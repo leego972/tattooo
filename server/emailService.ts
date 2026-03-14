@@ -301,3 +301,58 @@ export async function sendOutreachEmail(opts: {
     `.trim(),
   });
 }
+
+// ─── Artist Registration Confirmation ─────────────────────────────────────────
+export async function sendArtistRegistrationConfirmation(
+  toEmail: string,
+  artistName: string
+): Promise<void> {
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: toEmail,
+    subject: "Application Received — tatooo.shop",
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
+<body style="margin:0;padding:0;background-color:#0a0a0a;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0a0a0a;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background-color:#111111;border-radius:12px;border:1px solid #222222;overflow:hidden;max-width:600px;width:100%;">
+        <tr>
+          <td style="background:linear-gradient(135deg,#0a0a0a 0%,#111827 100%);padding:32px 40px;text-align:center;border-bottom:1px solid #1e3a5f;">
+            <div style="font-size:28px;font-weight:900;letter-spacing:0.05em;color:#ffffff;">tatt<span style="color:#06b6d4;">-ooo</span></div>
+            <div style="font-size:11px;letter-spacing:0.2em;color:#64748b;margin-top:4px;text-transform:uppercase;">AI Tattoo Designer</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:40px;">
+            <h1 style="margin:0 0 16px;font-size:22px;font-weight:700;color:#f1f5f9;">Application Received, ${artistName}! 🎉</h1>
+            <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#94a3b8;">
+              Thank you for applying to join the <strong style="color:#06b6d4;">tatooo.shop</strong> artist directory. Your payment has been received and your application is now <strong style="color:#f59e0b;">pending review</strong>.
+            </p>
+            <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#94a3b8;">
+              Our team will review your profile within <strong style="color:#f1f5f9;">2–3 business days</strong>. Once approved, your profile will be live and clients who've already designed their tattoo with AI will be referred directly to you.
+            </p>
+            <div style="background:#1e293b;border-radius:8px;padding:20px;margin-bottom:24px;">
+              <p style="margin:0 0 12px;font-size:13px;font-weight:700;color:#f1f5f9;text-transform:uppercase;letter-spacing:0.05em;">What happens next:</p>
+              <p style="margin:0 0 8px;font-size:13px;color:#94a3b8;">✦ Our team reviews your application (2–3 business days)</p>
+              <p style="margin:0 0 8px;font-size:13px;color:#94a3b8;">✦ You receive an approval email with your profile link</p>
+              <p style="margin:0 0 8px;font-size:13px;color:#94a3b8;">✦ Clients are matched to you based on style and location</p>
+              <p style="margin:0;font-size:13px;color:#94a3b8;">✦ 15% commission only on first bookings — zero recurring fees</p>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:20px 40px;border-top:1px solid #1e293b;text-align:center;">
+            <p style="margin:0;font-size:12px;color:#475569;">© ${new Date().getFullYear()} tatt-ooo · AI Tattoo Designer · tatooo.shop</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>
+    `.trim(),
+  });
+}

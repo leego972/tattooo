@@ -7,7 +7,7 @@ import { Router } from "express";
 import { constructWebhookEvent, CREDIT_PACKS, type PackId } from "./stripe";
 import { addCredits, setStripeCustomerId, getOrCreateCredits } from "./credits.db";
 import { getDb } from "./db";
-import { users } from "../drizzle/schema";
+import { users, artists, bookings, credits } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 
 const stripeWebhookRouter = Router();
@@ -54,41 +54,108 @@ stripeWebhookRouter.post(
     try {
       if (event.type === "checkout.session.completed") {
         const session = event.data.object as {
-          metadata?: { userId?: string; packId?: string; credits?: string };
+          metadata?: Record<string, string>;
           customer?: string;
           customer_email?: string;
+          amount_total?: number;
         };
+        const meta = session.metadata || {};
+        const eventType = meta.type;
 
-        const userId = session.metadata?.userId ? parseInt(session.metadata.userId) : null;
-        const packId = session.metadata?.packId as PackId | undefined;
-        const creditsAmount = session.metadata?.credits ? parseInt(session.metadata.credits) : 0;
-
-        if (!userId || !packId) {
-          console.warn("[Webhook] Missing userId or packId in metadata");
-          return res.json({ received: true });
+        // ── Credit pack purchase ──────────────────────────────────────────────
+        if (!eventType || eventType === "credit_purchase") {
+          const userId = meta.userId ? parseInt(meta.userId) : null;
+          const packId = meta.packId as PackId | undefined;
+          const creditsAmount = meta.credits ? parseInt(meta.credits) : 0;
+          if (!userId || !packId) {
+            console.warn("[Webhook] Missing userId or packId in metadata");
+            return res.json({ received: true });
+          }
+          const pack = CREDIT_PACKS.find((p) => p.id === packId);
+          if (!pack) {
+            console.warn("[Webhook] Unknown packId:", packId);
+            return res.json({ received: true });
+          }
+          if (session.customer && typeof session.customer === "string") {
+            await setStripeCustomerId(userId, session.customer);
+          }
+          await addCredits(
+            userId,
+            creditsAmount,
+            packId as "starter" | "pro" | "unlimited",
+            event.id,
+            `Purchased ${pack.name}: ${pack.description}`
+          );
+          console.log(`[Webhook] Granted ${creditsAmount} credits to user ${userId} (${packId})`);
         }
 
-        const pack = CREDIT_PACKS.find((p) => p.id === packId);
-        if (!pack) {
-          console.warn("[Webhook] Unknown packId:", packId);
-          return res.json({ received: true });
+        // ── Artist registration ───────────────────────────────────────────────
+        if (eventType === "artist_registration") {
+          const pendingArtistId = meta.pendingArtistId ? parseInt(meta.pendingArtistId) : null;
+          if (!pendingArtistId) {
+            console.warn("[Webhook] Missing pendingArtistId in artist_registration metadata");
+            return res.json({ received: true });
+          }
+          const db = await getDb();
+          if (db) {
+            // Mark artist as verified (payment received, pending admin review)
+            await db.update(artists)
+              .set({ verified: false })
+              .where(eq(artists.id, pendingArtistId));
+            const artistRows = await db.select().from(artists).where(eq(artists.id, pendingArtistId)).limit(1);
+            if (artistRows.length > 0) {
+              const artist = artistRows[0];
+              const contactEmail = artist.contactEmail || session.customer_email;
+              if (contactEmail) {
+                try {
+                  const { sendArtistRegistrationConfirmation } = await import("./emailService");
+                  await sendArtistRegistrationConfirmation(contactEmail, artist.name);
+                } catch (e) { console.warn("[Webhook] Artist reg email failed:", e); }
+              }
+            }
+            console.log(`[Webhook] Artist ${pendingArtistId} moved to pending_review`);
+          }
         }
 
-        // Save Stripe customer ID if available
-        if (session.customer && typeof session.customer === "string") {
-          await setStripeCustomerId(userId, session.customer);
+        // ── Booking deposit ───────────────────────────────────────────────────
+        if (eventType === "booking_deposit") {
+          const bookingId = meta.bookingId ? parseInt(meta.bookingId) : null;
+          const userId = meta.userId ? parseInt(meta.userId) : null;
+          if (!bookingId) {
+            console.warn("[Webhook] Missing bookingId in booking_deposit metadata");
+            return res.json({ received: true });
+          }
+          const db = await getDb();
+          if (db) {
+            await db.update(bookings)
+              .set({ status: "confirmed" })
+              .where(eq(bookings.id, bookingId));
+            if (userId) {
+              const userRows = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+              const bookingRows = await db.select().from(bookings).where(eq(bookings.id, bookingId)).limit(1);
+              if (userRows.length > 0 && bookingRows.length > 0) {
+                const user = userRows[0];
+                const booking = bookingRows[0];
+                if (user.email) {
+                  try {
+                    // Get artist name for the confirmation email
+                    const artistRows2 = await db.select().from(artists).where(eq(artists.id, booking.artistId)).limit(1);
+                    const artistName = artistRows2.length > 0 ? artistRows2[0].name : "your artist";
+                    const { sendArtistContactEmail } = await import("./emailService");
+                    await sendArtistContactEmail({
+                      artistEmail: user.email,
+                      artistName,
+                      customerName: user.name || "A client",
+                      customerEmail: user.email,
+                      message: `Your booking deposit of $${((session.amount_total || 0) / 100).toFixed(2)} has been received. Your appointment with ${artistName} is confirmed!`,
+                    });
+                  } catch (e) { console.warn("[Webhook] Booking confirmation email failed:", e); }
+                }
+              }
+            }
+            console.log(`[Webhook] Booking ${bookingId} confirmed`);
+          }
         }
-
-        // Grant credits
-        await addCredits(
-          userId,
-          creditsAmount,
-          packId as "starter" | "pro" | "unlimited",
-          event.id,
-          `Purchased ${pack.name}: ${pack.description}`
-        );
-
-        console.log(`[Webhook] Granted ${creditsAmount} credits to user ${userId} (${packId})`);
       }
 
       if (event.type === "customer.subscription.deleted") {

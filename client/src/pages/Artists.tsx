@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +24,12 @@ import {
   Palette,
   Send,
   Users,
+  Calendar,
+  DollarSign,
+  CheckCircle,
+  UserPlus,
+  Shield,
+  CreditCard,
 } from "lucide-react";
 
 interface ContactFormData {
@@ -32,14 +40,20 @@ interface ContactFormData {
 }
 
 export default function Artists() {
+  const { user } = useAuth();
+  const [, navigate] = useLocation();
   const [locationFilter, setLocationFilter] = useState("");
   const [specialtyFilter, setSpecialtyFilter] = useState("");
   const [selectedArtist, setSelectedArtist] = useState<number | null>(null);
+  const [bookingArtist, setBookingArtist] = useState<number | null>(null);
+  const [showRegister, setShowRegister] = useState(false);
   const [contactForm, setContactForm] = useState<ContactFormData>({
     customerName: "",
     customerEmail: "",
     message: "",
   });
+  const [bookingMsg, setBookingMsg] = useState("");
+
 
   const { data: artistList = [], isLoading } = trpc.artists.list.useQuery({
     location: locationFilter || undefined,
@@ -56,13 +70,39 @@ export default function Artists() {
     onError: (err) => toast.error(err.message || "Failed to send message."),
   });
 
+  const bookingMutation = trpc.artists.requestBooking.useMutation({
+    onSuccess: (data: { bookingId: number; checkoutUrl: string }) => {
+      if (data.checkoutUrl) {
+        toast.success("Redirecting to secure payment...");
+        window.open(data.checkoutUrl, "_blank");
+      } else {
+        toast.success("Booking request sent! The artist will confirm shortly.");
+      }
+      setBookingArtist(null);
+      setBookingMsg("");
+    },
+    onError: (err: { message?: string }) => toast.error(err.message || "Failed to create booking."),
+  });
+
   const handleContact = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedArtist) return;
     contactMutation.mutate({ artistId: selectedArtist, ...contactForm });
   };
 
+  const handleBooking = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bookingArtist) return;
+    bookingMutation.mutate({
+      artistId: bookingArtist,
+      message: bookingMsg,
+      origin: window.location.origin,
+    });
+  };
+
   const selectedArtistData = artistList.find((a) => a.id === selectedArtist);
+  const bookingArtistData = artistList.find((a) => a.id === bookingArtist);
+  const _ = showRegister; // used in JSX below
 
   return (
     <div className="min-h-screen bg-background">
@@ -212,16 +252,27 @@ export default function Artists() {
                       <Globe className="w-4 h-4" />
                     </a>
                   )}
-                  {artist.contactEmail && (
+                  <div className="ml-auto flex gap-1.5">
                     <Button
                       size="sm"
-                      className="ml-auto bg-cyan-500 hover:bg-cyan-600 text-black text-xs font-bold"
-                      onClick={() => setSelectedArtist(artist.id)}
+                      variant="outline"
+                      className="border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 text-xs"
+                      onClick={() => setBookingArtist(artist.id)}
                     >
-                      <Mail className="w-3 h-3 mr-1" />
-                      Contact
+                      <Calendar className="w-3 h-3 mr-1" />
+                      Book
                     </Button>
-                  )}
+                    {artist.contactEmail && (
+                      <Button
+                        size="sm"
+                        className="bg-cyan-500 hover:bg-cyan-600 text-black text-xs font-bold"
+                        onClick={() => setSelectedArtist(artist.id)}
+                      >
+                        <Mail className="w-3 h-3 mr-1" />
+                        Contact
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -236,14 +287,55 @@ export default function Artists() {
             their perfect tattoo using AI.
           </p>
           <Button
-            variant="outline"
-            className="border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10"
-            onClick={() => toast.info("Artist registration coming soon! Stay tuned.")}
+            className="bg-cyan-500 hover:bg-cyan-600 text-black font-bold"
+            onClick={() => navigate("/artist-signup")}
           >
-            Apply to Join
+            Apply to Join — $29/year
           </Button>
         </div>
       </div>
+
+      {/* Booking Dialog */}
+      <Dialog open={bookingArtist !== null} onOpenChange={(open) => !open && setBookingArtist(null)}>
+        <DialogContent className="bg-card border-border max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-foreground flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-cyan-400" />
+              Book {bookingArtistData?.name}
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              A deposit of <strong className="text-foreground">${bookingArtistData?.depositAmount ?? 50}</strong> is
+              required to secure your appointment. Paid securely via Stripe.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleBooking} className="space-y-4 mt-2">
+            <div className="space-y-1.5">
+              <Label className="text-sm text-foreground">Message to artist</Label>
+              <Textarea
+                placeholder="Describe your tattoo idea, preferred dates, size, placement..."
+                value={bookingMsg}
+                onChange={(e) => setBookingMsg(e.target.value)}
+                className="bg-background border-border min-h-[100px] resize-none"
+                required
+                minLength={10}
+              />
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Shield className="w-3.5 h-3.5 text-green-400" />
+              Secure payment via Stripe. Deposit held until appointment confirmed.
+            </div>
+            <Button
+              type="submit"
+              className="w-full bg-cyan-500 hover:bg-cyan-600 text-black font-bold"
+              disabled={bookingMutation.isPending}
+            >
+              <CreditCard className="w-4 h-4 mr-2" />
+              {bookingMutation.isPending ? "Processing…" : `Pay $${bookingArtistData?.depositAmount ?? 50} Deposit`}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Contact Dialog */}
       <Dialog open={selectedArtist !== null} onOpenChange={(open) => !open && setSelectedArtist(null)}>

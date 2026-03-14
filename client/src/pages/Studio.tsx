@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
   Send, Paperclip, X, Sparkles, Download, Printer, RotateCcw,
   ChevronDown, ChevronUp, User, Loader2, ImageIcon, Wand2,
   Palette, MapPin, Ruler, RefreshCw, ZoomIn, Settings2,
+  Layers, Droplets, SlidersHorizontal, Check,
 } from "lucide-react";
 import { TATTOO_STYLES, TATTOO_CATEGORIES, type TattooStyle, type TattooCategory } from "../../../shared/tattooStyles";
 import { BODY_PLACEMENTS, SIZE_OPTIONS } from "../../../shared/tattoo";
@@ -36,6 +37,7 @@ interface ChatMessage {
   dpi?: number;
   isGenerating?: boolean;
   timestamp: Date;
+  variations?: string[];
 }
 
 const SUGGESTED_PROMPTS = [
@@ -85,6 +87,13 @@ export default function Studio() {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const [sessionId] = useState(() => crypto.randomUUID());
+  const [variationCount, setVariationCount] = useState(1);
+  const [selectedVariationIdx, setSelectedVariationIdx] = useState(0);
+  const [showRuler, setShowRuler] = useState(false);
+  const [showColourPicker, setShowColourPicker] = useState(false);
+  const [skinPhotoUrl, setSkinPhotoUrl] = useState<string | undefined>();
+  const [showSkinOverlay, setShowSkinOverlay] = useState(false);
+  const skinInputRef = useRef<HTMLInputElement>(null);
 
   const generateMutation = trpc.tattoo.generate.useMutation({
     onSuccess: (data) => {
@@ -93,6 +102,7 @@ export default function Studio() {
       if (isAuthenticated) refetchCredits();
       if (data.imageUrl) {
         setLastGeneratedUrl(data.imageUrl);
+        setSelectedVariationIdx(0);
         setMessages((prev) =>
           prev.map((m) =>
             m.isGenerating
@@ -108,6 +118,7 @@ export default function Studio() {
                   heightCm: data.heightCm,
                   dpi: data.dpi,
                   content: data.refinedPrompt || m.content,
+                  variations: data.variations || [data.imageUrl],
                 }
               : m
           )
@@ -226,6 +237,7 @@ export default function Studio() {
       sessionId,
       gender: gender || undefined,
       bodyShape: bodyShape || undefined,
+      variationCount,
     });
   };
 
@@ -583,64 +595,141 @@ export default function Studio() {
                       </div>
                     )}
 
-                    {/* Generated tattoo image */}
-                    {msg.generatedImageUrl && (
-                      <div className="rounded-2xl overflow-hidden border border-primary/20 glow-ink-lg bg-card">
-                        <div className="relative group">
-                          <img
-                            src={msg.generatedImageUrl}
-                            alt="Generated tattoo design"
-                            className="w-full max-w-sm object-cover"
-                          />
-                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                            <Button
-                              size="sm"
-                              onClick={() => handleDownload(msg.printImageUrl || msg.generatedImageUrl!, msg.printSpec)}
-                              className="gap-1.5 bg-white/10 hover:bg-white/20 text-white border border-white/20"
-                            >
-                              <Download size={14} />
-                              Download
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={() => handlePrint(msg.printImageUrl || msg.generatedImageUrl!, msg.printSpec)}
-                              className="gap-1.5 bg-white/10 hover:bg-white/20 text-white border border-white/20"
-                            >
-                              <Printer size={14} />
-                              Print
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="px-3 py-2.5 flex flex-col gap-1.5">
-                          {/* Print spec badge */}
-                          {msg.printSpec && (
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-[10px] text-primary font-mono">
-                                <Printer size={9} /> {msg.printSpec}
-                              </span>
-                              <span className="text-[10px] text-muted-foreground/60">Print-ready · 300 DPI</span>
+                    {/* Generated tattoo image — single or multi-variation */}
+                    {msg.generatedImageUrl && (() => {
+                      const allVariations = msg.variations && msg.variations.length > 1
+                        ? msg.variations
+                        : [msg.generatedImageUrl];
+                      const isComparison = allVariations.length > 1;
+
+                      return (
+                        <div className="rounded-2xl overflow-hidden border border-primary/20 glow-ink-lg bg-card w-full">
+                          {/* Variation tabs */}
+                          {isComparison && (
+                            <div className="flex items-center gap-1 p-2 border-b border-border/30 bg-card/50">
+                              <Layers size={12} className="text-primary mr-1" />
+                              <span className="text-[10px] text-muted-foreground mr-2">Variations:</span>
+                              {allVariations.map((_, i) => (
+                                <button
+                                  key={i}
+                                  onClick={() => setSelectedVariationIdx(i)}
+                                  className={cn(
+                                    "w-6 h-6 rounded-md text-[10px] font-bold border transition-all",
+                                    selectedVariationIdx === i
+                                      ? "border-primary bg-primary/20 text-primary"
+                                      : "border-border/40 text-muted-foreground hover:border-primary/40"
+                                  )}
+                                >
+                                  {i + 1}
+                                </button>
+                              ))}
+                              <span className="ml-auto text-[10px] text-muted-foreground">Side-by-side</span>
                             </div>
                           )}
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground">Generated Design</span>
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleDownload(msg.printImageUrl || msg.generatedImageUrl!, msg.printSpec)}
-                                className="text-xs text-primary hover:text-primary/80 flex items-center gap-1"
-                              >
-                                <Download size={12} /> Save
-                              </button>
-                              <button
-                                onClick={() => handlePrint(msg.printImageUrl || msg.generatedImageUrl!, msg.printSpec)}
-                                className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                              >
-                                <Printer size={12} /> Print
-                              </button>
+
+                          {/* Image display — single or grid */}
+                          {isComparison ? (
+                            <div className={cn(
+                              "grid gap-1 p-1",
+                              allVariations.length === 2 ? "grid-cols-2" : "grid-cols-3"
+                            )}>
+                              {allVariations.map((url, i) => (
+                                <div
+                                  key={i}
+                                  className={cn(
+                                    "relative group rounded-lg overflow-hidden border-2 cursor-pointer transition-all",
+                                    selectedVariationIdx === i ? "border-primary" : "border-transparent"
+                                  )}
+                                  onClick={() => setSelectedVariationIdx(i)}
+                                >
+                                  <img
+                                    src={url}
+                                    alt={`Variation ${i + 1}`}
+                                    className="w-full object-cover"
+                                  />
+                                  {selectedVariationIdx === i && (
+                                    <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                                      <Check size={10} className="text-primary-foreground" />
+                                    </div>
+                                  )}
+                                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-[9px] text-white/80 text-center py-0.5">
+                                    V{i + 1}
+                                  </div>
+                                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleDownload(url); }}
+                                      className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white"
+                                    >
+                                      <Download size={12} />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="relative group">
+                              <img
+                                src={allVariations[0]}
+                                alt="Generated tattoo design"
+                                className="w-full max-w-sm object-cover"
+                              />
+                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleDownload(msg.printImageUrl || allVariations[0], msg.printSpec)}
+                                  className="gap-1.5 bg-white/10 hover:bg-white/20 text-white border border-white/20"
+                                >
+                                  <Download size={14} /> Download
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handlePrint(msg.printImageUrl || allVariations[0], msg.printSpec)}
+                                  className="gap-1.5 bg-white/10 hover:bg-white/20 text-white border border-white/20"
+                                >
+                                  <Printer size={14} /> Print
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="px-3 py-2.5 flex flex-col gap-1.5">
+                            {msg.printSpec && (
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-[10px] text-primary font-mono">
+                                  <Printer size={9} /> {msg.printSpec}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground/60">Print-ready · 300 DPI</span>
+                              </div>
+                            )}
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-muted-foreground">
+                                {isComparison ? `${allVariations.length} Variations` : "Generated Design"}
+                              </span>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleDownload(
+                                    (isComparison ? allVariations[selectedVariationIdx] : msg.printImageUrl) || allVariations[0],
+                                    msg.printSpec
+                                  )}
+                                  className="text-xs text-primary hover:text-primary/80 flex items-center gap-1"
+                                >
+                                  <Download size={12} /> Save
+                                </button>
+                                <button
+                                  onClick={() => handlePrint(
+                                    (isComparison ? allVariations[selectedVariationIdx] : msg.printImageUrl) || allVariations[0],
+                                    msg.printSpec
+                                  )}
+                                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                                >
+                                  <Printer size={12} /> Print
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
 
                   {msg.role === "user" && (
@@ -774,9 +863,125 @@ export default function Studio() {
             </Button>
           </div>
 
-          <p className="text-[10px] text-muted-foreground/50 text-center mt-2">
-            Press Enter to send · Shift+Enter for new line · Upload images for reference
-          </p>
+          {/* Variation count + tool toggles */}
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
+            {/* Variation count */}
+            <div className="flex items-center gap-1.5 bg-card/60 rounded-lg border border-border/30 px-2 py-1">
+              <Layers size={12} className="text-primary" />
+              <span className="text-[10px] text-muted-foreground">Variations:</span>
+              {[1, 2, 3].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setVariationCount(n)}
+                  className={cn(
+                    "w-5 h-5 rounded text-[10px] font-bold transition-all",
+                    variationCount === n
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+
+            {/* Skin overlay toggle */}
+            <button
+              onClick={() => skinInputRef.current?.click()}
+              className={cn(
+                "flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] transition-all",
+                skinPhotoUrl
+                  ? "border-primary/50 bg-primary/10 text-primary"
+                  : "border-border/30 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+              )}
+              title="Upload skin photo for overlay preview"
+            >
+              <Droplets size={11} />
+              {skinPhotoUrl ? "Skin ✓" : "Skin Overlay"}
+            </button>
+            <input
+              ref={skinInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => setSkinPhotoUrl(reader.result as string);
+                reader.readAsDataURL(file);
+                toast.success("Skin photo loaded — overlay active");
+              }}
+            />
+            {skinPhotoUrl && (
+              <button
+                onClick={() => setSkinPhotoUrl(undefined)}
+                className="text-[10px] text-muted-foreground hover:text-foreground"
+              >
+                <X size={10} />
+              </button>
+            )}
+
+            {/* Ruler toggle */}
+            <button
+              onClick={() => setShowRuler(!showRuler)}
+              className={cn(
+                "flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] transition-all",
+                showRuler
+                  ? "border-primary/50 bg-primary/10 text-primary"
+                  : "border-border/30 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+              )}
+            >
+              <Ruler size={11} />
+              Size Ruler
+            </button>
+
+            <p className="ml-auto text-[10px] text-muted-foreground/50 hidden sm:block">
+              Enter to send · Shift+Enter for new line
+            </p>
+          </div>
+
+          {/* Skin overlay preview */}
+          {skinPhotoUrl && lastGeneratedUrl && (
+            <div className="mt-2 p-2 bg-card/40 rounded-xl border border-primary/20">
+              <p className="text-[10px] text-muted-foreground mb-2 flex items-center gap-1">
+                <Droplets size={10} className="text-primary" /> Skin Overlay Preview
+              </p>
+              <div className="relative w-full max-w-xs mx-auto">
+                <img src={skinPhotoUrl} alt="Skin" className="w-full rounded-lg object-cover opacity-80" />
+                <img
+                  src={lastGeneratedUrl}
+                  alt="Tattoo overlay"
+                  className="absolute inset-0 w-full h-full object-contain mix-blend-multiply opacity-70 rounded-lg"
+                />
+              </div>
+              <p className="text-[9px] text-muted-foreground/50 text-center mt-1">
+                Approximate preview — actual placement may vary
+              </p>
+            </div>
+          )}
+
+          {/* Size ruler overlay */}
+          {showRuler && lastGeneratedUrl && (
+            <div className="mt-2 p-2 bg-card/40 rounded-xl border border-border/30">
+              <p className="text-[10px] text-muted-foreground mb-2 flex items-center gap-1">
+                <Ruler size={10} className="text-primary" /> Size Reference Ruler
+              </p>
+              <div className="relative w-full max-w-xs mx-auto">
+                <img src={lastGeneratedUrl} alt="Design" className="w-full rounded-lg" />
+                {/* Horizontal ruler */}
+                <div className="absolute bottom-2 left-2 right-2 h-4 flex items-center">
+                  <div className="flex-1 h-0.5 bg-cyan-400/80" />
+                  <div className="h-3 w-0.5 bg-cyan-400/80" />
+                </div>
+                <div className="absolute bottom-6 left-0 right-0 text-center">
+                  <span className="text-[9px] bg-black/60 text-cyan-400 px-1.5 py-0.5 rounded font-mono">
+                    {selectedSize ? SIZE_OPTIONS.find(s => s.label === selectedSize)?.cmRange || selectedSize : "Select size above"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

@@ -14,6 +14,10 @@ import {
   Zap,
   DollarSign,
   Users,
+  Gift,
+  UserPlus,
+  Mail,
+  ShieldCheck,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -33,6 +37,13 @@ const navLinks = [
   { href: "/history", label: "History", icon: Clock },
   { href: "/pricing", label: "Pricing", icon: DollarSign },
   { href: "/artists", label: "Find Artist", icon: Users },
+  { href: "/referral", label: "Refer & Earn", icon: Gift },
+  { href: "/artist-signup", label: "Join as Artist", icon: UserPlus },
+];
+
+const adminNavLinks = [
+  { href: "/admin", label: "Admin Panel", icon: Users },
+  { href: "/outreach", label: "Outreach", icon: Mail },
 ];
 
 function CreditsBadge() {
@@ -110,6 +121,32 @@ export default function Navbar() {
             );
           })}
         </nav>
+
+        {/* Admin links */}
+        {user?.role === "admin" && (
+          <div className="px-2 pb-2">
+            <p className="text-[9px] text-zinc-600 uppercase tracking-widest px-2 mb-1">Admin</p>
+            {adminNavLinks.map(({ href, label, icon: Icon }) => {
+              const active = location === href;
+              return (
+                <Link key={href} href={href}>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "w-full justify-start gap-2.5 h-9 text-sm transition-all rounded-lg",
+                      active
+                        ? "text-orange-400 bg-orange-500/10 border border-orange-500/20"
+                        : "text-zinc-500 hover:text-orange-400 hover:bg-zinc-800/60"
+                    )}
+                  >
+                    <Icon size={15} />
+                    {label}
+                  </Button>
+                </Link>
+              );
+            })}
+          </div>
+        )}
 
         {/* Credits + Auth */}
         <div className="px-2 py-3 border-t border-zinc-800/60 space-y-2">

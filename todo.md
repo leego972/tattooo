@@ -86,29 +86,73 @@
 - [x] Tests: 14 tests passing (auth, credits, tattoo procedures, API keys)
 
 ## Password Reset (Resend Email)
-- [ ] Install resend npm package
-- [ ] Backend: password_reset_tokens table (token, userId, expiresAt, usedAt)
-- [ ] Backend: tRPC auth.forgotPassword procedure (generates token, sends email via Resend)
-- [ ] Backend: tRPC auth.resetPassword procedure (validates token, updates passwordHash)
-- [ ] Frontend: "Forgot password?" link on Login page
-- [ ] Frontend: ForgotPassword page (email input form)
-- [ ] Frontend: ResetPassword page (new password form, reads token from URL)
-- [ ] Email: Branded HTML email template with tatt-ooo logo and reset link
+- [x] Backend: password_reset_tokens table
+- [x] Backend: tRPC auth.forgotPassword + auth.resetPassword procedures
+- [x] Frontend: ForgotPassword + ResetPassword pages
 
 ## Tattoo Artist Directory
-- [ ] DB: artists table (name, bio, location, specialties, instagram, website, contactEmail, avatarUrl, verified)
-- [ ] Backend: tRPC artists.list procedure (filter by specialty/location)
-- [ ] Backend: tRPC artists.contact procedure (sends inquiry email via Resend)
-- [ ] Frontend: Artists page with card grid, filter by style/location
-- [ ] Frontend: Artist profile card (photo, bio, specialties, contact button)
-- [ ] Frontend: "Find an Artist" button on My Tatts cards (passes design URL)
-- [ ] Frontend: Contact artist modal (pre-fills with design image URL)
-- [ ] Navigation: Artists link in sidebar
+- [x] DB: artists table
+- [x] Backend: tRPC artists.list, artists.contact procedures
+- [x] Frontend: Artists page with card grid, filter by style/location
+- [x] Frontend: Artist profile card (photo, bio, specialties, contact button)
+- [x] Navigation: Artists link in sidebar
 
 ## Social Sharing + Watermark
-- [ ] Frontend: Canvas watermark utility (overlays tatt-ooo logo bottom-right on generated image)
-- [ ] Frontend: Share button on each generated image in chat and My Tatts
-- [ ] Frontend: Share modal with platform options (Instagram, TikTok, Twitter/X, WhatsApp, copy link)
-- [ ] Frontend: Download with watermark option (separate from print-ready download)
-- [ ] Backend: Public share URL for each design (short shareable link)
-- [ ] Frontend: Public share page (/share/:id) showing design with branding
+- [x] Backend: Public share URL for each design
+- [x] Frontend: Share button on My Tatts cards
+- [x] Frontend: Public share page (/share?id=...)
+
+## Admin Dashboard
+- [x] Backend: admin.stats, admin.users, admin.generations, admin.artistApplications procedures
+- [x] Frontend: /admin page with stats cards, users table, generations table
+- [x] Frontend: Artist applications management panel
+- [x] Frontend: Admin-only route guard
+
+## Multi-Design Comparison + Studio Enhancements
+- [x] Frontend: "Generate Variations" toggle in Studio (1-3 variations)
+- [x] Frontend: Side-by-side comparison view for multiple variations
+- [x] Frontend: Size ruler overlay on generated image
+- [x] Frontend: Skin overlay / colour palette customiser controls in Studio
+
+## Artist Marketplace + Stripe Booking
+- [x] DB: bookings table
+- [x] Backend: artists.requestBooking with Stripe deposit checkout session
+- [x] Backend: Stripe webhook for booking payment confirmation
+- [x] Frontend: Artists page with Book button and booking dialog
+- [x] Frontend: My Bookings page (/bookings)
+
+## Referral Programme
+- [x] DB: referrals table
+- [x] Backend: referral.getLink, referral.stats, referral.redeem procedures
+- [x] Frontend: Referral page (/referral) with shareable link + stats
+- [x] Navigation: Referral link in sidebar
+
+## Animated Reveal Video
+- [x] Backend: tattoo.generateVideo (RunwayML image-to-video, costs 5 credits)
+- [x] DB: videoUrl column added to tattoo_generations
+- [x] Frontend: "Animate (5 cr)" button on My Tatts cards
+- [x] Frontend: "Watch Reveal" button when video is ready
+
+## Artist Sign-Up Page (Annual Directory Fee)
+- [x] Backend: artists.applyWithPayment procedure — creates Stripe checkout for $29/year annual fee
+- [x] Backend: Stripe webhook fulfillment — on payment success, create artist profile (status: pending_review)
+- [x] Backend: Admin can verify/reject artist applications
+- [x] Frontend: /artist-signup page — multi-step form (profile details → payment → confirmation)
+- [x] Frontend: Artist CTA button on /artists page links to /artist-signup
+- [x] Navigation: /artist-signup route in App.tsx
+
+## Autonomous Artist Outreach System
+- [x] DB: outreach_campaigns table (name, region, country, language, status, sentCount, openCount, clickCount, signupCount)
+- [x] DB: outreach_contacts table (email, name, studioName, country, language, campaignId, status, trackingPixelId)
+- [x] Backend: admin.createCampaign (AI generates personalised email in native language)
+- [x] Backend: admin.addOutreachContacts (bulk import artist emails per campaign)
+- [x] Backend: admin.sendCampaign (batch send via Resend with tracking pixel + signup link)
+- [x] Backend: admin.getCampaignContacts (list contacts per campaign)
+- [x] Frontend: /outreach admin page with campaign creation, contact import, email preview, send controls
+- [x] Frontend: Campaign stats dashboard (sent/opens/clicks/signups)
+- [x] Frontend: Campaign status badges (draft/scheduled/sending/completed)
+- [x] Navigation: Outreach link in admin sidebar section (admin-only)
+- [x] Supported languages: 16 languages including Japanese, Korean, Arabic, Russian, Chinese, etc.
+
+## Domain
+- [ ] Connect tattooo.shop domain via GoDaddy DNS (instructions provided at delivery)

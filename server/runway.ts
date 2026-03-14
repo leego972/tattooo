@@ -129,3 +129,60 @@ export async function generateTattooWithRunway(
 
   return { imageUrl, taskId };
 }
+
+// ── Image-to-Video (Animated Reveal) ─────────────────────────────────────────
+export interface RunwayVideoOptions {
+  imageUrl: string;
+  prompt?: string;
+  duration?: 5 | 10;
+}
+
+export interface RunwayVideoResult {
+  videoUrl: string;
+  taskId: string;
+}
+
+/**
+ * Generate an animated reveal video from a tattoo image using RunwayML Gen-3 Alpha Turbo.
+ * The animation subtly brings the tattoo to life with motion.
+ */
+export async function generateTattooVideo(
+  options: RunwayVideoOptions
+): Promise<RunwayVideoResult> {
+  const apiKey = process.env.RUNWAYML_API_KEY;
+  if (!apiKey) throw new Error("RUNWAYML_API_KEY is not configured");
+
+  const { imageUrl, prompt = "Cinematic tattoo reveal, subtle ink flow, dramatic lighting", duration = 5 } = options;
+
+  const body = {
+    model: "gen3a_turbo",
+    promptImage: imageUrl,
+    promptText: prompt.slice(0, 512),
+    duration,
+    ratio: "1280:768",
+    watermark: false,
+  };
+
+  const res = await fetch(`${RUNWAY_API_BASE}/image_to_video`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "X-Runway-Version": RUNWAY_VERSION,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`RunwayML video request failed (${res.status}): ${text}`);
+  }
+
+  const data = (await res.json()) as { id: string };
+  const taskId = data.id;
+
+  // Poll for video completion (videos take longer — up to 90 seconds)
+  const videoUrl = await pollForResult(taskId, apiKey, 60, 5000);
+
+  return { videoUrl, taskId };
+}

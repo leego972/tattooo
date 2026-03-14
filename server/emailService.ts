@@ -243,3 +243,61 @@ export async function sendWelcomeEmail(toEmail: string, toName: string | null): 
     `.trim(),
   });
 }
+
+// ─── Outreach Email ───────────────────────────────────────────────────────────
+
+export async function sendOutreachEmail(opts: {
+  to: string;
+  toName?: string;
+  subject: string;
+  htmlBody: string;
+}): Promise<void> {
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: opts.to,
+    subject: opts.subject,
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${opts.subject}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0a0a0a;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0a0a0a;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#111111;border-radius:12px;border:1px solid #222222;overflow:hidden;max-width:600px;width:100%;">
+          <tr>
+            <td style="background:linear-gradient(135deg,#0a0a0a 0%,#111827 100%);padding:32px 40px;text-align:center;border-bottom:1px solid #1e3a5f;">
+              <div style="font-size:28px;font-weight:900;letter-spacing:0.05em;color:#ffffff;">
+                tatt<span style="color:#06b6d4;">-ooo</span>
+              </div>
+              <div style="font-size:11px;letter-spacing:0.2em;color:#64748b;margin-top:4px;text-transform:uppercase;">AI Tattoo Designer</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:40px;color:#94a3b8;font-size:15px;line-height:1.7;">
+              ${opts.htmlBody}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 40px;border-top:1px solid #1e293b;text-align:center;">
+              <p style="margin:0;font-size:12px;color:#475569;">
+                © ${new Date().getFullYear()} tatt-ooo · AI Tattoo Designer · Created by LEEGO
+              </p>
+              <p style="margin:8px 0 0;font-size:11px;color:#334155;">
+                You're receiving this because you're a tattoo artist. <a href="[UNSUBSCRIBE_URL]" style="color:#475569;">Unsubscribe</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `.trim(),
+  });
+}

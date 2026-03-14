@@ -17,6 +17,9 @@ import {
   ImageOff,
   Share2,
   Copy,
+  Film,
+  Loader2,
+  Play,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
@@ -26,6 +29,7 @@ type Design = {
   imageUrl: string;
   printImageUrl?: string | null;
   printSpec?: string | null;
+  videoUrl?: string | null;
   userPrompt: string;
   nickname?: string | null;
   style?: string | null;
@@ -56,6 +60,25 @@ export default function MyTatts() {
   });
 
   const shareMutation = trpc.sharing.create.useMutation();
+  const [videoGenId, setVideoGenId] = useState<number | null>(null);
+  const [videoUrls, setVideoUrls] = useState<Record<number, string>>({});
+
+  const videoMutation = trpc.tattoo.generateVideo.useMutation({
+    onSuccess: (data, variables) => {
+      setVideoUrls((prev) => ({ ...prev, [variables.generationId]: data.videoUrl }));
+      setVideoGenId(null);
+      toast.success("Animated reveal ready!");
+    },
+    onError: (err) => {
+      setVideoGenId(null);
+      toast.error(err.message || "Video generation failed.");
+    },
+  });
+
+  const handleGenerateVideo = (design: Design) => {
+    setVideoGenId(design.id);
+    videoMutation.mutate({ generationId: design.id });
+  };
 
   const renameMutation = trpc.myTatts.rename.useMutation({
     onSuccess: () => {
@@ -264,6 +287,29 @@ export default function MyTatts() {
                     >
                       <Share2 size={12} /> Share Link
                     </Button>
+                    {/* Animated Reveal Video */}
+                    {videoUrls[design.id] || design.videoUrl ? (
+                      <Button
+                        size="sm"
+                        onClick={() => window.open(videoUrls[design.id] || design.videoUrl!, "_blank")}
+                        className="w-full gap-1.5 bg-purple-500/80 hover:bg-purple-500 text-white text-xs h-8"
+                      >
+                        <Play size={12} /> Watch Reveal
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        onClick={() => handleGenerateVideo(design)}
+                        disabled={videoGenId === design.id}
+                        className="w-full gap-1.5 bg-purple-500/20 hover:bg-purple-500/40 text-purple-300 border border-purple-500/20 text-xs h-8"
+                      >
+                        {videoGenId === design.id ? (
+                          <><Loader2 size={12} className="animate-spin" /> Animating…</>
+                        ) : (
+                          <><Film size={12} /> Animate (5 cr)</>
+                        )}
+                      </Button>
+                    )}
                     {/* Delete — confirm on second click */}
                     {deletingId === design.id ? (
                       <div className="flex gap-1 w-full">

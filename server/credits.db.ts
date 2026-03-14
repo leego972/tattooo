@@ -2,7 +2,7 @@ import { eq, desc } from "drizzle-orm";
 import { getDb } from "./db";
 import { credits, creditTransactions } from "../drizzle/schema";
 
-export const FREE_CREDITS = 5;
+export const FREE_CREDITS = 500;
 
 /**
  * Get or create a user's credits record.
@@ -32,7 +32,7 @@ export async function getOrCreateCredits(userId: number) {
     userId,
     amount: FREE_CREDITS,
     type: "free_grant",
-    description: `Welcome gift: ${FREE_CREDITS} free tattoo designs`,
+    description: `Welcome gift: ${FREE_CREDITS} free credits to start designing!`,
   });
 
   const created = await db
@@ -79,8 +79,8 @@ export async function deductCredit(userId: number): Promise<boolean> {
 export async function addCredits(
   userId: number,
   amount: number,
-  plan: "starter" | "pro" | "unlimited",
-  stripeSessionId: string,
+  plan: "starter" | "pro" | "unlimited" | "referral" | "purchase",
+  stripeSessionId: string | undefined,
   description: string
 ) {
   const db = await getDb();
@@ -91,19 +91,22 @@ export async function addCredits(
   const newBalance =
     plan === "unlimited" ? userCredits.balance : userCredits.balance + amount;
 
+  // Only update plan for actual plan changes (not for referral/purchase top-ups)
+  const planToSet = (plan === "referral" || plan === "purchase") ? userCredits.plan : plan;
+
   await db
     .update(credits)
     .set({
       balance: newBalance,
       lifetimeTotal: userCredits.lifetimeTotal + amount,
-      plan,
+      plan: planToSet,
     })
     .where(eq(credits.userId, userId));
 
   await db.insert(creditTransactions).values({
     userId,
     amount,
-    type: plan === "unlimited" ? "subscription" : "purchase",
+    type: plan === "unlimited" ? "subscription" : plan === "referral" ? "referral" : "purchase",
     stripeSessionId,
     description,
   });

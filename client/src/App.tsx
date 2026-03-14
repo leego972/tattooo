@@ -18,6 +18,11 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Artists from "./pages/Artists";
 import SharedDesign from "./pages/SharedDesign";
+import Admin from "./pages/Admin";
+import Referral from "./pages/Referral";
+import Bookings from "./pages/Bookings";
+import ArtistSignup from "./pages/ArtistSignup";
+import Outreach from "./pages/Outreach";
 
 function Router() {
   return (
@@ -40,6 +45,12 @@ function Router() {
           <Route path="/reset-password" component={ResetPassword} />
           <Route path="/artists" component={Artists} />
           <Route path="/share" component={SharedDesign} />
+          <Route path="/admin" component={Admin} />
+          <Route path="/referral" component={Referral} />
+          <Route path="/bookings" component={Bookings} />
+          <Route path="/artist-signup/success" component={ArtistSignup} />
+          <Route path="/artist-signup" component={ArtistSignup} />
+          <Route path="/outreach" component={Outreach} />
           <Route path="/404" component={NotFound} />
           <Route component={NotFound} />
         </Switch>

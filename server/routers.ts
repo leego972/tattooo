@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { eq, and, isNull, gt } from "drizzle-orm";
+import { eq, and, isNull, gt, desc, sql, count } from "drizzle-orm";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
@@ -52,8 +52,23 @@ import {
   artists,
   designShares,
   tattooGenerations,
+  users,
+  credits,
+  creditTransactions,
+  bookings,
+  referrals,
+  outreachCampaigns,
+  outreachContacts,
 } from "../drizzle/schema";
 import crypto from "crypto";
+
+// ─── Admin guard ──────────────────────────────────────────────────────────────
+const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.user.role !== "admin") {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required." });
+  }
+  return next({ ctx });
+});
 
 // ─── Auth Router (email/password, self-contained) ─────────────────────────────
 
@@ -64,6 +79,7 @@ const authRouter = router({
         name: z.string().min(2).max(64),
         email: z.string().email(),
         password: z.string().min(8).max(128),
+        refCode: z.string().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -83,6 +99,33 @@ const authRouter = router({
 
       // Grant 5 free credits
       await getOrCreateCredits(user.id);
+
+      // Handle referral
+      if (input.refCode) {
+        try {
+          const db = await getDb();
+          if (db) {
+            const refRows = await db
+              .select()
+              .from(referrals)
+              .where(and(eq(referrals.refCode, input.refCode), isNull(referrals.referredUserId)))
+              .limit(1);
+
+            if (refRows[0] && refRows[0].referrerId !== user.id) {
+              // Award 5 credits to both referrer and new user
+              await addCredits(refRows[0].referrerId, 5, "referral", undefined, "Referral reward: friend signed up");
+              await addCredits(user.id, 5, "referral", undefined, "Welcome bonus: joined via referral");
+
+              await db
+                .update(referrals)
+                .set({ referredUserId: user.id, creditAwarded: true })
+                .where(eq(referrals.id, refRows[0].id));
+            }
+          }
+        } catch (refErr) {
+          console.warn("[Referral] Error processing referral:", refErr);
+        }
+      }
 
       // Send welcome email (non-blocking)
       sendWelcomeEmail(user.email!, user.name).catch(console.warn);
@@ -135,26 +178,19 @@ const authRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-      // Find user by email
-      const { users } = await import("../drizzle/schema");
       const userRows = await db
         .select()
         .from(users)
         .where(eq(users.email, input.email))
         .limit(1);
 
-      // Always return success to prevent email enumeration
       if (!userRows[0]) return { success: true };
 
       const user = userRows[0];
       const token = crypto.randomBytes(48).toString("hex");
-      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
-      await db.insert(passwordResetTokens).values({
-        userId: user.id,
-        token,
-        expiresAt,
-      });
+      await db.insert(passwordResetTokens).values({ userId: user.id, token, expiresAt });
 
       const resetUrl = `${input.origin}/reset-password?token=${token}`;
       await sendPasswordResetEmail(user.email!, user.name, resetUrl);
@@ -181,18 +217,11 @@ const authRouter = router({
         .limit(1);
 
       if (!tokenRows[0]) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "This reset link is invalid or has expired.",
-        });
+        throw new TRPCError({ code: "BAD_REQUEST", message: "This reset link is invalid or has expired." });
       }
 
       const resetToken = tokenRows[0];
-
-      // Update password
       await updatePassword(resetToken.userId, input.newPassword);
-
-      // Mark token as used
       await db
         .update(passwordResetTokens)
         .set({ usedAt: new Date() })
@@ -265,15 +294,16 @@ const tattooRouter = router({
         sessionId: z.string(),
         gender: z.enum(["male", "female"]).optional(),
         bodyShape: z.enum(["slim", "athletic", "average", "plus-size"]).optional(),
+        variationCount: z.number().min(1).max(3).default(1),
       })
     )
     .mutation(async ({ input, ctx }) => {
       const {
         userPrompt, referenceImageUrl, bodyPlacement, sizeLabel,
-        sizeInCm, style, sessionId, gender, bodyShape,
+        sizeInCm, style, sessionId, gender, bodyShape, variationCount,
       } = input;
 
-      // Credit check
+      // Credit check — deduct one credit per generation (not per variation)
       if (ctx.user?.id) {
         const hasCredits = await deductCredit(ctx.user.id);
         if (!hasCredits) {
@@ -354,51 +384,68 @@ Please create the optimal image generation prompt for this tattoo design.`;
       const rawContent = refinementResponse.choices?.[0]?.message?.content;
       const refinedPrompt = typeof rawContent === "string" ? rawContent : userPrompt;
 
-      // Generate image
-      let rawImageUrl: string;
-      try {
-        const runwayResult = await generateTattooWithRunway({
-          prompt: refinedPrompt,
-          referenceImageUrl,
-          width: genWidth,
-          height: genHeight,
-        });
-        rawImageUrl = runwayResult.imageUrl;
-      } catch (runwayError) {
-        console.warn("[RunwayML] Failed, falling back to built-in generator:", runwayError);
-        const fallbackResult = await generateImage({
-          prompt: refinedPrompt,
-          ...(referenceImageUrl
-            ? { originalImages: [{ url: referenceImageUrl, mimeType: "image/jpeg" }] }
-            : {}),
-        });
-        rawImageUrl = fallbackResult.url || "";
-      }
+      // Generate image(s) — support multiple variations
+      const generateOne = async (variationSuffix: string = "") => {
+        const promptWithVariation = variationCount > 1
+          ? `${refinedPrompt}${variationSuffix}`
+          : refinedPrompt;
 
-      if (!rawImageUrl)
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Image generation failed." });
+        let rawImageUrl: string;
+        try {
+          const runwayResult = await generateTattooWithRunway({
+            prompt: promptWithVariation,
+            referenceImageUrl,
+            width: genWidth,
+            height: genHeight,
+          });
+          rawImageUrl = runwayResult.imageUrl;
+        } catch (runwayError) {
+          console.warn("[RunwayML] Failed, falling back to built-in generator:", runwayError);
+          const fallbackResult = await generateImage({
+            prompt: promptWithVariation,
+            ...(referenceImageUrl
+              ? { originalImages: [{ url: referenceImageUrl, mimeType: "image/jpeg" }] }
+              : {}),
+          });
+          rawImageUrl = fallbackResult.url || "";
+        }
 
-      // Embed 300 DPI metadata
-      let imageUrl = rawImageUrl;
-      let printImageUrl = rawImageUrl;
-      try {
-        const imgBuffer = await fetchImageAsBuffer(rawImageUrl);
-        const printBuffer = await embedDpiMetadata(imgBuffer, PRINT_DPI);
-        const printKey = `prints/${nanoid()}-${printWidthPx}x${printHeightPx}-300dpi.png`;
-        const { url } = await storagePut(printKey, printBuffer, "image/png");
-        printImageUrl = url;
-        imageUrl = url;
-      } catch (dpiErr) {
-        console.warn("[printUtils] DPI embedding failed, using raw URL:", dpiErr);
-      }
+        if (!rawImageUrl) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Image generation failed." });
 
-      // Save to database
+        let imageUrl = rawImageUrl;
+        let printImageUrl = rawImageUrl;
+        try {
+          const imgBuffer = await fetchImageAsBuffer(rawImageUrl);
+          const printBuffer = await embedDpiMetadata(imgBuffer, PRINT_DPI);
+          const printKey = `prints/${nanoid()}-${printWidthPx}x${printHeightPx}-300dpi.png`;
+          const { url } = await storagePut(printKey, printBuffer, "image/png");
+          printImageUrl = url;
+          imageUrl = url;
+        } catch (dpiErr) {
+          console.warn("[printUtils] DPI embedding failed, using raw URL:", dpiErr);
+        }
+
+        return { imageUrl, printImageUrl };
+      };
+
+      const variationSuffixes = [
+        "",
+        ", alternative composition, different angle",
+        ", bold variation, stronger contrast",
+      ];
+
+      // Generate variations (or just one)
+      const results = await Promise.all(
+        Array.from({ length: variationCount }, (_, i) => generateOne(variationSuffixes[i] || ""))
+      );
+
+      // Save primary to database
       await saveTattooGeneration({
         userId: ctx.user?.id ?? null,
         sessionId,
         userPrompt,
         refinedPrompt,
-        imageUrl,
+        imageUrl: results[0].imageUrl,
         referenceImageUrl: referenceImageUrl ?? null,
         style: style ?? null,
         bodyPlacement: bodyPlacement ?? null,
@@ -413,8 +460,9 @@ Please create the optimal image generation prompt for this tattoo design.`;
       }
 
       return {
-        imageUrl,
-        printImageUrl,
+        imageUrl: results[0].imageUrl,
+        printImageUrl: results[0].printImageUrl,
+        variations: results.map((r) => r.imageUrl),
         refinedPrompt,
         printSpec,
         printWidthPx,
@@ -436,6 +484,59 @@ Please create the optimal image generation prompt for this tattoo design.`;
   gallery: publicProcedure
     .input(z.object({ limit: z.number().min(1).max(100).default(50) }))
     .query(async ({ input }) => getAllPublicGenerations(input.limit)),
+
+  // ── Animated Reveal Video ──────────────────────────────────────────────
+
+  generateVideo: protectedProcedure
+    .input(
+      z.object({
+        generationId: z.number().int().positive(),
+        prompt: z.string().max(512).optional(),
+        duration: z.union([z.literal(5), z.literal(10)]).default(5),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      // Verify ownership
+      const rows = await db
+        .select()
+        .from(tattooGenerations)
+        .where(and(eq(tattooGenerations.id, input.generationId), eq(tattooGenerations.userId, ctx.user.id)))
+        .limit(1);
+
+      if (!rows[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Design not found." });
+
+      const generation = rows[0];
+      if (!generation.imageUrl) throw new TRPCError({ code: "BAD_REQUEST", message: "No image to animate." });
+
+      // Deduct credits (video costs 5 credits — call 5 times)
+      let deducted = 0;
+      for (let i = 0; i < 5; i++) {
+        const ok = await deductCredit(ctx.user.id);
+        if (ok) deducted++;
+        else break;
+      }
+      if (deducted < 5) {
+        throw new TRPCError({ code: "PAYMENT_REQUIRED", message: "Insufficient credits. Video generation costs 5 credits." });
+      }
+
+      const { generateTattooVideo } = await import("./runway");
+      const result = await generateTattooVideo({
+        imageUrl: generation.imageUrl,
+        prompt: input.prompt ?? `Cinematic tattoo reveal animation, ${generation.userPrompt?.slice(0, 100) ?? "tattoo"}, subtle ink flow, dramatic lighting`,
+        duration: input.duration,
+      });
+
+      // Store video URL back on the generation record
+      await db
+        .update(tattooGenerations)
+        .set({ videoUrl: result.videoUrl } as Record<string, unknown>)
+        .where(eq(tattooGenerations.id, input.generationId));
+
+      return { videoUrl: result.videoUrl, taskId: result.taskId };
+    }),
 });
 
 // ─── My Tatts Router ─────────────────────────────────────────────────────────
@@ -479,16 +580,22 @@ const artistsRouter = router({
         .where(eq(artists.verified, true))
         .limit(input.limit);
 
-      // Filter by specialty/location in JS (simple contains check)
       return rows.filter((a) => {
-        if (input.specialty && !a.specialties?.toLowerCase().includes(input.specialty.toLowerCase())) {
-          return false;
-        }
-        if (input.location && !a.location?.toLowerCase().includes(input.location.toLowerCase())) {
-          return false;
-        }
+        if (input.specialty && !a.specialties?.toLowerCase().includes(input.specialty.toLowerCase())) return false;
+        if (input.location && !a.location?.toLowerCase().includes(input.location.toLowerCase())) return false;
         return true;
       });
+    }),
+
+  get: publicProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      const rows = await db.select().from(artists).where(eq(artists.id, input.id)).limit(1);
+      if (!rows[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Artist not found." });
+      return rows[0];
     }),
 
   contact: publicProcedure
@@ -505,20 +612,11 @@ const artistsRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-      const artistRows = await db
-        .select()
-        .from(artists)
-        .where(eq(artists.id, input.artistId))
-        .limit(1);
-
-      if (!artistRows[0]) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Artist not found." });
-      }
+      const artistRows = await db.select().from(artists).where(eq(artists.id, input.artistId)).limit(1);
+      if (!artistRows[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Artist not found." });
 
       const artist = artistRows[0];
-      if (!artist.contactEmail) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "This artist has no contact email." });
-      }
+      if (!artist.contactEmail) throw new TRPCError({ code: "BAD_REQUEST", message: "This artist has no contact email." });
 
       await sendArtistContactEmail({
         artistEmail: artist.contactEmail,
@@ -531,30 +629,143 @@ const artistsRouter = router({
 
       return { success: true };
     }),
+
+  // ── Bookings ────────────────────────────────────────────────────────────────
+
+  requestBooking: protectedProcedure
+    .input(
+      z.object({
+        artistId: z.number().int().positive(),
+        tattooGenerationId: z.number().int().positive().optional(),
+        message: z.string().min(10).max(1000),
+        origin: z.string().url(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      const artistRows = await db.select().from(artists).where(eq(artists.id, input.artistId)).limit(1);
+      if (!artistRows[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Artist not found." });
+
+      const artist = artistRows[0];
+      const depositCents = (artist.depositAmount ?? 50) * 100;
+
+      // Create booking record
+      const [result] = await db.insert(bookings).values({
+        customerId: ctx.user.id,
+        artistId: input.artistId,
+        tattooGenerationId: input.tattooGenerationId ?? null,
+        message: input.message,
+        depositAmountCents: depositCents,
+        status: "pending",
+      });
+
+      const bookingId = (result as { insertId: number }).insertId;
+
+      // Create Stripe checkout for deposit
+      const { createBookingDepositSession } = await import("./stripe");
+      const checkoutUrl = await createBookingDepositSession(
+        ctx.user.id,
+        bookingId,
+        depositCents,
+        artist.name,
+        `${input.origin}/bookings/${bookingId}/success`,
+        `${input.origin}/artists/${input.artistId}`,
+        ctx.user.email ?? undefined
+      );
+
+      return { bookingId, checkoutUrl };
+    }),
+
+  myBookings: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) return [];
+
+    return db
+      .select()
+      .from(bookings)
+      .where(eq(bookings.customerId, ctx.user.id))
+      .orderBy(desc(bookings.createdAt));
+  }),
+
+  // ── Artist Registration with Annual Fee ──────────────────────────────────────
+
+  applyWithPayment: publicProcedure
+    .input(
+      z.object({
+        name: z.string().min(2).max(128),
+        bio: z.string().max(1000).optional(),
+        location: z.string().max(128).optional(),
+        specialties: z.string().max(256).optional(),
+        instagram: z.string().max(64).optional(),
+        website: z.string().url().optional().or(z.literal("")),
+        contactEmail: z.string().email(),
+        portfolioUrl: z.string().url().optional().or(z.literal("")),
+        origin: z.string().url(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      // Insert artist as unverified (pending payment + admin review)
+      const [result] = await db.insert(artists).values({
+        name: input.name,
+        bio: input.bio ?? null,
+        location: input.location ?? null,
+        specialties: input.specialties ?? null,
+        instagram: input.instagram ?? null,
+        website: input.website || null,
+        contactEmail: input.contactEmail,
+        avatarUrl: input.portfolioUrl || null,
+        verified: false,
+        depositAmount: 50,
+      });
+
+      const pendingArtistId = (result as { insertId: number }).insertId;
+
+      const { createArtistRegistrationSession } = await import("./stripe");
+      const checkoutUrl = await createArtistRegistrationSession(
+        pendingArtistId,
+        `${input.origin}/artist-signup/success`,
+        `${input.origin}/artist-signup`,
+        input.contactEmail
+      );
+
+      return { pendingArtistId, checkoutUrl };
+    }),
+
+  // Confirm registration after Stripe payment (called from success page)
+  confirmRegistration: publicProcedure
+    .input(z.object({ pendingArtistId: z.number().int().positive() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      const rows = await db.select().from(artists).where(eq(artists.id, input.pendingArtistId)).limit(1);
+      if (!rows[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Application not found." });
+
+      return { artist: rows[0], status: rows[0].verified ? "approved" : "pending_review" };
+    }),
 });
 
 // ─── Sharing Router ───────────────────────────────────────────────────────────
 
 const sharingRouter = router({
-  /**
-   * Create a public share link for a tattoo design.
-   */
   create: publicProcedure
     .input(z.object({ tattooGenerationId: z.number().int().positive() }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-      // Check if share already exists
       const existing = await db
         .select()
         .from(designShares)
         .where(eq(designShares.tattooGenerationId, input.tattooGenerationId))
         .limit(1);
 
-      if (existing[0]) {
-        return { shareId: existing[0].shareId };
-      }
+      if (existing[0]) return { shareId: existing[0].shareId };
 
       const shareId = nanoid(12);
       await db.insert(designShares).values({
@@ -566,9 +777,6 @@ const sharingRouter = router({
       return { shareId };
     }),
 
-  /**
-   * Get a shared design by shareId (public).
-   */
   get: publicProcedure
     .input(z.object({ shareId: z.string() }))
     .query(async ({ input }) => {
@@ -581,33 +789,430 @@ const sharingRouter = router({
         .where(eq(designShares.shareId, input.shareId))
         .limit(1);
 
-      if (!shareRows[0]) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Share not found." });
-      }
+      if (!shareRows[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Share not found." });
 
       const share = shareRows[0];
-
-      // Increment view count
       await db
         .update(designShares)
         .set({ viewCount: share.viewCount + 1 })
         .where(eq(designShares.id, share.id));
 
-      // Get the tattoo generation
       const genRows = await db
         .select()
         .from(tattooGenerations)
         .where(eq(tattooGenerations.id, share.tattooGenerationId))
         .limit(1);
 
-      if (!genRows[0]) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Design not found." });
+      if (!genRows[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Design not found." });
+
+      return { share, design: genRows[0] };
+    }),
+});
+
+// ─── Referral Router ─────────────────────────────────────────────────────────
+
+const referralRouter = router({
+  getMyCode: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+    // Check if user already has a referral code
+    const existing = await db
+      .select()
+      .from(referrals)
+      .where(eq(referrals.referrerId, ctx.user.id))
+      .limit(1);
+
+    if (existing[0]) {
+      return { refCode: existing[0].refCode };
+    }
+
+    // Create new referral code
+    const refCode = nanoid(10).toUpperCase();
+    await db.insert(referrals).values({
+      referrerId: ctx.user.id,
+      refCode,
+    });
+
+    return { refCode };
+  }),
+
+  getStats: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+    const allReferrals = await db
+      .select()
+      .from(referrals)
+      .where(eq(referrals.referrerId, ctx.user.id));
+
+    const totalReferrals = allReferrals.length;
+    const completedReferrals = allReferrals.filter((r) => r.creditAwarded).length;
+    const pendingReferrals = allReferrals.filter((r) => !r.referredUserId).length;
+
+    return {
+      totalReferrals,
+      completedReferrals,
+      pendingReferrals,
+      creditsEarned: completedReferrals * 5,
+    };
+  }),
+});
+
+// ─── Admin Router ─────────────────────────────────────────────────────────────
+
+const adminRouter = router({
+  stats: adminProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+    const [userCount] = await db.select({ count: count() }).from(users);
+    const [genCount] = await db.select({ count: count() }).from(tattooGenerations);
+    const [artistCount] = await db.select({ count: count() }).from(artists);
+
+    // Revenue from credit transactions
+    const revenueRows = await db
+      .select({ amount: creditTransactions.amount })
+      .from(creditTransactions)
+      .where(eq(creditTransactions.type, "purchase"));
+
+    // Approximate revenue: each credit is worth ~$0.20 (50 credits = $9.99)
+    const totalCreditsFromPurchases = revenueRows.reduce((sum, r) => sum + r.amount, 0);
+    const estimatedRevenue = (totalCreditsFromPurchases / 50) * 9.99;
+
+    // Top styles
+    const styleRows = await db
+      .select({
+        style: tattooGenerations.style,
+        count: count(),
+      })
+      .from(tattooGenerations)
+      .groupBy(tattooGenerations.style)
+      .orderBy(desc(count()))
+      .limit(10);
+
+    // Recent users
+    const recentUsers = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        role: users.role,
+        createdAt: users.createdAt,
+      })
+      .from(users)
+      .orderBy(desc(users.createdAt))
+      .limit(20);
+
+    // Credits distribution
+    const creditRows = await db
+      .select({
+        plan: credits.plan,
+        count: count(),
+        totalBalance: sql<number>`SUM(${credits.balance})`,
+      })
+      .from(credits)
+      .groupBy(credits.plan);
+
+    return {
+      userCount: userCount.count,
+      genCount: genCount.count,
+      artistCount: artistCount.count,
+      estimatedRevenue: Math.round(estimatedRevenue * 100) / 100,
+      topStyles: styleRows.filter((s) => s.style),
+      recentUsers,
+      creditDistribution: creditRows,
+    };
+  }),
+
+  listUsers: adminProcedure
+    .input(z.object({ limit: z.number().min(1).max(200).default(50), offset: z.number().default(0) }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      const userRows = await db
+        .select({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          role: users.role,
+          createdAt: users.createdAt,
+          lastSignedIn: users.lastSignedIn,
+        })
+        .from(users)
+        .orderBy(desc(users.createdAt))
+        .limit(input.limit)
+        .offset(input.offset);
+
+      return userRows;
+    }),
+
+  setUserRole: adminProcedure
+    .input(z.object({ userId: z.number().int().positive(), role: z.enum(["user", "admin"]) }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      await db.update(users).set({ role: input.role }).where(eq(users.id, input.userId));
+      return { success: true };
+    }),
+
+  adjustCredits: adminProcedure
+    .input(z.object({ userId: z.number().int().positive(), amount: z.number(), reason: z.string() }))
+    .mutation(async ({ input }) => {
+      if (input.amount > 0) {
+        await addCredits(input.userId, input.amount, "purchase", undefined, input.reason);
+      }
+      return { success: true };
+    }),
+
+  verifyArtist: adminProcedure
+    .input(z.object({ artistId: z.number().int().positive(), verified: z.boolean() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      await db.update(artists).set({ verified: input.verified }).where(eq(artists.id, input.artistId));
+      return { success: true };
+    }),
+
+  listArtists: adminProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+    return db.select().from(artists).orderBy(desc(artists.createdAt));
+  }),
+
+  // ── Outreach ────────────────────────────────────────────────────────────────
+
+  listCampaigns: adminProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+    return db.select().from(outreachCampaigns).orderBy(desc(outreachCampaigns.createdAt));
+  }),
+
+  createCampaign: adminProcedure
+    .input(
+      z.object({
+        name: z.string().min(1).max(256),
+        country: z.string().min(1).max(128),
+        region: z.string().optional(),
+        language: z.string().default("en"),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      // Generate email content using AI
+      const langNames: Record<string, string> = {
+        en: "English", fr: "French", es: "Spanish", de: "German",
+        it: "Italian", pt: "Portuguese", ja: "Japanese", ko: "Korean",
+        zh: "Mandarin Chinese", ar: "Arabic", ru: "Russian", nl: "Dutch",
+        pl: "Polish", sv: "Swedish", no: "Norwegian", da: "Danish",
+      };
+      const langName = langNames[input.language] || "English";
+
+      const aiResponse = await invokeLLM({
+        messages: [
+          {
+            role: "system",
+            content: `You are a marketing copywriter for tatt-ooo, an AI-powered tattoo design platform. 
+Write compelling outreach emails to tattoo artists in their native language.
+The email should be professional, enthusiastic, and explain the value proposition clearly.
+Always write in ${langName}.`,
+          },
+          {
+            role: "user",
+            content: `Write a short outreach email to tattoo artists in ${input.country}${input.region ? `, ${input.region}` : ""}.
+
+The email should:
+1. Introduce tatt-ooo as an AI tattoo design platform
+2. Explain how artists can join our marketplace to get more clients
+3. Mention that clients can generate AI designs and then book a real artist to execute them
+4. Include a clear call-to-action to sign up at [SIGNUP_URL]
+5. Be warm, professional, and culturally appropriate for ${input.country}
+
+Format your response as JSON with these fields:
+{
+  "subject": "email subject line",
+  "body": "full email body in HTML format with <p> tags"
+}`,
+          },
+        ],
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "email_content",
+            strict: true,
+            schema: {
+              type: "object",
+              properties: {
+                subject: { type: "string" },
+                body: { type: "string" },
+              },
+              required: ["subject", "body"],
+              additionalProperties: false,
+            },
+          },
+        },
+      });
+
+      let subject = `Join tatt-ooo — AI Tattoo Design Platform`;
+      let emailBodyHtml = `<p>We'd love to have you on our platform!</p>`;
+
+      try {
+        const content = JSON.parse(aiResponse.choices?.[0]?.message?.content as string);
+        subject = content.subject;
+        emailBodyHtml = content.body;
+      } catch (e) {
+        console.warn("[Outreach] Failed to parse AI email content:", e);
       }
 
-      return {
-        share,
-        design: genRows[0],
-      };
+      const [result] = await db.insert(outreachCampaigns).values({
+        name: input.name,
+        country: input.country,
+        region: input.region ?? null,
+        language: input.language,
+        subjectLine: subject,
+        emailBodyHtml,
+        status: "draft",
+      });
+
+      const campaignId = (result as { insertId: number }).insertId;
+      return { campaignId, subject, emailBodyHtml };
+    }),
+
+  addOutreachContacts: adminProcedure
+    .input(
+      z.object({
+        campaignId: z.number().int().positive(),
+        contacts: z.array(
+          z.object({
+            email: z.string().email(),
+            name: z.string().optional(),
+            studioName: z.string().optional(),
+            country: z.string().optional(),
+            language: z.string().default("en"),
+          })
+        ).max(500),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      const contactsToInsert = input.contacts.map((c) => ({
+        campaignId: input.campaignId,
+        email: c.email,
+        name: c.name ?? null,
+        studioName: c.studioName ?? null,
+        country: c.country ?? null,
+        language: c.language,
+        trackingPixelId: nanoid(16),
+      }));
+
+      await db.insert(outreachContacts).values(contactsToInsert);
+      return { added: contactsToInsert.length };
+    }),
+
+  sendCampaign: adminProcedure
+    .input(z.object({ campaignId: z.number().int().positive(), origin: z.string().url() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      const campaignRows = await db
+        .select()
+        .from(outreachCampaigns)
+        .where(eq(outreachCampaigns.id, input.campaignId))
+        .limit(1);
+
+      if (!campaignRows[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Campaign not found." });
+
+      const campaign = campaignRows[0];
+
+      const pendingContacts = await db
+        .select()
+        .from(outreachContacts)
+        .where(
+          and(
+            eq(outreachContacts.campaignId, input.campaignId),
+            eq(outreachContacts.status, "pending")
+          )
+        )
+        .limit(100); // Send in batches of 100
+
+      if (pendingContacts.length === 0) {
+        return { sent: 0, message: "No pending contacts." };
+      }
+
+      // Update campaign status
+      await db
+        .update(outreachCampaigns)
+        .set({ status: "sending" })
+        .where(eq(outreachCampaigns.id, input.campaignId));
+
+      const { sendOutreachEmail } = await import("./emailService");
+      let sentCount = 0;
+
+      for (const contact of pendingContacts) {
+        try {
+          const trackingPixelUrl = `${input.origin}/api/track/open/${contact.trackingPixelId}`;
+          const signupUrl = `${input.origin}/signup?ref=outreach&campaign=${input.campaignId}`;
+
+          const personalizedBody = (campaign.emailBodyHtml || "")
+            .replace(/\[SIGNUP_URL\]/g, signupUrl)
+            .replace(/\[NAME\]/g, contact.name || "there")
+            .replace(/\[STUDIO\]/g, contact.studioName || "your studio")
+            + `<img src="${trackingPixelUrl}" width="1" height="1" style="display:none" />`;
+
+          await sendOutreachEmail({
+            to: contact.email,
+            toName: contact.name ?? undefined,
+            subject: campaign.subjectLine || "Join tatt-ooo",
+            htmlBody: personalizedBody,
+          });
+
+          await db
+            .update(outreachContacts)
+            .set({ status: "sent", sentAt: new Date() })
+            .where(eq(outreachContacts.id, contact.id));
+
+          sentCount++;
+        } catch (err) {
+          console.warn(`[Outreach] Failed to send to ${contact.email}:`, err);
+          await db
+            .update(outreachContacts)
+            .set({ status: "bounced" })
+            .where(eq(outreachContacts.id, contact.id));
+        }
+      }
+
+      await db
+        .update(outreachCampaigns)
+        .set({
+          sentCount: campaign.sentCount + sentCount,
+          status: "completed",
+        })
+        .where(eq(outreachCampaigns.id, input.campaignId));
+
+      return { sent: sentCount };
+    }),
+
+  getCampaignContacts: adminProcedure
+    .input(z.object({ campaignId: z.number().int().positive() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      return db
+        .select()
+        .from(outreachContacts)
+        .where(eq(outreachContacts.campaignId, input.campaignId))
+        .orderBy(desc(outreachContacts.createdAt));
     }),
 });
 
@@ -621,6 +1226,8 @@ export const appRouter = router({
   myTatts: myTattsRouter,
   artists: artistsRouter,
   sharing: sharingRouter,
+  referral: referralRouter,
+  admin: adminRouter,
 });
 
 export type AppRouter = typeof appRouter;

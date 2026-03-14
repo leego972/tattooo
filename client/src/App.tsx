@@ -11,6 +11,9 @@ import History from "./pages/History";
 import MyTatts from "./pages/MyTatts";
 import DrawingBoard from "./pages/DrawingBoard";
 import Navbar from "./components/Navbar";
+import Login from "./pages/Login";
+import Pricing from "./pages/Pricing";
+import PaymentSuccess from "./pages/PaymentSuccess";
 
 function Router() {
   return (
@@ -26,6 +29,9 @@ function Router() {
           <Route path="/history" component={History} />
           <Route path="/my-tatts" component={MyTatts} />
           <Route path="/draw" component={DrawingBoard} />
+          <Route path="/login" component={Login} />
+          <Route path="/pricing" component={Pricing} />
+          <Route path="/payment-success" component={PaymentSuccess} />
           <Route path="/404" component={NotFound} />
           <Route component={NotFound} />
         </Switch>

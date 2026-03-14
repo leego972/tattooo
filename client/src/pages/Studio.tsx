@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -16,7 +16,7 @@ import {
 import { TATTOO_STYLES, TATTOO_CATEGORIES, type TattooStyle, type TattooCategory } from "../../../shared/tattooStyles";
 import { BODY_PLACEMENTS, SIZE_OPTIONS } from "../../../shared/tattoo";
 import { cn } from "@/lib/utils";
-import { getLoginUrl } from "@/const";
+import { useLocation } from "wouter";
 
 const LOGO_URL =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/tatt-ooo-logo_244a108c.png";
@@ -49,6 +49,11 @@ const SUGGESTED_PROMPTS = [
 
 export default function Studio() {
   const { user, isAuthenticated } = useAuth();
+  const [, navigate] = useLocation();
+  const { data: creditsData, refetch: refetchCredits } = trpc.credits.balance.useQuery(undefined, {
+    enabled: isAuthenticated,
+    staleTime: 10 * 1000,
+  });
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [uploadedImages, setUploadedImages] = useState<{ url: string; name: string }[]>([]);
@@ -84,6 +89,8 @@ export default function Studio() {
   const generateMutation = trpc.tattoo.generate.useMutation({
     onSuccess: (data) => {
       setIsGenerating(false);
+      // Refresh credit balance after generation
+      if (isAuthenticated) refetchCredits();
       if (data.imageUrl) {
         setLastGeneratedUrl(data.imageUrl);
         setMessages((prev) =>
@@ -110,7 +117,14 @@ export default function Studio() {
     onError: (err) => {
       setIsGenerating(false);
       setMessages((prev) => prev.filter((m) => !m.isGenerating));
-      toast.error(`Generation failed: ${err.message}`);
+      if (err.message === "INSUFFICIENT_CREDITS") {
+        toast.error("You've used all your credits! Top up to keep designing.", {
+          action: { label: "Buy Credits", onClick: () => navigate("/pricing") },
+          duration: 6000,
+        });
+      } else {
+        toast.error(`Generation failed: ${err.message}`);
+      }
     },
   });
 
@@ -509,7 +523,7 @@ export default function Studio() {
 
               {!isAuthenticated && (
                 <p className="text-xs text-muted-foreground text-center">
-                  <a href={getLoginUrl()} className="text-primary hover:underline">Sign in</a> to save your designs to history
+                   <button onClick={() => navigate("/login")} className="text-cyan-400 hover:underline">Sign in</button> to save your designs to history
                 </p>
               )}
             </div>

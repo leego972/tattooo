@@ -68,3 +68,19 @@
 - [x] Frontend: Mobile-friendly touch drawing support (iOS/Android)
 - [x] Navigation: "Edit in Board" button on each My Tatts card
 - [x] Navigation: Drawing Board link in sidebar nav with PenTool icon
+
+## Stripe Credits System
+- [x] DB: credits table (userId, balance, lifetimeTotal, updatedAt)
+- [x] DB: credit_transactions table (userId, amount, type, stripeSessionId, description, createdAt)
+- [x] Backend: Stripe checkout session procedure (buy credits packs)
+- [x] Backend: Stripe webhook handler (fulfill credits on payment success)
+- [x] Backend: Deduct 1 credit per generation, enforce gate (0 credits = blocked)
+- [x] Backend: tRPC credits.balance, credits.transactions procedures
+- [x] Backend: New users get 5 free credits on signup (freemium)
+- [x] Frontend: Credits badge in sidebar (shows live balance)
+- [x] Frontend: Pricing page with 3 tiers (Starter $9.99/50, Pro $24.99/150, Unlimited $49.99/mo)
+- [x] Frontend: Generation blocked UI when credits = 0 (upgrade prompt)
+- [x] Frontend: Stripe Checkout redirect flow (opens in new tab)
+- [x] Frontend: Payment success page
+- [x] Frontend: Login/Signup page (email + password, no Manus OAuth)
+- [x] Tests: 14 tests passing (auth, credits, tattoo procedures, API keys)

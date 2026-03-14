@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/_core/hooks/useAuth";
-import { getLoginUrl } from "@/const";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
@@ -133,7 +132,7 @@ export default function MyTatts() {
           </p>
         </div>
         <Button
-          onClick={() => (window.location.href = getLoginUrl())}
+          onClick={() => navigate("/login")}
           className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
         >
           <LogIn size={16} />

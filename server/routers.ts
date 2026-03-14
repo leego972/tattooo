@@ -15,6 +15,21 @@ import {
   softDeleteTattooGeneration,
   renameTattooGeneration,
 } from "./tattoo.db";
+import {
+  getOrCreateCredits,
+  deductCredit,
+  addCredits,
+  getCreditTransactions,
+  setStripeCustomerId,
+} from "./credits.db";
+import {
+  registerUser,
+  loginUser,
+  createSessionToken,
+  verifySessionToken,
+  getUserById,
+} from "./emailAuth";
+import { createCheckoutSession, CREDIT_PACKS, type PackId } from "./stripe";
 import { buildSizeAndPlacementContext } from "../shared/tattoo";
 import {
   parseSizeCm,
@@ -26,6 +41,166 @@ import {
   PRINT_DPI,
 } from "./printUtils";
 import { nanoid } from "nanoid";
+import { TRPCError } from "@trpc/server";
+
+// ─── Auth Router (email/password, self-contained) ─────────────────────────────
+
+const authRouter = router({
+  /**
+   * Register a new user with email + password.
+   * Grants 5 free credits on signup.
+   */
+  register: publicProcedure
+    .input(
+      z.object({
+        name: z.string().min(2).max(64),
+        email: z.string().email(),
+        password: z.string().min(8).max(128),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      let user;
+      try {
+        user = await registerUser(input.name, input.email, input.password);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "";
+        if (msg === "EMAIL_TAKEN") {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "An account with this email already exists.",
+          });
+        }
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Registration failed." });
+      }
+
+      // Grant 5 free credits
+      await getOrCreateCredits(user.id);
+
+      // Issue session cookie
+      const token = await createSessionToken(user.id);
+      const cookieOptions = getSessionCookieOptions(ctx.req);
+      ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: 30 * 24 * 60 * 60 * 1000 });
+
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      };
+    }),
+
+  /**
+   * Login with email + password.
+   */
+  login: publicProcedure
+    .input(
+      z.object({
+        email: z.string().email(),
+        password: z.string().min(1),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      let user;
+      try {
+        user = await loginUser(input.email, input.password);
+      } catch {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Invalid email or password.",
+        });
+      }
+
+      const token = await createSessionToken(user.id);
+      const cookieOptions = getSessionCookieOptions(ctx.req);
+      ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: 30 * 24 * 60 * 60 * 1000 });
+
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      };
+    }),
+
+  /**
+   * Get the current authenticated user.
+   */
+  me: publicProcedure.query(async ({ ctx }) => {
+    // First check if the framework already resolved a user via Manus OAuth
+    if (ctx.user) return ctx.user;
+
+    // Otherwise try our own JWT cookie
+    const token = ctx.req.cookies?.[COOKIE_NAME];
+    if (!token) return null;
+
+    const userId = await verifySessionToken(token);
+    if (!userId) return null;
+
+    return getUserById(userId);
+  }),
+
+  /**
+   * Logout — clear session cookie.
+   */
+  logout: publicProcedure.mutation(({ ctx }) => {
+    const cookieOptions = getSessionCookieOptions(ctx.req);
+    ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+    return { success: true } as const;
+  }),
+});
+
+// ─── Credits Router ───────────────────────────────────────────────────────────
+
+const creditsRouter = router({
+  /**
+   * Get the current user's credit balance and plan.
+   */
+  balance: protectedProcedure.query(async ({ ctx }) => {
+    const userCredits = await getOrCreateCredits(ctx.user.id);
+    return {
+      balance: userCredits.balance,
+      plan: userCredits.plan,
+      lifetimeTotal: userCredits.lifetimeTotal,
+    };
+  }),
+
+  /**
+   * Get the available credit packs.
+   */
+  packs: publicProcedure.query(() => CREDIT_PACKS),
+
+  /**
+   * Create a Stripe Checkout Session for purchasing credits.
+   */
+  checkout: protectedProcedure
+    .input(
+      z.object({
+        packId: z.enum(["starter", "pro", "unlimited"]),
+        origin: z.string().url(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const successUrl = `${input.origin}/payment-success`;
+      const cancelUrl = `${input.origin}/pricing`;
+
+      const url = await createCheckoutSession(
+        ctx.user.id,
+        input.packId as PackId,
+        successUrl,
+        cancelUrl,
+        ctx.user.email ?? undefined
+      );
+
+      return { url };
+    }),
+
+  /**
+   * Get credit transaction history.
+   */
+  transactions: protectedProcedure.query(async ({ ctx }) => {
+    return getCreditTransactions(ctx.user.id, 30);
+  }),
+});
 
 // ─── Tattoo Router ────────────────────────────────────────────────────────────
 
@@ -51,10 +226,11 @@ const tattooRouter = router({
 
   /**
    * Core generation procedure:
-   * 1. Uses OpenAI to refine the user's prompt with placement/size/avatar context
-   * 2. Generates the tattoo image via RunwayML at the correct pixel dimensions
-   * 3. Downloads the image, embeds 300 DPI metadata, re-uploads as print-ready PNG
-   * 4. Saves the result to the database
+   * 1. Checks user has credits (deducts 1 if authenticated, allows 1 free guest attempt)
+   * 2. Uses OpenAI to refine the user's prompt
+   * 3. Generates the tattoo image via RunwayML at the correct pixel dimensions
+   * 4. Embeds 300 DPI metadata and re-uploads as print-ready PNG
+   * 5. Saves the result to the database
    */
   generate: publicProcedure
     .input(
@@ -83,6 +259,18 @@ const tattooRouter = router({
         bodyShape,
       } = input;
 
+      // ── Step 0: Credit check ───────────────────────────────────────────────
+      if (ctx.user?.id) {
+        const hasCredits = await deductCredit(ctx.user.id);
+        if (!hasCredits) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "INSUFFICIENT_CREDITS",
+          });
+        }
+      }
+      // Guest users get 1 attempt per session (no credit check — limited by UX)
+
       // ── Step 1: Calculate print dimensions ────────────────────────────────
       let widthCm: number;
       let heightCm: number;
@@ -96,7 +284,6 @@ const tattooRouter = router({
         widthCm = cm;
         heightCm = cm;
       } else {
-        // Default to medium (12cm square)
         widthCm = 12;
         heightCm = 12;
       }
@@ -125,7 +312,7 @@ Rules:
 - Use tattoo-specific terminology: linework, shading, black and grey, traditional, neo-traditional, realism, watercolor, geometric, tribal, etc.
 - Specify artistic style, line weight, shading technique, and composition
 - Make the design appropriate for the specified body placement and size
-- Account for the curvature and unique skin texture of the specified body part (e.g. fingers, face, feet have special considerations)
+- Account for the curvature and unique skin texture of the specified body part
 - The output should be a single paragraph, maximum 300 words
 - Always end with: "tattoo design, professional tattoo art, high contrast, clean lines, suitable for tattooing, white background"`;
 
@@ -168,11 +355,10 @@ Please create the optimal image generation prompt for this tattoo design.`;
       const refinedPrompt =
         typeof rawContent === "string" ? rawContent : userPrompt;
 
-      // ── Step 3: Generate image at correct dimensions ───────────────────────
+      // ── Step 3: Generate image ─────────────────────────────────────────────
       let rawImageUrl: string;
 
       try {
-        // Try RunwayML first with correct print dimensions
         const runwayResult = await generateTattooWithRunway({
           prompt: refinedPrompt,
           referenceImageUrl,
@@ -181,28 +367,20 @@ Please create the optimal image generation prompt for this tattoo design.`;
         });
         rawImageUrl = runwayResult.imageUrl;
       } catch (runwayError) {
-        console.warn(
-          "[RunwayML] Failed, falling back to built-in generator:",
-          runwayError
-        );
-        // Fallback to built-in image generation
+        console.warn("[RunwayML] Failed, falling back to built-in generator:", runwayError);
         const fallbackResult = await generateImage({
           prompt: refinedPrompt,
           ...(referenceImageUrl
-            ? {
-                originalImages: [
-                  { url: referenceImageUrl, mimeType: "image/jpeg" },
-                ],
-              }
+            ? { originalImages: [{ url: referenceImageUrl, mimeType: "image/jpeg" }] }
             : {}),
         });
         rawImageUrl = fallbackResult.url || "";
       }
 
       if (!rawImageUrl)
-        throw new Error("Image generation failed — no image URL returned.");
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Image generation failed." });
 
-      // ── Step 4: Embed 300 DPI metadata and re-upload as print-ready PNG ────
+      // ── Step 4: Embed 300 DPI metadata ────────────────────────────────────
       let imageUrl = rawImageUrl;
       let printImageUrl = rawImageUrl;
 
@@ -212,10 +390,9 @@ Please create the optimal image generation prompt for this tattoo design.`;
         const printKey = `prints/${nanoid()}-${printWidthPx}x${printHeightPx}-300dpi.png`;
         const { url } = await storagePut(printKey, printBuffer, "image/png");
         printImageUrl = url;
-        imageUrl = url; // Use the DPI-embedded version as the primary URL
+        imageUrl = url;
       } catch (dpiErr) {
         console.warn("[printUtils] DPI embedding failed, using raw URL:", dpiErr);
-        // Fall back to raw image URL — still usable
       }
 
       // ── Step 5: Save to database ───────────────────────────────────────────
@@ -232,6 +409,13 @@ Please create the optimal image generation prompt for this tattoo design.`;
         sizeInCm: sizeInCm ?? `${widthCm}x${heightCm}`,
       });
 
+      // Return updated credit balance if authenticated
+      let creditBalance: number | null = null;
+      if (ctx.user?.id) {
+        const userCredits = await getOrCreateCredits(ctx.user.id);
+        creditBalance = userCredits.balance;
+      }
+
       return {
         imageUrl,
         printImageUrl,
@@ -242,6 +426,7 @@ Please create the optimal image generation prompt for this tattoo design.`;
         widthCm,
         heightCm,
         dpi: PRINT_DPI,
+        creditBalance,
       };
     }),
 
@@ -265,13 +450,6 @@ Please create the optimal image generation prompt for this tattoo design.`;
     .query(async ({ input }) => {
       return getAllPublicGenerations(input.limit);
     }),
-
-  /**
-   * Get user's personal saved designs (requires auth).
-   */
-  myDesigns: protectedProcedure.query(async ({ ctx }) => {
-    return getTattooGenerationsByUser(ctx.user.id);
-  }),
 });
 
 // ─── My Tatts Router ─────────────────────────────────────────────────────────
@@ -300,14 +478,8 @@ const myTattsRouter = router({
 
 export const appRouter = router({
   system: systemRouter,
-  auth: router({
-    me: publicProcedure.query((opts) => opts.ctx.user),
-    logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return { success: true } as const;
-    }),
-  }),
+  auth: authRouter,
+  credits: creditsRouter,
   tattoo: tattooRouter,
   myTatts: myTattsRouter,
 });

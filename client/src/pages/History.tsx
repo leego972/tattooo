@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -9,7 +9,6 @@ import { TATTOO_STYLES } from "../../../shared/tattooStyles";
 import { BODY_PLACEMENTS } from "../../../shared/tattoo";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
-import { getLoginUrl } from "@/const";
 
 export default function History() {
   const [, navigate] = useLocation();
@@ -132,7 +131,7 @@ export default function History() {
             <Button
               size="sm"
               className="gap-2 bg-primary hover:bg-primary/90"
-              onClick={() => window.location.href = getLoginUrl()}
+              onClick={() => navigate("/login")}
             >
               <LogIn size={14} /> Sign In
             </Button>

@@ -1,0 +1,9 @@
+{
+  "query": "\nCREATE TABLE IF NOT EXISTS tattoo_generations (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  userId INT NULL,\n  sessionId VARCHAR(128) NOT NULL,\n  userPrompt TEXT NOT NULL,\n  refinedPrompt TEXT,\n  imageUrl TEXT NOT NULL,\n  referenceImageUrl TEXT NULL,\n  style VARCHAR(64) NULL,\n  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,\n  INDEX idx_userId (userId),\n  INDEX idx_sessionId (sessionId),\n  INDEX idx_createdAt (createdAt)\n);\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 25vRfUBwvHKUCo5.root --database Pa7E4RBX4UbpFBvKpz2nxk --execute \nCREATE TABLE IF NOT EXISTS tattoo_generations (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  userId INT NULL,\n  sessionId VARCHAR(128) NOT NULL,\n  userPrompt TEXT NOT NULL,\n  refinedPrompt TEXT,\n  imageUrl TEXT NOT NULL,\n  referenceImageUrl TEXT NULL,\n  style VARCHAR(64) NULL,\n  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,\n  INDEX idx_userId (userId),\n  INDEX idx_sessionId (sessionId),\n  INDEX idx_createdAt (createdAt)\n);\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 3183
+}

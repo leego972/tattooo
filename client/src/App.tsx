@@ -5,33 +5,46 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
+import Studio from "./pages/Studio";
+import Gallery from "./pages/Gallery";
+import History from "./pages/History";
+import Navbar from "./components/Navbar";
 
 function Router() {
-  // make sure to consider if you need authentication for certain routes
   return (
-    <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
-      <Route component={NotFound} />
-    </Switch>
+    <div className="min-h-screen bg-background text-foreground flex flex-col md:flex-row">
+      {/* Navbar renders as sidebar on desktop, top bar on mobile */}
+      <Navbar />
+      {/* Main content area — takes remaining width beside sidebar */}
+      <main className="flex-1 min-w-0 flex flex-col">
+        <Switch>
+          <Route path="/" component={Home} />
+          <Route path="/studio" component={Studio} />
+          <Route path="/gallery" component={Gallery} />
+          <Route path="/history" component={History} />
+          <Route path="/404" component={NotFound} />
+          <Route component={NotFound} />
+        </Switch>
+      </main>
+    </div>
   );
 }
-
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
 
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
+      <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
-          <Toaster />
+          <Toaster
+            theme="dark"
+            toastOptions={{
+              style: {
+                background: "oklch(0.10 0.008 250)",
+                border: "1px solid oklch(0.20 0.01 250)",
+                color: "oklch(0.93 0.005 250)",
+              },
+            }}
+          />
           <Router />
         </TooltipProvider>
       </ThemeProvider>

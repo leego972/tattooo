@@ -1,0 +1,900 @@
+import { useState, useRef, useEffect, useCallback } from "react";
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { Streamdown } from "streamdown";
+import BodyAvatar, { type Gender, type BodyShape, type AvatarView } from "@/components/BodyAvatar";
+import {
+  Send, Paperclip, X, Sparkles, Download, Printer, RotateCcw,
+  ChevronDown, ChevronUp, User, Loader2, ImageIcon, Wand2,
+  Palette, MapPin, Ruler, RefreshCw, ZoomIn, Settings2,
+} from "lucide-react";
+import { TATTOO_STYLES, TATTOO_CATEGORIES, type TattooStyle, type TattooCategory } from "../../../shared/tattooStyles";
+import { BODY_PLACEMENTS, SIZE_OPTIONS } from "../../../shared/tattoo";
+import { cn } from "@/lib/utils";
+import { getLoginUrl } from "@/const";
+
+const LOGO_URL =
+  "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/tatt-ooo-logo_244a108c.png";
+
+interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  imageUrls?: string[];
+  generatedImageUrl?: string;
+  printImageUrl?: string;
+  printSpec?: string;
+  printWidthPx?: number;
+  printHeightPx?: number;
+  widthCm?: number;
+  heightCm?: number;
+  dpi?: number;
+  isGenerating?: boolean;
+  timestamp: Date;
+}
+
+const SUGGESTED_PROMPTS = [
+  "A wolf howling at the moon in Japanese style",
+  "Geometric rose with fine line detail",
+  "Minimalist compass for my wrist",
+  "Skull with roses, traditional American style",
+  "Koi fish with cherry blossoms, full sleeve",
+  "Cyber sigilism wolf head on my chest",
+];
+
+export default function Studio() {
+  const { user, isAuthenticated } = useAuth();
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [uploadedImages, setUploadedImages] = useState<{ url: string; name: string }[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  // Style & options
+  const [selectedStyle, setSelectedStyle] = useState<TattooStyle | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<TattooCategory | "All">("All");
+  const [selectedPlacement, setSelectedPlacement] = useState("");
+  const [selectedSize, setSelectedSize] = useState("");
+  const [selectedMood, setSelectedMood] = useState("");
+
+  // Avatar
+  const [gender, setGender] = useState<Gender>("male");
+  const [bodyShape, setBodyShape] = useState<BodyShape>("average");
+  const [avatarView, setAvatarView] = useState<AvatarView>("front");
+  const [lastGeneratedUrl, setLastGeneratedUrl] = useState<string | undefined>();
+
+  // Panel states (mobile collapsible)
+  const [stylesPanelOpen, setStylesPanelOpen] = useState(true);
+  const [optionsPanelOpen, setOptionsPanelOpen] = useState(true);
+  const [avatarPanelOpen, setAvatarPanelOpen] = useState(true);
+  const [rightPanelOpen, setRightPanelOpen] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  const [sessionId] = useState(() => crypto.randomUUID());
+
+  const generateMutation = trpc.tattoo.generate.useMutation({
+    onSuccess: (data) => {
+      setIsGenerating(false);
+      if (data.imageUrl) {
+        setLastGeneratedUrl(data.imageUrl);
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.isGenerating
+              ? {
+                  ...m,
+                  isGenerating: false,
+                  generatedImageUrl: data.imageUrl,
+                  printImageUrl: data.printImageUrl,
+                  printSpec: data.printSpec,
+                  printWidthPx: data.printWidthPx,
+                  printHeightPx: data.printHeightPx,
+                  widthCm: data.widthCm,
+                  heightCm: data.heightCm,
+                  dpi: data.dpi,
+                  content: data.refinedPrompt || m.content,
+                }
+              : m
+          )
+        );
+      }
+    },
+    onError: (err) => {
+      setIsGenerating(false);
+      setMessages((prev) => prev.filter((m) => !m.isGenerating));
+      toast.error(`Generation failed: ${err.message}`);
+    },
+  });
+
+  const uploadMutation = trpc.tattoo.uploadReference.useMutation({
+    onError: (err: { message: string }) => toast.error(`Upload failed: ${err.message}`),
+  });
+
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, scrollToBottom]);
+
+  // Auto-resize textarea
+  const handleTextareaInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    const ta = e.target;
+    ta.style.height = "auto";
+    ta.style.height = Math.min(ta.scrollHeight, 160) + "px";
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    setIsUploading(true);
+    for (const file of files) {
+      if (!file.type.startsWith("image/")) {
+        toast.error(`${file.name} is not an image`);
+        continue;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`${file.name} exceeds 10MB limit`);
+        continue;
+      }
+
+      try {
+        const reader = new FileReader();
+        const base64 = await new Promise<string>((resolve, reject) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        const result = await uploadMutation.mutateAsync({
+          base64,
+          filename: file.name,
+          mimeType: file.type,
+        });
+
+        setUploadedImages((prev) => [
+          ...prev,
+          { url: result.url, name: file.name },
+        ]);
+        toast.success(`${file.name} uploaded`);
+    } catch (_e) {
+      toast.error(`Failed to upload ${file.name}`);
+    }
+    }
+    setIsUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleSend = async (messageText?: string) => {
+    const text = (messageText || input).trim();
+    if (!text && uploadedImages.length === 0) return;
+    if (isGenerating) return;
+
+    const userMsg: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: text,
+      imageUrls: uploadedImages.map((i) => i.url),
+      timestamp: new Date(),
+    };
+
+    const generatingMsg: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "assistant",
+      content: "",
+      isGenerating: true,
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, userMsg, generatingMsg]);
+    setInput("");
+    setUploadedImages([]);
+    setIsGenerating(true);
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
+
+    generateMutation.mutate({
+      userPrompt: [text, selectedMood ? `Mood: ${selectedMood}` : ""].filter(Boolean).join(". "),
+      referenceImageUrl: (userMsg.imageUrls || [])[0],
+      style: selectedStyle?.id,
+      bodyPlacement: selectedPlacement || undefined,
+      sizeLabel: selectedSize || undefined,
+      sessionId,
+      gender: gender || undefined,
+      bodyShape: bodyShape || undefined,
+    });
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      void handleSend();
+    }
+  };
+
+  const handleDownload = async (url: string, printSpec?: string) => {
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `tatt-ooo-design-${Date.now()}.png`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast.success(printSpec ? `Downloaded — ${printSpec}` : "Design downloaded!");
+    } catch (_e) {
+      window.open(url, "_blank");
+    }
+  };
+
+  const handlePrint = (url: string, printSpec?: string) => {
+    const win = window.open("", "_blank");
+    if (!win) return;
+    const specNote = printSpec ? `<p style="font-family:monospace;font-size:11px;color:#666;margin-top:8px;text-align:center">${printSpec} · Print-ready 300 DPI</p>` : "";
+    win.document.write(`
+      <html><head><title>tatt-ooo — Print Tattoo Design</title>
+      <style>
+        body { margin: 0; display: flex; flex-direction:column; justify-content: center; align-items: center; min-height: 100vh; background: #fff; padding: 20px; box-sizing:border-box; }
+        img { max-width: 100%; max-height: 90vh; object-fit: contain; }
+        @media print { body { margin: 0; padding:0; } p { display:none; } }
+      </style></head>
+      <body><img src="${url}" onload="window.print()"/>${specNote}</body></html>
+    `);
+    win.document.close();
+  };
+
+  const filteredStyles =
+    selectedCategory === "All"
+      ? TATTOO_STYLES
+      : TATTOO_STYLES.filter((s) => s.category === selectedCategory);
+
+  const placement = BODY_PLACEMENTS.find((p) => p.value === selectedPlacement);
+  const size = SIZE_OPTIONS.find((s) => s.label === selectedSize);
+
+  return (
+    <div className="flex h-screen md:h-screen overflow-hidden bg-background">
+      {/* ── LEFT PANEL: Style & Options ─────────────────────────────────── */}
+      <aside
+        className={cn(
+          "hidden lg:flex flex-col w-72 xl:w-80 border-r border-border/40 bg-card/30 overflow-hidden shrink-0",
+        )}
+      >
+        <div className="flex-1 overflow-y-auto">
+          {/* Style Selector */}
+          <div className="p-4 border-b border-border/30">
+            <div className="flex items-center gap-2 mb-3">
+              <Palette size={14} className="text-primary" />
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Tattoo Style
+              </span>
+            </div>
+
+            {/* Category tabs */}
+            <div className="flex flex-wrap gap-1 mb-3">
+              <button
+                onClick={() => setSelectedCategory("All")}
+                className={cn(
+                  "px-2 py-0.5 text-xs rounded-full border transition-all",
+                  selectedCategory === "All"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border/50 text-muted-foreground hover:border-primary/40"
+                )}
+              >
+                All
+              </button>
+              {TATTOO_CATEGORIES.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={cn(
+                    "px-2 py-0.5 text-xs rounded-full border transition-all",
+                    selectedCategory === cat
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border/50 text-muted-foreground hover:border-primary/40"
+                  )}
+                >
+                  {cat.split(" ")[0]}
+                </button>
+              ))}
+            </div>
+
+            {/* Style grid */}
+            <div className="grid grid-cols-2 gap-1.5 max-h-64 overflow-y-auto pr-1">
+              {filteredStyles.map((style) => (
+                <button
+                  key={style.id}
+                  onClick={() => setSelectedStyle(selectedStyle?.id === style.id ? null : style)}
+                  className={cn(
+                    "text-left p-2 rounded-lg border transition-all text-xs",
+                    selectedStyle?.id === style.id
+                      ? "border-primary bg-primary/10 text-primary glow-ink"
+                      : "border-border/30 bg-card/50 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                  )}
+                >
+                  <div className="flex items-center gap-1 mb-0.5">
+                    <span>{style.toolEmoji}</span>
+                    <span className="font-medium truncate">{style.name}</span>
+                  </div>
+                  <div className="text-[10px] opacity-60 truncate">{style.origin}</div>
+                </button>
+              ))}
+            </div>
+
+            {/* Selected style details */}
+            {selectedStyle && (
+              <div className="mt-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-semibold text-primary">{selectedStyle.name}</span>
+                  {selectedStyle.culturalSensitive && (
+                    <Badge variant="outline" className="text-[9px] border-amber-500/50 text-amber-400">
+                      Cultural
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  {selectedStyle.description}
+                </p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-[10px] text-muted-foreground">{selectedStyle.tool}</span>
+                  <span className="text-[10px] text-primary/60">·</span>
+                  <span className="text-[10px] text-muted-foreground capitalize">{selectedStyle.difficulty}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Placement */}
+          <div className="p-4 border-b border-border/30">
+            <div className="flex items-center gap-2 mb-3">
+              <MapPin size={14} className="text-primary" />
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Body Placement
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-1">
+              {BODY_PLACEMENTS.map((p) => (
+                <button
+                  key={p.value}
+                  onClick={() => setSelectedPlacement(selectedPlacement === p.value ? "" : p.value)}
+                  className={cn(
+                    "text-left px-2 py-1.5 rounded-lg border transition-all text-xs",
+                    selectedPlacement === p.value
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border/30 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                  )}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Size */}
+          <div className="p-4 border-b border-border/30">
+            <div className="flex items-center gap-2 mb-3">
+              <Ruler size={14} className="text-primary" />
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Size
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {SIZE_OPTIONS.map((s) => (
+                <button
+                  key={s.label}
+                  onClick={() => setSelectedSize(selectedSize === s.label ? "" : s.label)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg border transition-all text-xs",
+                    selectedSize === s.label
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border/30 text-muted-foreground hover:border-primary/30"
+                  )}
+                >
+                  <span className="font-bold">{s.label}</span>
+                  <span className="ml-1 opacity-60">{s.cmRange}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Mood */}
+          <div className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Wand2 size={14} className="text-primary" />
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Mood
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {["Bold", "Dark", "Elegant", "Spiritual", "Futuristic", "Minimal", "Feminine", "Masculine", "Mystical", "Luxury", "Playful", "Sacred", "Raw", "Aggressive", "Soft"].map((mood) => (
+                <button
+                  key={mood}
+                  onClick={() => setSelectedMood(selectedMood === mood ? "" : mood)}
+                  className={cn(
+                    "px-2.5 py-1 rounded-full border transition-all text-xs",
+                    selectedMood === mood
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border/30 text-muted-foreground hover:border-primary/30"
+                  )}
+                >
+                  {mood}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* ── CENTRE: Chat ─────────────────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Chat header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border/30 bg-card/20 shrink-0">
+          <div className="flex items-center gap-3">
+            <img src={LOGO_URL} alt="tatt-ooo" className="w-7 h-7 rounded-full ring-1 ring-primary/30" />
+            <div>
+              <h1 className="text-sm font-semibold text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>
+                tatt-ooo Studio
+              </h1>
+              <p className="text-xs text-muted-foreground">
+                {selectedStyle ? `${selectedStyle.toolEmoji} ${selectedStyle.name}` : "Describe your tattoo idea"}
+              {selectedPlacement && ` · ${placement?.label}`}
+              {selectedSize && ` · ${size?.label} (${size?.cmRange})`}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {/* Mobile: toggle right panel */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="lg:hidden gap-1 text-xs text-muted-foreground"
+              onClick={() => setRightPanelOpen(!rightPanelOpen)}
+            >
+              <Settings2 size={14} />
+            </Button>
+            {messages.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1 text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => setMessages([])}
+              >
+                <RotateCcw size={13} />
+                <span className="hidden sm:inline">New</span>
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto" ref={scrollAreaRef}>
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full gap-8 px-4 py-12">
+              <div className="text-center">
+                <div className="relative mx-auto w-20 h-20 mb-4">
+                  <div className="absolute inset-0 rounded-full blur-xl opacity-30" style={{ background: "oklch(0.62 0.19 220)" }} />
+                  <img src={LOGO_URL} alt="" className="relative w-20 h-20 rounded-full object-cover ring-2 ring-primary/30" />
+                </div>
+                <h2 className="text-xl font-bold gradient-text mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>
+                  Describe Your Tattoo
+                </h2>
+                <p className="text-sm text-muted-foreground max-w-sm">
+                  Tell me your idea, upload reference images, choose a style and placement — and I'll generate your perfect tattoo design.
+                </p>
+              </div>
+
+              {/* Suggested prompts */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-2xl">
+                {SUGGESTED_PROMPTS.map((prompt) => (
+                  <button
+                    key={prompt}
+                    onClick={() => void handleSend(prompt)}
+                    disabled={isGenerating}
+                    className="text-left px-4 py-3 rounded-xl border border-border/40 bg-card/40 text-sm text-muted-foreground hover:text-foreground hover:border-primary/30 hover:bg-primary/5 transition-all disabled:opacity-50"
+                  >
+                    <Sparkles size={12} className="inline mr-2 text-primary opacity-60" />
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+
+              {!isAuthenticated && (
+                <p className="text-xs text-muted-foreground text-center">
+                  <a href={getLoginUrl()} className="text-primary hover:underline">Sign in</a> to save your designs to history
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-6 p-4 pb-4 max-w-4xl mx-auto w-full">
+              {messages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={cn(
+                    "flex gap-3",
+                    msg.role === "user" ? "justify-end" : "justify-start"
+                  )}
+                >
+                  {msg.role === "assistant" && (
+                    <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mt-1">
+                      <img src={LOGO_URL} alt="" className="w-6 h-6 rounded-full" />
+                    </div>
+                  )}
+
+                  <div className={cn("max-w-[80%] flex flex-col gap-2", msg.role === "user" ? "items-end" : "items-start")}>
+                    {/* User images */}
+                    {msg.imageUrls && msg.imageUrls.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {msg.imageUrls.map((url, i) => (
+                          <img
+                            key={i}
+                            src={url}
+                            alt="Reference"
+                            className="w-20 h-20 rounded-lg object-cover border border-border/40"
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Message bubble */}
+                    {(msg.content || msg.isGenerating) && (
+                      <div
+                        className={cn(
+                          "rounded-2xl px-4 py-3 text-sm",
+                          msg.role === "user"
+                            ? "bg-primary text-primary-foreground rounded-tr-sm"
+                            : "bg-card border border-border/40 text-foreground rounded-tl-sm"
+                        )}
+                      >
+                        {msg.isGenerating ? (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Loader2 size={14} className="animate-spin" />
+                            <span className="text-xs">Generating your tattoo design...</span>
+                          </div>
+                        ) : msg.role === "assistant" ? (
+                          <div className="prose prose-sm dark:prose-invert max-w-none">
+                            <Streamdown>{msg.content}</Streamdown>
+                          </div>
+                        ) : (
+                          <p className="whitespace-pre-wrap">{msg.content}</p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Generated tattoo image */}
+                    {msg.generatedImageUrl && (
+                      <div className="rounded-2xl overflow-hidden border border-primary/20 glow-ink-lg bg-card">
+                        <div className="relative group">
+                          <img
+                            src={msg.generatedImageUrl}
+                            alt="Generated tattoo design"
+                            className="w-full max-w-sm object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                            <Button
+                              size="sm"
+                              onClick={() => handleDownload(msg.printImageUrl || msg.generatedImageUrl!, msg.printSpec)}
+                              className="gap-1.5 bg-white/10 hover:bg-white/20 text-white border border-white/20"
+                            >
+                              <Download size={14} />
+                              Download
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handlePrint(msg.printImageUrl || msg.generatedImageUrl!, msg.printSpec)}
+                              className="gap-1.5 bg-white/10 hover:bg-white/20 text-white border border-white/20"
+                            >
+                              <Printer size={14} />
+                              Print
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="px-3 py-2.5 flex flex-col gap-1.5">
+                          {/* Print spec badge */}
+                          {msg.printSpec && (
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-[10px] text-primary font-mono">
+                                <Printer size={9} /> {msg.printSpec}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground/60">Print-ready · 300 DPI</span>
+                            </div>
+                          )}
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">Generated Design</span>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleDownload(msg.printImageUrl || msg.generatedImageUrl!, msg.printSpec)}
+                                className="text-xs text-primary hover:text-primary/80 flex items-center gap-1"
+                              >
+                                <Download size={12} /> Save
+                              </button>
+                              <button
+                                onClick={() => handlePrint(msg.printImageUrl || msg.generatedImageUrl!, msg.printSpec)}
+                                className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                              >
+                                <Printer size={12} /> Print
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {msg.role === "user" && (
+                    <div className="w-8 h-8 rounded-full bg-secondary border border-border/30 flex items-center justify-center shrink-0 mt-1">
+                      <User size={14} className="text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+        </div>
+
+        {/* ── Input Area ───────────────────────────────────────────────── */}
+        <div className="shrink-0 border-t border-border/30 bg-card/20 p-3 sm:p-4">
+          {/* Uploaded images preview */}
+          {uploadedImages.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {uploadedImages.map((img, i) => (
+                <div key={i} className="relative group">
+                  <img
+                    src={img.url}
+                    alt={img.name}
+                    className="w-14 h-14 rounded-lg object-cover border border-border/40"
+                  />
+                  <button
+                    onClick={() => setUploadedImages((prev) => prev.filter((_, j) => j !== i))}
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X size={10} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Mobile quick options */}
+          <div className="flex gap-2 mb-2 lg:hidden overflow-x-auto pb-1">
+            <select
+              value={selectedStyle?.id || ""}
+              onChange={(e) => setSelectedStyle(TATTOO_STYLES.find((s) => s.id === e.target.value) || null)}
+              className="text-xs bg-card border border-border/40 rounded-lg px-2 py-1.5 text-muted-foreground shrink-0"
+            >
+              <option value="">Style</option>
+              {TATTOO_STYLES.map((s) => (
+                <option key={s.id} value={s.id}>{s.toolEmoji} {s.name}</option>
+              ))}
+            </select>
+            <select
+              value={selectedPlacement}
+              onChange={(e) => setSelectedPlacement(e.target.value)}
+              className="text-xs bg-card border border-border/40 rounded-lg px-2 py-1.5 text-muted-foreground shrink-0"
+            >
+              <option value="">Placement</option>
+              {BODY_PLACEMENTS.map((p) => (
+                <option key={p.value} value={p.value}>{p.label}</option>
+              ))}
+            </select>
+            <select
+              value={selectedSize}
+              onChange={(e) => setSelectedSize(e.target.value)}
+              className="text-xs bg-card border border-border/40 rounded-lg px-2 py-1.5 text-muted-foreground shrink-0"
+            >
+              <option value="">Size</option>
+              {SIZE_OPTIONS.map((s) => (
+                <option key={s.label} value={s.label}>{s.label} {s.cmRange}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Main input row */}
+          <div className="flex gap-2 items-end">
+            {/* Upload button */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={handleFileSelect}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className={cn(
+                "shrink-0 w-10 h-10 rounded-xl border border-border/40 flex items-center justify-center transition-all",
+                isUploading
+                  ? "opacity-50 cursor-not-allowed"
+                  : "hover:border-primary/40 hover:bg-primary/5 text-muted-foreground hover:text-primary"
+              )}
+              title="Upload reference image"
+            >
+              {isUploading ? <Loader2 size={16} className="animate-spin" /> : <Paperclip size={16} />}
+            </button>
+
+            {/* Textarea */}
+            <div className="flex-1 relative">
+              <Textarea
+                ref={textareaRef}
+                value={input}
+                onChange={handleTextareaInput}
+                onKeyDown={handleKeyDown}
+                placeholder={
+                  selectedStyle
+                    ? `Describe your ${selectedStyle.name} tattoo...`
+                    : "Describe your tattoo idea... (e.g. 'A wolf with geometric patterns on my forearm')"
+                }
+                className="resize-none min-h-[42px] max-h-40 rounded-xl border-border/40 bg-card/60 text-sm pr-4 py-2.5 leading-relaxed"
+                rows={1}
+                style={{ fontSize: "16px" }} // Prevent iOS zoom
+              />
+            </div>
+
+            {/* Send button */}
+            <Button
+              onClick={() => void handleSend()}
+              disabled={(!input.trim() && uploadedImages.length === 0) || isGenerating}
+              className={cn(
+                "shrink-0 w-10 h-10 rounded-xl p-0 transition-all",
+                isGenerating
+                  ? "bg-primary/50 cursor-not-allowed"
+                  : "bg-primary hover:bg-primary/90 glow-ink"
+              )}
+            >
+              {isGenerating ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Send size={16} />
+              )}
+            </Button>
+          </div>
+
+          <p className="text-[10px] text-muted-foreground/50 text-center mt-2">
+            Press Enter to send · Shift+Enter for new line · Upload images for reference
+          </p>
+        </div>
+      </div>
+
+      {/* ── RIGHT PANEL: Avatar Preview ──────────────────────────────────── */}
+      <aside
+        className={cn(
+          "border-l border-border/40 bg-card/30 flex flex-col shrink-0 overflow-hidden transition-all duration-300",
+          "hidden lg:flex w-64 xl:w-72",
+          rightPanelOpen && "flex w-full lg:w-64 xl:w-72 absolute lg:relative inset-0 z-10 lg:z-auto"
+        )}
+      >
+        <div className="p-4 border-b border-border/30 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <User size={14} className="text-primary" />
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Body Preview
+            </span>
+          </div>
+          <button
+            className="lg:hidden text-muted-foreground hover:text-foreground"
+            onClick={() => setRightPanelOpen(false)}
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+          {/* Gender */}
+          <div>
+            <p className="text-xs text-muted-foreground mb-2">Gender</p>
+            <div className="flex gap-2">
+              {(["male", "female"] as Gender[]).map((g) => (
+                <button
+                  key={g}
+                  onClick={() => setGender(g)}
+                  className={cn(
+                    "flex-1 py-1.5 rounded-lg border text-xs capitalize transition-all",
+                    gender === g
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border/40 text-muted-foreground hover:border-primary/30"
+                  )}
+                >
+                  {g === "male" ? "♂ Male" : "♀ Female"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Body Shape */}
+          <div>
+            <p className="text-xs text-muted-foreground mb-2">Body Shape</p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {(["slim", "athletic", "average", "plus-size"] as BodyShape[]).map((shape) => (
+                <button
+                  key={shape}
+                  onClick={() => setBodyShape(shape)}
+                  className={cn(
+                    "py-1.5 rounded-lg border text-xs capitalize transition-all",
+                    bodyShape === shape
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border/40 text-muted-foreground hover:border-primary/30"
+                  )}
+                >
+                  {shape}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Front / Back toggle */}
+          <div>
+            <p className="text-xs text-muted-foreground mb-2">View</p>
+            <div className="flex gap-2">
+              {(["front", "back"] as AvatarView[]).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setAvatarView(v)}
+                  className={cn(
+                    "flex-1 py-1.5 rounded-lg border text-xs capitalize transition-all",
+                    avatarView === v
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border/40 text-muted-foreground hover:border-primary/30"
+                  )}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Avatar SVG */}
+          <div className="flex-1 flex items-center justify-center bg-card/30 rounded-xl border border-border/20 p-2" style={{ minHeight: "280px" }}>
+            <BodyAvatar
+              gender={gender}
+              bodyShape={bodyShape}
+              view={avatarView}
+              selectedZone={selectedPlacement}
+              tattooImageUrl={lastGeneratedUrl}
+              onZoneClick={(zone) => setSelectedPlacement(zone)}
+            />
+          </div>
+
+          <p className="text-[10px] text-muted-foreground text-center">
+            Tap a body zone to select placement
+          </p>
+
+          {/* Last generated preview */}
+          {lastGeneratedUrl && (
+            <div className="rounded-xl overflow-hidden border border-primary/20">
+              <img src={lastGeneratedUrl} alt="Latest design" className="w-full object-cover" />
+              <div className="flex gap-2 p-2">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="flex-1 text-xs gap-1"
+                  onClick={() => handleDownload(lastGeneratedUrl)}
+                >
+                  <Download size={12} /> Download
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="flex-1 text-xs gap-1"
+                  onClick={() => handlePrint(lastGeneratedUrl)}
+                >
+                  <Printer size={12} /> Print
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </aside>
+    </div>
+  );
+}

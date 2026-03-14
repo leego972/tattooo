@@ -1,0 +1,8 @@
+{
+  "query": "\nALTER TABLE tattoo_generations\n  ADD COLUMN bodyPlacement VARCHAR(64) NULL AFTER style,\n  ADD COLUMN sizeLabel VARCHAR(16) NULL AFTER bodyPlacement,\n  ADD COLUMN sizeInCm VARCHAR(32) NULL AFTER sizeLabel;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 25vRfUBwvHKUCo5.root --database Pa7E4RBX4UbpFBvKpz2nxk --execute \nALTER TABLE tattoo_generations\n  ADD COLUMN bodyPlacement VARCHAR(64) NULL AFTER style,\n  ADD COLUMN sizeLabel VARCHAR(16) NULL AFTER bodyPlacement,\n  ADD COLUMN sizeInCm VARCHAR(32) NULL AFTER sizeLabel;\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 2: Unknown column 'bodyplacement' in 'tattoo_generations'"
+  ]
+}

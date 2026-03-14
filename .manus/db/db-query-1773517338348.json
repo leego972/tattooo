@@ -1,0 +1,9 @@
+{
+  "query": "\nALTER TABLE tattoo_generations\n  ADD COLUMN bodyPlacement VARCHAR(64) NULL,\n  ADD COLUMN sizeLabel VARCHAR(16) NULL,\n  ADD COLUMN sizeInCm VARCHAR(32) NULL;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 25vRfUBwvHKUCo5.root --database Pa7E4RBX4UbpFBvKpz2nxk --execute \nALTER TABLE tattoo_generations\n  ADD COLUMN bodyPlacement VARCHAR(64) NULL,\n  ADD COLUMN sizeLabel VARCHAR(16) NULL,\n  ADD COLUMN sizeInCm VARCHAR(32) NULL;\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 3722
+}

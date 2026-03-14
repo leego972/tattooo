@@ -18,6 +18,9 @@ import {
   UserPlus,
   Mail,
   ShieldCheck,
+  BarChart2,
+  Megaphone,
+  CreditCard,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -39,11 +42,14 @@ const navLinks = [
   { href: "/artists", label: "Find Artist", icon: Users },
   { href: "/referral", label: "Refer & Earn", icon: Gift },
   { href: "/artist-signup", label: "Join as Artist", icon: UserPlus },
+  { href: "/subscription", label: "Subscription", icon: CreditCard },
 ];
 
 const adminNavLinks = [
   { href: "/admin", label: "Admin Panel", icon: Users },
   { href: "/outreach", label: "Outreach", icon: Mail },
+  { href: "/advertising", label: "Advertising", icon: Megaphone },
+  { href: "/affiliates", label: "Affiliates", icon: BarChart2 },
 ];
 
 function CreditsBadge() {

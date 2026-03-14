@@ -23,6 +23,9 @@ import Referral from "./pages/Referral";
 import Bookings from "./pages/Bookings";
 import ArtistSignup from "./pages/ArtistSignup";
 import Outreach from "./pages/Outreach";
+import AdvertisingDashboard from "./pages/AdvertisingDashboard";
+import AffiliateDashboard from "./pages/AffiliateDashboard";
+import Subscription from "./pages/Subscription";
 
 function Router() {
   return (
@@ -51,6 +54,9 @@ function Router() {
           <Route path="/artist-signup/success" component={ArtistSignup} />
           <Route path="/artist-signup" component={ArtistSignup} />
           <Route path="/outreach" component={Outreach} />
+          <Route path="/advertising" component={AdvertisingDashboard} />
+          <Route path="/affiliates" component={AffiliateDashboard} />
+          <Route path="/subscription" component={Subscription} />
           <Route path="/404" component={NotFound} />
           <Route component={NotFound} />
         </Switch>

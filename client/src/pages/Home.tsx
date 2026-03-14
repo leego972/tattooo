@@ -6,7 +6,7 @@ const LOGO_URL =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/tatt-ooo-logo_244a108c.png";
 
 const WALLPAPER_URL =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/tatt-ooo-wallpaper_412a38be.png";
+  "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/hero-wallpaper_ca0e6f21.png";
 
 const features = [
   {
@@ -52,12 +52,20 @@ export default function Home() {
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: `url(${WALLPAPER_URL})` }}
         />
-        {/* Dark gradient overlay for text readability — left side darker, right side shows art */}
+        {/* Strong dark overlay — ensures all text is readable over the busy wallpaper */}
         <div
           className="absolute inset-0"
           style={{
             background:
-              "linear-gradient(105deg, oklch(0.05 0.006 250 / 0.97) 0%, oklch(0.05 0.006 250 / 0.88) 35%, oklch(0.05 0.006 250 / 0.55) 60%, oklch(0.05 0.006 250 / 0.25) 100%)",
+              "linear-gradient(to bottom, oklch(0.04 0.006 250 / 0.82) 0%, oklch(0.04 0.006 250 / 0.72) 50%, oklch(0.04 0.006 250 / 0.88) 100%)",
+          }}
+        />
+        {/* Extra left-side darkening for text column */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(90deg, oklch(0.03 0.004 250 / 0.65) 0%, oklch(0.03 0.004 250 / 0.35) 55%, transparent 100%)",
           }}
         />
         {/* Bottom fade to background */}
@@ -93,7 +101,7 @@ export default function Home() {
               <br />
               <em>Inked Perfectly.</em>
             </h1>
-            <p className="text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
+            <p className="text-lg max-w-xl mx-auto leading-relaxed" style={{ color: 'oklch(0.85 0.01 250)' }}>
               Describe your tattoo idea, upload references, choose your body placement — and watch
               our AI generate stunning, print-ready tattoo artwork in seconds.
             </p>
@@ -114,7 +122,7 @@ export default function Home() {
               <Button
                 variant="outline"
                 size="lg"
-                className="gap-2 border-border/60 text-muted-foreground hover:text-foreground hover:border-primary/40 text-base px-8 py-6"
+                className="gap-2 border-white/30 bg-black/30 text-white hover:text-white hover:border-primary/60 hover:bg-black/50 text-base px-8 py-6"
               >
                 View Gallery
               </Button>
@@ -125,7 +133,7 @@ export default function Home() {
             {styles.map((s) => (
               <span
                 key={s}
-                className="px-3 py-1 text-xs rounded-full border border-border/50 text-muted-foreground bg-card/50"
+                className="px-3 py-1 text-xs rounded-full border border-white/20 text-white/80 bg-black/40 backdrop-blur-sm"
               >
                 {s}
               </span>

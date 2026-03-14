@@ -156,3 +156,46 @@
 
 ## Domain
 - [ ] Connect tattooo.shop domain via GoDaddy DNS (instructions provided at delivery)
+
+## Advertising System (from Archibald Titan)
+- [x] Backend: advertising-orchestrator.ts — AI content generation, A/B testing, channel management
+- [x] Backend: advertising-router.ts — tRPC procedures for dashboard, content queue, TikTok, video generation
+- [x] Backend: marketing-channels.ts — Instagram, TikTok, Facebook, Google, Pinterest, Twitter channels
+- [x] Backend: tiktok-content-service.ts — TikTok-specific content generation
+- [x] Backend: blog-seed.ts — SEO blog content seeding
+- [x] Frontend: /advertising page — admin dashboard with overview, ad creatives library, content queue, channels
+- [x] Ad Creatives: 7 ad creatives uploaded to CDN (3 portrait + 4 landscape)
+- [x] Navigation: Advertising link in admin sidebar section
+
+## Affiliate System (from Archibald Titan)
+- [x] Backend: affiliate-engine.ts + affiliate-engine-v2.ts — partner discovery, outreach, conversion tracking
+- [x] Backend: affiliate-discovery-engine.ts — automated discovery of tattoo affiliate prospects
+- [x] Backend: affiliate-signup-engine.ts — automated signup flow for discovered affiliates
+- [x] Backend: affiliate-router.ts — tRPC procedures for stats, partners, discovery, payouts
+- [x] Frontend: /affiliates page — admin dashboard with overview, partners list, discovery, payouts
+- [x] Navigation: Affiliates link in admin sidebar section
+
+## SEO Engine (from Archibald Titan)
+- [x] Backend: seo-engine.ts — keyword tracking, meta generation, content optimization for tattoo keywords
+- [x] Backend: seo-router.ts — tRPC procedures for SEO analysis
+
+## Subscription / Membership System (from Archibald Titan)
+- [x] Backend: subscription-gate.ts — plan gating logic (Free/Pro/Studio)
+- [x] Backend: subscription-router.ts — Stripe subscription checkout, portal, status procedures
+- [x] Frontend: /subscription page — pricing tiers (Free/Pro/Studio) with Stripe checkout
+- [x] Navigation: Subscription link in main sidebar
+
+## Credit System (from Archibald Titan)
+- [x] Backend: credit-service.ts — credit balance, deduction, purchase, transaction history
+- [x] Backend: credit-router.ts — tRPC procedures for credits
+
+## Hero Wallpaper
+- [x] Uploaded tatooo.shop cinematic banner wallpaper as hero background
+- [x] Text contrast overlays ensure all hero text is visible against busy background
+
+## GitHub Push
+- [x] Repo created: https://github.com/leego972/tattooo
+- [x] Code pushed to GitHub
+
+## Tests
+- [x] 24 tests passing (auth, credits, tattoo, outreach, features)

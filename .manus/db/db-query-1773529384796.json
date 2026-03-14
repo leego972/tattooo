@@ -1,0 +1,17 @@
+{
+  "query": "UPDATE users SET role = 'admin' WHERE id = 1;\nSELECT id, name, email, role, loginMethod FROM users;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 25vRfUBwvHKUCo5.root --database Pa7E4RBX4UbpFBvKpz2nxk --execute UPDATE users SET role = 'admin' WHERE id = 1;\nSELECT id, name, email, role, loginMethod FROM users;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "vibamanager",
+      "email": "vibamanager@gmail.com",
+      "role": "admin",
+      "loginMethod": "email"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\temail\trole\tloginMethod\n1\tvibamanager\tvibamanager@gmail.com\tadmin\temail\n",
+  "stderr": "",
+  "execution_time_ms": 1967
+}

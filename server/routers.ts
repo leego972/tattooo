@@ -3,6 +3,12 @@ import { eq, and, isNull, gt, desc, sql, count } from "drizzle-orm";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
+import { advertisingRouter } from "./advertising-router";
+import { affiliateRouter } from "./affiliate-router";
+import { creditRouter } from "./credit-router";
+import { subscriptionRouter } from "./subscription-router";
+import { seoRouter } from "./seo-router";
+import { marketingRouter } from "./marketing-router";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { invokeLLM } from "./_core/llm";
 import { storagePut } from "./storage";
@@ -1228,6 +1234,12 @@ export const appRouter = router({
   sharing: sharingRouter,
   referral: referralRouter,
   admin: adminRouter,
+  advertising: advertisingRouter,
+  affiliate: affiliateRouter,
+  creditMgmt: creditRouter,
+  subscription: subscriptionRouter,
+  seo: seoRouter,
+  marketing: marketingRouter,
 });
 
 export type AppRouter = typeof appRouter;

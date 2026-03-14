@@ -12,6 +12,8 @@ import {
   getTattooGenerationsBySession,
   getTattooGenerationsByUser,
   getAllPublicGenerations,
+  softDeleteTattooGeneration,
+  renameTattooGeneration,
 } from "./tattoo.db";
 import { buildSizeAndPlacementContext } from "../shared/tattoo";
 import {
@@ -272,6 +274,28 @@ Please create the optimal image generation prompt for this tattoo design.`;
   }),
 });
 
+// ─── My Tatts Router ─────────────────────────────────────────────────────────
+
+const myTattsRouter = router({
+  list: protectedProcedure.query(async ({ ctx }) => {
+    return getTattooGenerationsByUser(ctx.user.id);
+  }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .mutation(async ({ input, ctx }) => {
+      await softDeleteTattooGeneration(input.id, ctx.user.id);
+      return { success: true };
+    }),
+
+  rename: protectedProcedure
+    .input(z.object({ id: z.number().int().positive(), nickname: z.string().min(1).max(128) }))
+    .mutation(async ({ input, ctx }) => {
+      await renameTattooGeneration(input.id, ctx.user.id, input.nickname);
+      return { success: true };
+    }),
+});
+
 // ─── App Router ───────────────────────────────────────────────────────────────
 
 export const appRouter = router({
@@ -285,6 +309,7 @@ export const appRouter = router({
     }),
   }),
   tattoo: tattooRouter,
+  myTatts: myTattsRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -8,6 +8,8 @@ import Home from "./pages/Home";
 import Studio from "./pages/Studio";
 import Gallery from "./pages/Gallery";
 import History from "./pages/History";
+import MyTatts from "./pages/MyTatts";
+import DrawingBoard from "./pages/DrawingBoard";
 import Navbar from "./components/Navbar";
 
 function Router() {
@@ -22,6 +24,8 @@ function Router() {
           <Route path="/studio" component={Studio} />
           <Route path="/gallery" component={Gallery} />
           <Route path="/history" component={History} />
+          <Route path="/my-tatts" component={MyTatts} />
+          <Route path="/draw" component={DrawingBoard} />
           <Route path="/404" component={NotFound} />
           <Route component={NotFound} />
         </Switch>

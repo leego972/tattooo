@@ -2,7 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
-import { Sparkles, Images, Clock, LogOut, LogIn, Menu, X } from "lucide-react";
+import { Sparkles, Images, Clock, LogOut, LogIn, Menu, X, BookMarked, PenTool } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -14,7 +14,9 @@ const LEEGO_URL =
 
 const navLinks = [
   { href: "/studio", label: "Studio", icon: Sparkles },
+  { href: "/my-tatts", label: "My Tatts", icon: BookMarked },
   { href: "/gallery", label: "Gallery", icon: Images },
+  { href: "/draw", label: "Drawing Board", icon: PenTool },
   { href: "/history", label: "History", icon: Clock },
 ];
 

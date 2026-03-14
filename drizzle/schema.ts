@@ -30,6 +30,10 @@ export const tattooGenerations = mysqlTable("tattoo_generations", {
   bodyPlacement: varchar("bodyPlacement", { length: 64 }),
   sizeLabel: varchar("sizeLabel", { length: 16 }),
   sizeInCm: varchar("sizeInCm", { length: 32 }),
+  nickname: varchar("nickname", { length: 128 }),
+  printImageUrl: text("printImageUrl"),
+  printSpec: varchar("printSpec", { length: 128 }),
+  deletedAt: timestamp("deletedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

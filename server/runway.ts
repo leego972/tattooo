@@ -1,9 +1,11 @@
 /**
- * RunwayML Gen-3 Alpha image generation service.
- * Uses the text-to-image endpoint to generate high-quality tattoo artwork.
+ * RunwayML Gen-4 image generation service.
+ * Uses the /v1/text_to_image endpoint (POST) to generate high-quality tattoo artwork.
+ * Docs: https://docs.dev.runwayml.com/api/
  */
 
 const RUNWAY_API_BASE = "https://api.dev.runwayml.com/v1";
+const RUNWAY_VERSION = "2024-11-06";
 
 export interface RunwayGenerationOptions {
   prompt: string;
@@ -17,6 +19,17 @@ export interface RunwayGenerationResult {
   taskId: string;
 }
 
+// ── Ratio helper ──────────────────────────────────────────────────────────────
+function pickRatio(width: number, height: number): string {
+  const aspect = width / height;
+  if (Math.abs(aspect - 1) < 0.05) return "1024:1024";
+  if (aspect > 1.7) return "1920:1080";
+  if (aspect < 0.6) return "1080:1920";
+  if (aspect > 1.3) return "1440:1080";
+  return "1080:1440";
+}
+
+// ── Poll for task completion ───────────────────────────────────────────────────
 async function pollForResult(
   taskId: string,
   apiKey: string,
@@ -29,7 +42,7 @@ async function pollForResult(
     const res = await fetch(`${RUNWAY_API_BASE}/tasks/${taskId}`, {
       headers: {
         Authorization: `Bearer ${apiKey}`,
-        "X-Runway-Version": "2024-11-06",
+        "X-Runway-Version": RUNWAY_VERSION,
       },
     });
 
@@ -54,13 +67,13 @@ async function pollForResult(
         `RunwayML generation failed: ${data.failure || data.failureCode || "Unknown error"}`
       );
     }
-
     // PENDING or RUNNING — keep polling
   }
 
   throw new Error("RunwayML generation timed out after waiting 3 minutes.");
 }
 
+// ── Main generation function ──────────────────────────────────────────────────
 export async function generateTattooWithRunway(
   options: RunwayGenerationOptions
 ): Promise<RunwayGenerationResult> {
@@ -69,37 +82,43 @@ export async function generateTattooWithRunway(
 
   const { prompt, referenceImageUrl, width = 1024, height = 1024 } = options;
 
-  // Build the request body for image generation
-  const body: Record<string, unknown> = {
-    model: "gen4_image",
-    promptText: prompt,
-    ratio: width === height ? "1:1" : width > height ? "16:9" : "9:16",
-    outputFormat: "png",
-  };
+  const ratio = pickRatio(width, height);
 
-  // If a reference image is provided, include it
+  // Build the request body — referenceImages is REQUIRED by the API (1-3 items)
+  // If no user reference image, we use a minimal placeholder approach:
+  // We always include at least one reference image (the prompt describes the style)
+  const referenceImages: Array<{ uri: string; tag?: string }> = [];
+
   if (referenceImageUrl) {
-    body.referenceImages = [
-      {
-        uri: referenceImageUrl,
-        tag: "reference",
-      },
-    ];
+    referenceImages.push({ uri: referenceImageUrl, tag: "reference" });
+  } else {
+    // Use a simple white canvas data URI as a neutral reference so the API
+    // doesn't reject the request for missing referenceImages
+    referenceImages.push({
+      uri: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI6QAAAABJRU5ErkJggg==",
+      tag: "style",
+    });
   }
 
-  const res = await fetch(`${RUNWAY_API_BASE}/image_to_image`, {
+  const body = {
+    model: "gen4_image",
+    promptText: prompt.slice(0, 1000),
+    ratio,
+    referenceImages,
+  };
+
+  const res = await fetch(`${RUNWAY_API_BASE}/text_to_image`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
-      "X-Runway-Version": "2024-11-06",
+      "X-Runway-Version": RUNWAY_VERSION,
     },
     body: JSON.stringify(body),
   });
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    // Fall back to built-in image generation if RunwayML fails
     throw new Error(`RunwayML request failed (${res.status}): ${text}`);
   }
 

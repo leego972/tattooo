@@ -84,3 +84,31 @@
 - [x] Frontend: Payment success page
 - [x] Frontend: Login/Signup page (email + password, no Manus OAuth)
 - [x] Tests: 14 tests passing (auth, credits, tattoo procedures, API keys)
+
+## Password Reset (Resend Email)
+- [ ] Install resend npm package
+- [ ] Backend: password_reset_tokens table (token, userId, expiresAt, usedAt)
+- [ ] Backend: tRPC auth.forgotPassword procedure (generates token, sends email via Resend)
+- [ ] Backend: tRPC auth.resetPassword procedure (validates token, updates passwordHash)
+- [ ] Frontend: "Forgot password?" link on Login page
+- [ ] Frontend: ForgotPassword page (email input form)
+- [ ] Frontend: ResetPassword page (new password form, reads token from URL)
+- [ ] Email: Branded HTML email template with tatt-ooo logo and reset link
+
+## Tattoo Artist Directory
+- [ ] DB: artists table (name, bio, location, specialties, instagram, website, contactEmail, avatarUrl, verified)
+- [ ] Backend: tRPC artists.list procedure (filter by specialty/location)
+- [ ] Backend: tRPC artists.contact procedure (sends inquiry email via Resend)
+- [ ] Frontend: Artists page with card grid, filter by style/location
+- [ ] Frontend: Artist profile card (photo, bio, specialties, contact button)
+- [ ] Frontend: "Find an Artist" button on My Tatts cards (passes design URL)
+- [ ] Frontend: Contact artist modal (pre-fills with design image URL)
+- [ ] Navigation: Artists link in sidebar
+
+## Social Sharing + Watermark
+- [ ] Frontend: Canvas watermark utility (overlays tatt-ooo logo bottom-right on generated image)
+- [ ] Frontend: Share button on each generated image in chat and My Tatts
+- [ ] Frontend: Share modal with platform options (Instagram, TikTok, Twitter/X, WhatsApp, copy link)
+- [ ] Frontend: Download with watermark option (separate from print-ready download)
+- [ ] Backend: Public share URL for each design (short shareable link)
+- [ ] Frontend: Public share page (/share/:id) showing design with branding

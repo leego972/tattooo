@@ -15,6 +15,8 @@ import {
   PenTool,
   LogIn,
   ImageOff,
+  Share2,
+  Copy,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
@@ -52,6 +54,8 @@ export default function MyTatts() {
     },
     onError: () => toast.error("Failed to delete design"),
   });
+
+  const shareMutation = trpc.sharing.create.useMutation();
 
   const renameMutation = trpc.myTatts.rename.useMutation({
     onSuccess: () => {
@@ -105,6 +109,17 @@ export default function MyTatts() {
   const confirmEdit = (id: number) => {
     if (!editValue.trim()) return;
     renameMutation.mutate({ id, nickname: editValue.trim() });
+  };
+
+  const handleShare = async (design: Design) => {
+    try {
+      const res = await shareMutation.mutateAsync({ tattooGenerationId: design.id });
+      const shareUrl = `${window.location.origin}/share?id=${res.shareId}`;
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success("Share link copied to clipboard!");
+    } catch {
+      toast.error("Failed to generate share link.");
+    }
   };
 
   const openInDrawingBoard = (design: Design) => {
@@ -240,6 +255,14 @@ export default function MyTatts() {
                       className="w-full gap-1.5 bg-primary/80 hover:bg-primary text-white text-xs h-8"
                     >
                       <PenTool size={12} /> Edit in Board
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => handleShare(design)}
+                      disabled={shareMutation.isPending}
+                      className="w-full gap-1.5 bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs h-8"
+                    >
+                      <Share2 size={12} /> Share Link
                     </Button>
                     {/* Delete — confirm on second click */}
                     {deletingId === design.id ? (

@@ -14,6 +14,10 @@ import Navbar from "./components/Navbar";
 import Login from "./pages/Login";
 import Pricing from "./pages/Pricing";
 import PaymentSuccess from "./pages/PaymentSuccess";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import Artists from "./pages/Artists";
+import SharedDesign from "./pages/SharedDesign";
 
 function Router() {
   return (
@@ -32,6 +36,10 @@ function Router() {
           <Route path="/login" component={Login} />
           <Route path="/pricing" component={Pricing} />
           <Route path="/payment-success" component={PaymentSuccess} />
+          <Route path="/forgot-password" component={ForgotPassword} />
+          <Route path="/reset-password" component={ResetPassword} />
+          <Route path="/artists" component={Artists} />
+          <Route path="/share" component={SharedDesign} />
           <Route path="/404" component={NotFound} />
           <Route component={NotFound} />
         </Switch>

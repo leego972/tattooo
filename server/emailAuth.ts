@@ -108,6 +108,16 @@ export async function registerUser(
  * Authenticate a user with email + password.
  * Returns the user or throws a typed error.
  */
+/**
+ * Update a user's password (used in password reset flow).
+ */
+export async function updatePassword(userId: number, newPassword: string): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const passwordHash = await hashPassword(newPassword);
+  await db.update(users).set({ passwordHash }).where(eq(users.id, userId));
+}
+
 export async function loginUser(email: string, password: string): Promise<User> {
   const user = await getUserByEmail(email);
   if (!user) throw new Error("INVALID_CREDENTIALS");

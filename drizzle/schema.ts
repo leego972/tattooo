@@ -70,3 +70,45 @@ export const creditTransactions = mysqlTable("credit_transactions", {
 
 export type CreditTransaction = typeof creditTransactions.$inferSelect;
 export type InsertCreditTransaction = typeof creditTransactions.$inferInsert;
+
+// ── Password Reset Tokens ─────────────────────────────────────────────────────
+export const passwordResetTokens = mysqlTable("password_reset_tokens", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  token: varchar("token", { length: 128 }).notNull().unique(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  usedAt: timestamp("usedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+
+// ── Artists ───────────────────────────────────────────────────────────────────
+export const artists = mysqlTable("artists", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 128 }).notNull(),
+  bio: text("bio"),
+  location: varchar("location", { length: 128 }),
+  specialties: varchar("specialties", { length: 512 }),
+  instagram: varchar("instagram", { length: 128 }),
+  website: varchar("website", { length: 255 }),
+  contactEmail: varchar("contactEmail", { length: 320 }),
+  avatarUrl: text("avatarUrl"),
+  verified: boolean("verified").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Artist = typeof artists.$inferSelect;
+export type InsertArtist = typeof artists.$inferInsert;
+
+// ── Design Shares ─────────────────────────────────────────────────────────────
+export const designShares = mysqlTable("design_shares", {
+  id: int("id").autoincrement().primaryKey(),
+  shareId: varchar("shareId", { length: 32 }).notNull().unique(),
+  tattooGenerationId: int("tattooGenerationId").notNull(),
+  userId: int("userId"),
+  viewCount: int("viewCount").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type DesignShare = typeof designShares.$inferSelect;

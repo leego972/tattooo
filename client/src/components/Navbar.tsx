@@ -13,6 +13,7 @@ import {
   PenTool,
   Zap,
   DollarSign,
+  Users,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,7 @@ const navLinks = [
   { href: "/draw", label: "Drawing Board", icon: PenTool },
   { href: "/history", label: "History", icon: Clock },
   { href: "/pricing", label: "Pricing", icon: DollarSign },
+  { href: "/artists", label: "Find Artist", icon: Users },
 ];
 
 function CreditsBadge() {

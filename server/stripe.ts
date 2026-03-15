@@ -51,7 +51,8 @@ export async function createCheckoutSession(
   packId: PackId,
   successUrl: string,
   cancelUrl: string,
-  customerEmail?: string
+  customerEmail?: string,
+  discountPercent?: number
 ): Promise<string> {
   const stripe = getStripe();
   const pack = CREDIT_PACKS.find((p) => p.id === packId);
@@ -59,19 +60,25 @@ export async function createCheckoutSession(
 
   const isSubscription = "isSubscription" in pack && pack.isSubscription;
 
+  // Apply promo discount if provided
+  const unitAmount = discountPercent && discountPercent > 0
+    ? Math.round(pack.price * (1 - discountPercent / 100))
+    : pack.price;
+
   const session = await stripe.checkout.sessions.create({
     mode: isSubscription ? "subscription" : "payment",
     customer_email: customerEmail,
+    allow_promotion_codes: !discountPercent, // allow Stripe promo codes only if no server-side discount
     line_items: [
       {
         price_data: {
           currency: "usd",
           product_data: {
-            name: `tatt-ooo ${pack.name}`,
+            name: `tatt-ooo ${pack.name}${discountPercent ? ` (${discountPercent}% off)` : ""}`,
             description: pack.description,
             images: [],
           },
-          unit_amount: pack.price,
+          unit_amount: unitAmount,
           ...(isSubscription ? { recurring: { interval: "month" } } : {}),
         },
         quantity: 1,
@@ -81,6 +88,7 @@ export async function createCheckoutSession(
       userId: String(userId),
       packId,
       credits: String(pack.credits),
+      discountPercent: discountPercent ? String(discountPercent) : "",
     },
     success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: cancelUrl,

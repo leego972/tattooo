@@ -63,10 +63,26 @@ import {
   creditTransactions,
   bookings,
   referrals,
+  referralCodes,
+  referralTracking,
+  promoCodes,
   outreachCampaigns,
   outreachContacts,
 } from "../drizzle/schema";
 import crypto from "crypto";
+
+// ─── Referral & Promo Constants ───────────────────────────────────────────────
+const REFERRAL_REWARDS = {
+  referrerCredits: 10,
+  newUserCredits: 10,
+  milestones: [
+    { count: 3,  bonus: 15,  label: "Ink Starter" },
+    { count: 5,  bonus: 25,  label: "Tattoo Enthusiast" },
+    { count: 10, bonus: 50,  label: "Ink Master" },
+    { count: 25, bonus: 100, label: "Tattoo Legend" },
+    { count: 50, bonus: 200, label: "Hall of Ink" },
+  ],
+} as const;
 
 // ─── Admin guard ──────────────────────────────────────────────────────────────
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -106,26 +122,55 @@ const authRouter = router({
       // Grant 5 free credits
       await getOrCreateCredits(user.id);
 
-      // Handle referral
+      // Handle referral (using referral_codes table with milestone tracking)
       if (input.refCode) {
         try {
           const db = await getDb();
           if (db) {
-            const refRows = await db
+            const rcRows = await db
               .select()
-              .from(referrals)
-              .where(and(eq(referrals.refCode, input.refCode), isNull(referrals.referredUserId)))
+              .from(referralCodes)
+              .where(and(eq(referralCodes.code, input.refCode.toUpperCase()), eq(referralCodes.isActive, true)))
               .limit(1);
 
-            if (refRows[0] && refRows[0].referrerId !== user.id) {
-              // Award 5 credits to both referrer and new user
-              await addCredits(refRows[0].referrerId, 5, "referral", undefined, "Referral reward: friend signed up");
-              await addCredits(user.id, 5, "referral", undefined, "Welcome bonus: joined via referral");
+            if (rcRows[0] && rcRows[0].userId !== user.id) {
+              const rc = rcRows[0];
+              const BASE_REWARD = REFERRAL_REWARDS.referrerCredits;
+              const NEW_USER_REWARD = REFERRAL_REWARDS.newUserCredits;
 
-              await db
-                .update(referrals)
-                .set({ referredUserId: user.id, creditAwarded: true })
-                .where(eq(referrals.id, refRows[0].id));
+              // Award credits to both parties
+              await addCredits(rc.userId, BASE_REWARD, "referral", undefined, `Referral reward: friend signed up via code ${rc.code}`);
+              await addCredits(user.id, NEW_USER_REWARD, "referral", undefined, `Welcome bonus: joined via referral code ${rc.code}`);
+
+              const newSuccessfulCount = (rc.successfulReferrals || 0) + 1;
+
+              // Update referral code stats
+              await db.update(referralCodes).set({
+                totalReferrals: (rc.totalReferrals || 0) + 1,
+                successfulReferrals: newSuccessfulCount,
+                bonusCreditsEarned: (rc.bonusCreditsEarned || 0) + BASE_REWARD,
+              }).where(eq(referralCodes.id, rc.id));
+
+              // Create tracking record
+              await db.insert(referralTracking).values({
+                referralCodeId: rc.id,
+                referrerId: rc.userId,
+                referredUserId: user.id,
+                referredEmail: user.email ?? undefined,
+                status: "rewarded",
+                rewardType: "credits",
+                rewardAmount: BASE_REWARD,
+                rewardedAt: new Date(),
+              });
+
+              // Check for milestone bonuses
+              const hitMilestone = REFERRAL_REWARDS.milestones.find(m => m.count === newSuccessfulCount);
+              if (hitMilestone) {
+                await addCredits(rc.userId, hitMilestone.bonus, "referral", undefined, `Milestone bonus: ${hitMilestone.label} (${newSuccessfulCount} referrals)`);
+                await db.update(referralCodes).set({
+                  bonusCreditsEarned: (rc.bonusCreditsEarned || 0) + BASE_REWARD + hitMilestone.bonus,
+                }).where(eq(referralCodes.id, rc.id));
+              }
             }
           }
         } catch (refErr) {
@@ -254,14 +299,32 @@ const creditsRouter = router({
   checkout: protectedProcedure
     .input(z.object({ packId: z.enum(["starter", "pro", "unlimited"]), origin: z.string().url() }))
     .mutation(async ({ input, ctx }) => {
+      // Check if user has an unapplied promo discount
+      let discountPercent: number | undefined;
+      try {
+        const db = await getDb();
+        if (db) {
+          const userRows = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
+          const u = userRows[0];
+          if (u?.appliedPromoCode && u.promoDiscountUsed) {
+            const promoRows = await db.select().from(promoCodes).where(eq(promoCodes.code, u.appliedPromoCode)).limit(1);
+            if (promoRows[0]?.isActive) {
+              discountPercent = promoRows[0].discountPercent;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("[Checkout] Failed to look up promo discount:", e);
+      }
       const url = await createCheckoutSession(
         ctx.user.id,
         input.packId as PackId,
         `${input.origin}/payment-success`,
         `${input.origin}/pricing`,
-        ctx.user.email ?? undefined
+        ctx.user.email ?? undefined,
+        discountPercent
       );
-      return { url };
+      return { url, discountPercent };
     }),
 
   transactions: protectedProcedure.query(async ({ ctx }) => {
@@ -818,51 +881,204 @@ const sharingRouter = router({
 // ─── Referral Router ─────────────────────────────────────────────────────────
 
 const referralRouter = router({
+  // Get or create the user's referral code (uses referral_codes table)
   getMyCode: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-    // Check if user already has a referral code
     const existing = await db
       .select()
-      .from(referrals)
-      .where(eq(referrals.referrerId, ctx.user.id))
+      .from(referralCodes)
+      .where(eq(referralCodes.userId, ctx.user.id))
       .limit(1);
 
     if (existing[0]) {
-      return { refCode: existing[0].refCode };
+      return { refCode: existing[0].code, id: existing[0].id };
     }
 
-    // Create new referral code
-    const refCode = nanoid(10).toUpperCase();
-    await db.insert(referrals).values({
-      referrerId: ctx.user.id,
-      refCode,
-    });
+    // Auto-generate a unique code
+    const code = nanoid(10).toUpperCase();
+    const [inserted] = await db.insert(referralCodes).values({
+      userId: ctx.user.id,
+      code,
+    }).$returningId();
 
-    return { refCode };
+    return { refCode: code, id: inserted.id };
   }),
 
+  // Full stats for the referral dashboard
   getStats: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-    const allReferrals = await db
+    const codeRows = await db
       .select()
-      .from(referrals)
-      .where(eq(referrals.referrerId, ctx.user.id));
+      .from(referralCodes)
+      .where(eq(referralCodes.userId, ctx.user.id))
+      .limit(1);
 
-    const totalReferrals = allReferrals.length;
-    const completedReferrals = allReferrals.filter((r) => r.creditAwarded).length;
-    const pendingReferrals = allReferrals.filter((r) => !r.referredUserId).length;
+    if (!codeRows[0]) {
+      return {
+        refCode: null,
+        totalReferrals: 0,
+        successfulReferrals: 0,
+        creditsEarned: 0,
+        nextMilestone: REFERRAL_REWARDS.milestones[0],
+        milestones: REFERRAL_REWARDS.milestones,
+        recentReferrals: [],
+      };
+    }
+
+    const rc = codeRows[0];
+    const trackRows = await db
+      .select()
+      .from(referralTracking)
+      .where(eq(referralTracking.referralCodeId, rc.id))
+      .orderBy(desc(referralTracking.createdAt))
+      .limit(20);
+
+    const successfulCount = rc.successfulReferrals;
+    const nextMilestone = REFERRAL_REWARDS.milestones.find(m => m.count > successfulCount) ?? null;
 
     return {
-      totalReferrals,
-      completedReferrals,
-      pendingReferrals,
-      creditsEarned: completedReferrals * 5,
+      refCode: rc.code,
+      totalReferrals: rc.totalReferrals,
+      successfulReferrals: successfulCount,
+      creditsEarned: rc.bonusCreditsEarned,
+      nextMilestone,
+      milestones: REFERRAL_REWARDS.milestones,
+      recentReferrals: trackRows.map(t => ({
+        id: t.id,
+        status: t.status,
+        rewardAmount: t.rewardAmount,
+        rewardedAt: t.rewardedAt,
+        createdAt: t.createdAt,
+      })),
     };
   }),
+
+  // Validate a referral code (public — for registration form)
+  validate: publicProcedure
+    .input(z.object({ code: z.string() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return { valid: false };
+      const rows = await db
+        .select()
+        .from(referralCodes)
+        .where(and(eq(referralCodes.code, input.code.toUpperCase()), eq(referralCodes.isActive, true)))
+        .limit(1);
+      if (!rows[0]) return { valid: false };
+      return { valid: true, bonusCredits: REFERRAL_REWARDS.newUserCredits };
+    }),
+});
+
+// ─── Promo Code Router ────────────────────────────────────────────────────────
+
+const promoRouter = router({
+  // Validate a promo code (public — called live as user types)
+  validate: publicProcedure
+    .input(z.object({ code: z.string() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return { valid: false };
+      const rows = await db
+        .select()
+        .from(promoCodes)
+        .where(eq(promoCodes.code, input.code.toUpperCase()))
+        .limit(1);
+      const promo = rows[0];
+      if (!promo || !promo.isActive) return { valid: false, reason: "Code not found or inactive" };
+      if (promo.usedCount >= promo.maxUses) return { valid: false, reason: "Code has reached its usage limit" };
+      if (promo.expiresAt && promo.expiresAt < new Date()) return { valid: false, reason: "Code has expired" };
+      return {
+        valid: true,
+        discountPercent: promo.discountPercent,
+        bonusCredits: promo.bonusCredits,
+        description: promo.description,
+      };
+    }),
+
+  // Apply a promo code to the current user (protected)
+  applyCode: protectedProcedure
+    .input(z.object({ code: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      // Check if user already used a promo
+      const userRows = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
+      if (userRows[0]?.promoDiscountUsed) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "You have already used a promo code." });
+      }
+
+      const rows = await db
+        .select()
+        .from(promoCodes)
+        .where(eq(promoCodes.code, input.code.toUpperCase()))
+        .limit(1);
+      const promo = rows[0];
+      if (!promo || !promo.isActive) throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid promo code." });
+      if (promo.usedCount >= promo.maxUses) throw new TRPCError({ code: "BAD_REQUEST", message: "This promo code has expired." });
+      if (promo.expiresAt && promo.expiresAt < new Date()) throw new TRPCError({ code: "BAD_REQUEST", message: "This promo code has expired." });
+
+      // Mark user as having applied promo
+      await db.update(users).set({ appliedPromoCode: promo.code, promoDiscountUsed: true }).where(eq(users.id, ctx.user.id));
+      // Increment usage count
+      await db.update(promoCodes).set({ usedCount: promo.usedCount + 1 }).where(eq(promoCodes.id, promo.id));
+      // Award bonus credits if any
+      if (promo.bonusCredits > 0) {
+        await addCredits(ctx.user.id, promo.bonusCredits, "referral", undefined, `Promo code ${promo.code}: ${promo.bonusCredits} bonus credits`);
+      }
+
+      return {
+        success: true,
+        discountPercent: promo.discountPercent,
+        bonusCredits: promo.bonusCredits,
+        message: `Promo applied! ${promo.discountPercent}% off your next purchase${promo.bonusCredits > 0 ? ` + ${promo.bonusCredits} bonus credits` : ""}.`,
+      };
+    }),
+
+  // Admin: list all promo codes
+  list: adminProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+    return db.select().from(promoCodes).orderBy(desc(promoCodes.createdAt));
+  }),
+
+  // Admin: create a promo code
+  create: adminProcedure
+    .input(z.object({
+      code: z.string().min(3).max(32),
+      discountPercent: z.number().min(1).max(100).default(50),
+      bonusCredits: z.number().min(0).default(0),
+      maxUses: z.number().min(1).default(100),
+      description: z.string().max(255).optional(),
+      expiresAt: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await db.insert(promoCodes).values({
+        code: input.code.toUpperCase(),
+        discountPercent: input.discountPercent,
+        bonusCredits: input.bonusCredits,
+        maxUses: input.maxUses,
+        description: input.description,
+        expiresAt: input.expiresAt ? new Date(input.expiresAt) : undefined,
+      });
+      return { success: true };
+    }),
+
+  // Admin: toggle active status
+  toggle: adminProcedure
+    .input(z.object({ id: z.number(), isActive: z.boolean() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await db.update(promoCodes).set({ isActive: input.isActive }).where(eq(promoCodes.id, input.id));
+      return { success: true };
+    }),
 });
 
 // ─── Admin Router ─────────────────────────────────────────────────────────────
@@ -1233,6 +1449,7 @@ export const appRouter = router({
   artists: artistsRouter,
   sharing: sharingRouter,
   referral: referralRouter,
+  promo: promoRouter,
   admin: adminRouter,
   advertising: advertisingRouter,
   affiliate: affiliateRouter,

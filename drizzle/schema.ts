@@ -11,6 +11,8 @@ export const users = mysqlTable("users", {
   passwordHash: varchar("passwordHash", { length: 255 }),
   emailVerified: boolean("emailVerified").default(false).notNull(),
   refCode: varchar("refCode", { length: 32 }),
+  appliedPromoCode: varchar("appliedPromoCode", { length: 32 }),
+  promoDiscountUsed: boolean("promoDiscountUsed").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -619,13 +621,50 @@ export const creditBalances = mysqlTable("credit_balances", {
 export const referralCodes = mysqlTable("referral_codes", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(), // the referrer
-  code: varchar("code", { length: 16 }).notNull().unique(),
+  code: varchar("code", { length: 32 }).notNull().unique(),
   totalReferrals: int("totalReferrals").default(0).notNull(),
+  successfulReferrals: int("successfulReferrals").default(0).notNull(),
+  bonusCreditsEarned: int("bonusCreditsEarned").default(0).notNull(),
   totalRewardsEarned: int("totalRewardsEarned").default(0).notNull(),
   totalCommissionCents: int("totalCommissionCents").default(0).notNull(),
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
+
+export type ReferralCode = typeof referralCodes.$inferSelect;
+export type InsertReferralCode = typeof referralCodes.$inferInsert;
+
+export const referralTracking = mysqlTable("referral_tracking", {
+  id: int("id").autoincrement().primaryKey(),
+  referralCodeId: int("referralCodeId").notNull(),
+  referrerId: int("referrerId").notNull(),
+  referredUserId: int("referredUserId"),
+  referredEmail: varchar("referredEmail", { length: 320 }),
+  status: mysqlEnum("referralTrackStatus", ["clicked", "registered", "rewarded"]).default("clicked").notNull(),
+  rewardType: varchar("rewardType", { length: 64 }),
+  rewardAmount: int("rewardAmount"),
+  rewardedAt: timestamp("rewardedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ReferralTracking = typeof referralTracking.$inferSelect;
+export type InsertReferralTracking = typeof referralTracking.$inferInsert;
+
+export const promoCodes = mysqlTable("promo_codes", {
+  id: int("id").autoincrement().primaryKey(),
+  code: varchar("code", { length: 32 }).notNull().unique(),
+  discountPercent: int("discountPercent").notNull().default(50),
+  bonusCredits: int("bonusCredits").notNull().default(0),
+  maxUses: int("maxUses").notNull().default(100),
+  usedCount: int("usedCount").notNull().default(0),
+  isActive: boolean("isActive").notNull().default(true),
+  description: varchar("description", { length: 255 }),
+  expiresAt: timestamp("expiresAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PromoCode = typeof promoCodes.$inferSelect;
+export type InsertPromoCode = typeof promoCodes.$inferInsert;
 
 
 export const referralConversions = mysqlTable("referral_conversions", {

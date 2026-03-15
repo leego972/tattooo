@@ -142,6 +142,55 @@ describe("myTatts.delete", () => {
   });
 });
 
+// ─── Promo Code Tests ─────────────────────────────────────────────────────────
+
+describe("promo.validate", () => {
+  it("returns valid=false for unknown promo code", async () => {
+    const ctx = makeCtx();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.promo.validate({ code: "NOTACODE" });
+    expect(result.valid).toBe(false);
+  });
+
+  it("returns a boolean valid field for any code", async () => {
+    const ctx = makeCtx();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.promo.validate({ code: "TATTOO50" });
+    expect(typeof result.valid).toBe("boolean");
+  });
+});
+
+// ─── Referral Tests ───────────────────────────────────────────────────────────
+
+describe("referral.validate", () => {
+  it("returns valid=false for unknown referral code", async () => {
+    const ctx = makeCtx();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.referral.validate({ code: "NOTACODE" });
+    expect(result.valid).toBe(false);
+  });
+});
+
+describe("referral.getMyCode", () => {
+  it("throws UNAUTHORIZED when called without auth", async () => {
+    const ctx = makeCtx();
+    const caller = appRouter.createCaller(ctx);
+    await expect(caller.referral.getMyCode()).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+  });
+});
+
+describe("referral.getStats", () => {
+  it("throws UNAUTHORIZED when called without auth", async () => {
+    const ctx = makeCtx();
+    const caller = appRouter.createCaller(ctx);
+    await expect(caller.referral.getStats()).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+  });
+});
+
 // ─── API Keys Sanity Check ────────────────────────────────────────────────────
 
 describe("environment", () => {

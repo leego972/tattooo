@@ -198,4 +198,17 @@
 - [x] Code pushed to GitHub
 
 ## Tests
-- [x] 24 tests passing (auth, credits, tattoo, outreach, features)
+- [x] 29 tests passing (auth, credits, tattoo, outreach, features, promo, referral)
+
+## Enhanced Promo Code & Referral System
+- [x] DB: Added appliedPromoCode/promoDiscountUsed to users table
+- [x] DB: Added successfulReferrals/bonusCreditsEarned to referral_codes table
+- [x] DB: New referral_tracking table for per-referral audit trail
+- [x] DB: New promo_codes table with discount/bonus/usage fields
+- [x] Backend: promoRouter — validate (public) and applyCode (protected) procedures
+- [x] Backend: Seeded 3 built-in promo codes (TATTOO50, WELCOME25, INKED2025)
+- [x] Backend: Register flow upgraded to use referral_codes + referral_tracking + milestone bonuses
+- [x] Backend: Checkout procedure reads user's applied promo and passes discount to Stripe
+- [x] Backend: createCheckoutSession accepts optional discountPercent
+- [x] Frontend: Referral page rebuilt with milestone progress bar, stats, promo code input, share tools
+- [x] Tests: promo.validate, referral.validate, referral.getMyCode, referral.getStats coverage added

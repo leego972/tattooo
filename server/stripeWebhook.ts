@@ -7,8 +7,8 @@ import { Router } from "express";
 import { constructWebhookEvent, CREDIT_PACKS, type PackId } from "./stripe";
 import { addCredits, setStripeCustomerId, getOrCreateCredits } from "./credits.db";
 import { getDb } from "./db";
-import { users, artists, bookings, credits } from "../drizzle/schema";
-import { eq } from "drizzle-orm";
+import { users, artists, bookings, credits, promoCodes } from "../drizzle/schema";
+import { eq, sql } from "drizzle-orm";
 
 const stripeWebhookRouter = Router();
 
@@ -87,6 +87,25 @@ stripeWebhookRouter.post(
             `Purchased ${pack.name}: ${pack.description}`
           );
           console.log(`[Webhook] Granted ${creditsAmount} credits to user ${userId} (${packId})`);
+
+          // ── Clear one-time promo after successful purchase ──────────────────
+          const db2 = await getDb();
+          if (db2) {
+            const userRows = await db2.select({ appliedPromoCode: users.appliedPromoCode })
+              .from(users).where(eq(users.id, userId)).limit(1);
+            const promoCode = userRows[0]?.appliedPromoCode;
+            if (promoCode) {
+              // Increment usedCount on the promo code
+              await db2.update(promoCodes)
+                .set({ usedCount: sql`${promoCodes.usedCount} + 1` })
+                .where(eq(promoCodes.code, promoCode));
+              // Clear the applied promo from the user so it can't be reused
+              await db2.update(users)
+                .set({ appliedPromoCode: null, promoDiscountUsed: false })
+                .where(eq(users.id, userId));
+              console.log(`[Webhook] Cleared promo '${promoCode}' for user ${userId} after purchase`);
+            }
+          }
         }
 
         // ── Artist registration ───────────────────────────────────────────────

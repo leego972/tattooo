@@ -1429,12 +1429,84 @@ Format your response as JSON with these fields:
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-
       return db
         .select()
         .from(outreachContacts)
         .where(eq(outreachContacts.campaignId, input.campaignId))
         .orderBy(desc(outreachContacts.createdAt));
+    }),
+
+  // ── Promo Code Management ──────────────────────────────────────────────────
+  listPromos: adminProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+    return db.select().from(promoCodes).orderBy(desc(promoCodes.createdAt));
+  }),
+
+  createPromo: adminProcedure
+    .input(
+      z.object({
+        code: z.string().min(3).max(32).toUpperCase(),
+        discountPercent: z.number().int().min(0).max(100).default(0),
+        bonusCredits: z.number().int().min(0).default(0),
+        description: z.string().optional(),
+        maxUses: z.number().int().positive().optional(),
+        expiresAt: z.date().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      // Check for duplicate
+      const existing = await db.select().from(promoCodes).where(eq(promoCodes.code, input.code.toUpperCase())).limit(1);
+      if (existing[0]) throw new TRPCError({ code: "CONFLICT", message: "Promo code already exists" });
+      await db.insert(promoCodes).values({
+        code: input.code.toUpperCase(),
+        discountPercent: input.discountPercent,
+        bonusCredits: input.bonusCredits,
+        description: input.description ?? undefined,
+        maxUses: input.maxUses ?? 1000,
+        expiresAt: input.expiresAt ?? undefined,
+        isActive: true,
+        usedCount: 0,
+      });
+      return { success: true };
+    }),
+
+  updatePromo: adminProcedure
+    .input(
+      z.object({
+        id: z.number().int().positive(),
+        discountPercent: z.number().int().min(0).max(100).optional(),
+        bonusCredits: z.number().int().min(0).optional(),
+        description: z.string().optional(),
+        maxUses: z.number().int().positive().nullable().optional(),
+        expiresAt: z.date().nullable().optional(),
+        isActive: z.boolean().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const { id, ...fields } = input;
+      const updateData: Record<string, unknown> = {};
+      if (fields.discountPercent !== undefined) updateData.discountPercent = fields.discountPercent;
+      if (fields.bonusCredits !== undefined) updateData.bonusCredits = fields.bonusCredits;
+      if (fields.description !== undefined) updateData.description = fields.description;
+      if (fields.maxUses !== undefined) updateData.maxUses = fields.maxUses;
+      if (fields.expiresAt !== undefined) updateData.expiresAt = fields.expiresAt;
+      if (fields.isActive !== undefined) updateData.isActive = fields.isActive;
+      await db.update(promoCodes).set(updateData).where(eq(promoCodes.id, id));
+      return { success: true };
+    }),
+
+  deletePromo: adminProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await db.update(promoCodes).set({ isActive: false }).where(eq(promoCodes.id, input.id));
+      return { success: true };
     }),
 });
 

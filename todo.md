@@ -212,3 +212,26 @@
 - [x] Backend: createCheckoutSession accepts optional discountPercent
 - [x] Frontend: Referral page rebuilt with milestone progress bar, stats, promo code input, share tools
 - [x] Tests: promo.validate, referral.validate, referral.getMyCode, referral.getStats coverage added
+
+## Admin Promo Code Manager + One-Time Enforcement
+- [x] Backend: admin.promo.list — list all promo codes with usage stats
+- [x] Backend: admin.promo.create — create new promo code
+- [x] Backend: admin.promo.update — toggle active, change discount/bonus/limits
+- [x] Backend: admin.promo.delete — deactivate/remove a promo code
+- [x] Frontend: /admin/promos page — table with create/edit/deactivate actions
+- [x] Backend: Stripe webhook clears appliedPromoCode after checkout.session.completed
+
+## Auth Gating — No Features Without Signup
+- [x] Create ProtectedRoute wrapper component that redirects to /login if not authenticated
+- [x] Gate: Studio (/studio)
+- [x] Gate: My Tatts (/my-tatts)
+- [x] Gate: Drawing Board (/draw)
+- [x] Gate: History (/history)
+- [x] Gate: Gallery (/gallery)
+- [x] Gate: Artists (/artists)
+- [x] Gate: Referral (/referral)
+- [x] Gate: Pricing (/pricing)
+- [x] Gate: Bookings (/bookings)
+- [x] Gate: Subscription (/subscription)
+- [x] Navbar: only show Login, Sign Up, Join as Artist when logged out (hide all other nav items)
+- [x] Leego logo: black background panel, enlarged but tasteful, better visibility in sidebar

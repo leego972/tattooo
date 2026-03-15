@@ -4,28 +4,35 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import ProtectedRoute from "./components/ProtectedRoute";
+
+// Public pages (no auth required)
 import Home from "./pages/Home";
+import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import SharedDesign from "./pages/SharedDesign";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import ArtistSignup from "./pages/ArtistSignup";
+
+// Protected pages (require login)
 import Studio from "./pages/Studio";
 import Gallery from "./pages/Gallery";
 import History from "./pages/History";
 import MyTatts from "./pages/MyTatts";
 import DrawingBoard from "./pages/DrawingBoard";
-import Navbar from "./components/Navbar";
-import Login from "./pages/Login";
 import Pricing from "./pages/Pricing";
-import PaymentSuccess from "./pages/PaymentSuccess";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
 import Artists from "./pages/Artists";
-import SharedDesign from "./pages/SharedDesign";
 import Admin from "./pages/Admin";
 import Referral from "./pages/Referral";
 import Bookings from "./pages/Bookings";
-import ArtistSignup from "./pages/ArtistSignup";
 import Outreach from "./pages/Outreach";
 import AdvertisingDashboard from "./pages/AdvertisingDashboard";
 import AffiliateDashboard from "./pages/AffiliateDashboard";
 import Subscription from "./pages/Subscription";
+import AdminPromos from "./pages/AdminPromos";
+
+import Navbar from "./components/Navbar";
 
 function Router() {
   return (
@@ -35,28 +42,65 @@ function Router() {
       {/* Main content area — takes remaining width beside sidebar */}
       <main className="flex-1 min-w-0 flex flex-col">
         <Switch>
+          {/* ── Public routes ─────────────────────────────────────── */}
           <Route path="/" component={Home} />
-          <Route path="/studio" component={Studio} />
-          <Route path="/gallery" component={Gallery} />
-          <Route path="/history" component={History} />
-          <Route path="/my-tatts" component={MyTatts} />
-          <Route path="/draw" component={DrawingBoard} />
           <Route path="/login" component={Login} />
-          <Route path="/pricing" component={Pricing} />
-          <Route path="/payment-success" component={PaymentSuccess} />
+          <Route path="/signup" component={Login} />
           <Route path="/forgot-password" component={ForgotPassword} />
           <Route path="/reset-password" component={ResetPassword} />
-          <Route path="/artists" component={Artists} />
           <Route path="/share" component={SharedDesign} />
-          <Route path="/admin" component={Admin} />
-          <Route path="/referral" component={Referral} />
-          <Route path="/bookings" component={Bookings} />
+          <Route path="/payment-success" component={PaymentSuccess} />
           <Route path="/artist-signup/success" component={ArtistSignup} />
           <Route path="/artist-signup" component={ArtistSignup} />
-          <Route path="/outreach" component={Outreach} />
-          <Route path="/advertising" component={AdvertisingDashboard} />
-          <Route path="/affiliates" component={AffiliateDashboard} />
-          <Route path="/subscription" component={Subscription} />
+
+          {/* ── Protected routes (require login) ──────────────────── */}
+          <Route path="/studio">
+            {() => <ProtectedRoute component={Studio} />}
+          </Route>
+          <Route path="/gallery">
+            {() => <ProtectedRoute component={Gallery} />}
+          </Route>
+          <Route path="/history">
+            {() => <ProtectedRoute component={History} />}
+          </Route>
+          <Route path="/my-tatts">
+            {() => <ProtectedRoute component={MyTatts} />}
+          </Route>
+          <Route path="/draw">
+            {() => <ProtectedRoute component={DrawingBoard} />}
+          </Route>
+          <Route path="/pricing">
+            {() => <ProtectedRoute component={Pricing} />}
+          </Route>
+          <Route path="/artists">
+            {() => <ProtectedRoute component={Artists} />}
+          </Route>
+          <Route path="/referral">
+            {() => <ProtectedRoute component={Referral} />}
+          </Route>
+          <Route path="/bookings">
+            {() => <ProtectedRoute component={Bookings} />}
+          </Route>
+          <Route path="/subscription">
+            {() => <ProtectedRoute component={Subscription} />}
+          </Route>
+          <Route path="/admin/promos">
+            {() => <ProtectedRoute component={AdminPromos} />}
+          </Route>
+          <Route path="/admin">
+            {() => <ProtectedRoute component={Admin} />}
+          </Route>
+          <Route path="/outreach">
+            {() => <ProtectedRoute component={Outreach} />}
+          </Route>
+          <Route path="/advertising">
+            {() => <ProtectedRoute component={AdvertisingDashboard} />}
+          </Route>
+          <Route path="/affiliates">
+            {() => <ProtectedRoute component={AffiliateDashboard} />}
+          </Route>
+
+          {/* ── Fallback ──────────────────────────────────────────── */}
           <Route path="/404" component={NotFound} />
           <Route component={NotFound} />
         </Switch>

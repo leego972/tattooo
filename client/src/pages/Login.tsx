@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { useLocation } from "wouter";
+import { useState, useEffect } from "react";
+import { useLocation, useSearch } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,11 +12,24 @@ const LOGO_URL = "https://cdn-biz.manus.space/biz-assets/tatt-ooo/logo.png";
 
 export default function Login() {
   const [, navigate] = useLocation();
+  const search = useSearch();
+  const { user, loading } = useAuth();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  // Parse returnTo from query string
+  const params = new URLSearchParams(search);
+  const returnTo = params.get("returnTo") ? decodeURIComponent(params.get("returnTo")!) : "/studio";
+
+  // If already authenticated, redirect immediately
+  useEffect(() => {
+    if (!loading && user) {
+      navigate(returnTo);
+    }
+  }, [loading, user, navigate, returnTo]);
 
   const utils = trpc.useUtils();
 
@@ -23,7 +37,7 @@ export default function Login() {
     onSuccess: () => {
       utils.auth.me.invalidate();
       toast.success("Welcome back!");
-      navigate("/studio");
+      navigate(returnTo);
     },
     onError: (err) => {
       toast.error(err.message || "Invalid email or password.");
@@ -34,7 +48,7 @@ export default function Login() {
     onSuccess: () => {
       utils.auth.me.invalidate();
       toast.success("Account created! You have 5 free credits to start.");
-      navigate("/studio");
+      navigate(returnTo);
     },
     onError: (err) => {
       toast.error(err.message || "Registration failed. Please try again.");

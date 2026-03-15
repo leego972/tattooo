@@ -17,10 +17,10 @@ import {
   Gift,
   UserPlus,
   Mail,
-  ShieldCheck,
   BarChart2,
   Megaphone,
   CreditCard,
+  Tag,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -32,7 +32,8 @@ const LOGO_URL =
 const LEEGO_URL =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/leego-logo_ad7e0c89.png";
 
-const navLinks = [
+// Links shown only when authenticated
+const authNavLinks = [
   { href: "/studio", label: "Studio", icon: Sparkles },
   { href: "/my-tatts", label: "My Tatts", icon: BookMarked },
   { href: "/gallery", label: "Gallery", icon: Images },
@@ -41,12 +42,19 @@ const navLinks = [
   { href: "/pricing", label: "Pricing", icon: DollarSign },
   { href: "/artists", label: "Find Artist", icon: Users },
   { href: "/referral", label: "Refer & Earn", icon: Gift },
-  { href: "/artist-signup", label: "Join as Artist", icon: UserPlus },
   { href: "/subscription", label: "Subscription", icon: CreditCard },
+];
+
+// Links shown to everyone (logged out)
+const publicNavLinks = [
+  { href: "/login", label: "Sign In", icon: LogIn },
+  { href: "/signup", label: "Create Account", icon: Sparkles },
+  { href: "/artist-signup", label: "Join as Artist", icon: UserPlus },
 ];
 
 const adminNavLinks = [
   { href: "/admin", label: "Admin Panel", icon: Users },
+  { href: "/admin/promos", label: "Promo Codes", icon: Tag },
   { href: "/outreach", label: "Outreach", icon: Mail },
   { href: "/advertising", label: "Advertising", icon: Megaphone },
   { href: "/affiliates", label: "Affiliates", icon: BarChart2 },
@@ -86,6 +94,8 @@ export default function Navbar() {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const visibleLinks = isAuthenticated ? authNavLinks : publicNavLinks;
+
   return (
     <>
       {/* ── DESKTOP SIDEBAR ─────────────────────────────────────────────────── */}
@@ -106,9 +116,9 @@ export default function Navbar() {
         </Link>
 
         {/* Nav links */}
-        <nav className="flex flex-col gap-0.5 px-2 pt-3 flex-1">
-          {navLinks.map(({ href, label, icon: Icon }) => {
-            const active = location === href;
+        <nav className="flex flex-col gap-0.5 px-2 pt-3 flex-1 overflow-y-auto">
+          {visibleLinks.map(({ href, label, icon: Icon }) => {
+            const active = location === href || (href === "/signup" && location === "/login");
             return (
               <Link key={href} href={href}>
                 <Button
@@ -128,8 +138,8 @@ export default function Navbar() {
           })}
         </nav>
 
-        {/* Admin links */}
-        {user?.role === "admin" && (
+        {/* Admin links — only when authenticated admin */}
+        {isAuthenticated && user?.role === "admin" && (
           <div className="px-2 pb-2">
             <p className="text-[9px] text-zinc-600 uppercase tracking-widest px-2 mb-1">Admin</p>
             {adminNavLinks.map(({ href, label, icon: Icon }) => {
@@ -154,11 +164,11 @@ export default function Navbar() {
           </div>
         )}
 
-        {/* Credits + Auth */}
+        {/* Credits + Auth — only when authenticated */}
         <div className="px-2 py-3 border-t border-zinc-800/60 space-y-2">
           <CreditsBadge />
 
-          {isAuthenticated ? (
+          {isAuthenticated && (
             <div className="flex flex-col gap-1">
               <p className="text-xs text-zinc-500 px-2 truncate">
                 {user?.name || user?.email}
@@ -173,27 +183,19 @@ export default function Navbar() {
                 Sign out
               </Button>
             </div>
-          ) : (
-            <Link href="/login" className="block">
-              <Button
-                size="sm"
-                className="w-full gap-2 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-xs h-8"
-              >
-                <LogIn size={12} />
-                Sign In
-              </Button>
-            </Link>
           )}
         </div>
 
-        {/* LEEGO creator logo */}
-        <div className="flex flex-col items-center pb-4 pt-2 border-t border-zinc-800/40">
-          <p className="text-[9px] text-zinc-600 uppercase tracking-widest mb-1">Created by</p>
-          <img
-            src={LEEGO_URL}
-            alt="Created by LEEGO"
-            className="w-24 h-24 object-contain opacity-70 hover:opacity-100 transition-opacity"
-          />
+        {/* LEEGO creator logo — black background panel, enlarged */}
+        <div className="flex flex-col items-center pb-4 pt-3 border-t border-zinc-800/40">
+          <p className="text-[9px] text-zinc-600 uppercase tracking-widest mb-2">Created by</p>
+          <div className="bg-black rounded-xl p-2 shadow-lg shadow-black/60">
+            <img
+              src={LEEGO_URL}
+              alt="Created by LEEGO"
+              className="w-28 h-28 object-contain opacity-90 hover:opacity-100 transition-opacity"
+            />
+          </div>
         </div>
       </aside>
 
@@ -228,7 +230,7 @@ export default function Navbar() {
         {/* Mobile dropdown */}
         {mobileOpen && (
           <div className="bg-zinc-950/98 border-t border-zinc-800/60 px-3 pb-4 pt-2 flex flex-col gap-1">
-            {navLinks.map(({ href, label, icon: Icon }) => {
+            {visibleLinks.map(({ href, label, icon: Icon }) => {
               const active = location === href;
               return (
                 <Link key={href} href={href} onClick={() => setMobileOpen(false)}>
@@ -248,6 +250,24 @@ export default function Navbar() {
               );
             })}
 
+            {/* Admin links on mobile */}
+            {isAuthenticated && user?.role === "admin" && (
+              <div className="pt-2 border-t border-zinc-800/60">
+                <p className="text-[9px] text-zinc-600 uppercase tracking-widest px-2 mb-1">Admin</p>
+                {adminNavLinks.map(({ href, label, icon: Icon }) => (
+                  <Link key={href} href={href} onClick={() => setMobileOpen(false)}>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start gap-2 h-9 text-sm text-zinc-500 hover:text-orange-400 hover:bg-zinc-800/60"
+                    >
+                      <Icon size={14} />
+                      {label}
+                    </Button>
+                  </Link>
+                ))}
+              </div>
+            )}
+
             <div className="pt-2 border-t border-zinc-800/60">
               {isAuthenticated ? (
                 <Button
@@ -258,23 +278,19 @@ export default function Navbar() {
                   <LogOut size={13} />
                   Sign out ({user?.name || user?.email})
                 </Button>
-              ) : (
-                <Link href="/login" onClick={() => setMobileOpen(false)} className="block">
-                  <Button className="w-full gap-2 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold h-9 text-sm">
-                    <LogIn size={13} />
-                    Sign In
-                  </Button>
-                </Link>
-              )}
+              ) : null}
             </div>
 
+            {/* Leego logo on mobile */}
             <div className="flex flex-col items-center pt-2 border-t border-zinc-800/40">
-              <p className="text-[9px] text-zinc-600 uppercase tracking-widest mb-1">Created by</p>
-              <img
-                src={LEEGO_URL}
-                alt="Created by LEEGO"
-                className="w-16 h-16 object-contain opacity-70"
-              />
+              <p className="text-[9px] text-zinc-600 uppercase tracking-widest mb-2">Created by</p>
+              <div className="bg-black rounded-xl p-1.5 shadow-lg shadow-black/60">
+                <img
+                  src={LEEGO_URL}
+                  alt="Created by LEEGO"
+                  className="w-20 h-20 object-contain opacity-90"
+                />
+              </div>
             </div>
           </div>
         )}

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { router, protectedProcedure, publicProcedure } from "./_core/trpc";
+import { createBookingFeeSession } from "./stripe";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "./db";
 import {
@@ -253,6 +254,10 @@ export const bookingRouter = router({
       declineReason: bookings.declineReason,
       nextAvailableDate: bookings.nextAvailableDate,
       createdAt: bookings.createdAt,
+      quotedAmountCents: bookings.quotedAmountCents,
+      platformFeeCents: bookings.platformFeeCents,
+      quoteMessage: bookings.quoteMessage,
+      isMultiSession: bookings.isMultiSession,
       artistId: artists.id,
       artistName: artists.name,
       artistCity: artists.city,
@@ -265,6 +270,76 @@ export const bookingRouter = router({
       .orderBy(desc(bookings.createdAt));
     return rows;
   }),
+
+  // Artist: send a quote to the customer
+  sendQuote: protectedProcedure
+    .input(z.object({
+      bookingId: z.number().int().positive(),
+      quotedAmountCents: z.number().int().positive().min(100, "Minimum quote is $1"),
+      quoteMessage: z.string().max(1000).optional(),
+      isMultiSession: z.boolean().default(false),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      // Verify caller is the artist for this booking
+      const bookingRows = await db.select().from(bookings).where(eq(bookings.id, input.bookingId)).limit(1);
+      const booking = bookingRows[0];
+      if (!booking) throw new TRPCError({ code: "NOT_FOUND" });
+      const artistRows = await db.select().from(artists).where(eq(artists.userId, ctx.user.id)).limit(1);
+      const artist = artistRows[0];
+      if (!artist || artist.id !== booking.artistId) throw new TRPCError({ code: "FORBIDDEN" });
+      const platformFeeCents = Math.round(input.quotedAmountCents * 0.13);
+      await db.update(bookings).set({
+        quotedAmountCents: input.quotedAmountCents,
+        platformFeeCents,
+        quoteMessage: input.quoteMessage ?? null,
+        isMultiSession: input.isMultiSession,
+        status: "quote_sent",
+      }).where(eq(bookings.id, input.bookingId));
+      // Notify customer
+      await createNotification({
+        userId: booking.customerId,
+        type: "booking_confirmed",
+        title: "💰 Quote Received!",
+        message: `${artist.name} has sent you a quote of $${(input.quotedAmountCents / 100).toFixed(2)} for your tattoo. Review and accept to confirm your booking.`,
+        data: { bookingId: input.bookingId, artistName: artist.name, quotedAmountCents: input.quotedAmountCents, platformFeeCents },
+      });
+      return { success: true, platformFeeCents };
+    }),
+
+  // Customer: accept a quote and pay the 13% platform fee via Stripe
+  acceptQuote: protectedProcedure
+    .input(z.object({
+      bookingId: z.number().int().positive(),
+      origin: z.string().url().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const bookingRows = await db.select().from(bookings).where(eq(bookings.id, input.bookingId)).limit(1);
+      const booking = bookingRows[0];
+      if (!booking) throw new TRPCError({ code: "NOT_FOUND" });
+      if (booking.customerId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+      if (!booking.quotedAmountCents || !booking.platformFeeCents) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "No quote has been sent yet." });
+      }
+      const artistRows = await db.select().from(artists).where(eq(artists.id, booking.artistId)).limit(1);
+      const artist = artistRows[0];
+      const quotedDisplay = `$${(booking.quotedAmountCents / 100).toFixed(2)}`;
+      const checkoutUrl = await createBookingFeeSession(
+        ctx.user.id,
+        booking.id,
+        booking.platformFeeCents,
+        artist?.name ?? "Artist",
+        quotedDisplay,
+        `${input.origin}/payment-success`,
+        `${input.origin}/bookings/${booking.id}`,
+        ctx.user.email ?? undefined,
+      );
+      await db.update(bookings).set({ quoteStripeSessionId: checkoutUrl }).where(eq(bookings.id, input.bookingId));
+      return { checkoutUrl };
+    }),
 
   // Artist: get their booking inbox
   artistInbox: protectedProcedure.query(async ({ ctx }) => {

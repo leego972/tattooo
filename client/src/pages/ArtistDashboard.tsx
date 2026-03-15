@@ -24,6 +24,8 @@ import {
   Mail,
   StickyNote,
   AlertCircle,
+  DollarSign,
+  Layers,
 } from "lucide-react";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -312,7 +314,7 @@ function NotificationBell() {
 }
 
 // ── Booking Card ──────────────────────────────────────────────────────────────
-function BookingCard({ booking, onConfirm, onDecline }: {
+function BookingCard({ booking, onConfirm, onDecline, onSendQuote }: {
   booking: {
     id: number;
     status: string;
@@ -325,6 +327,7 @@ function BookingCard({ booking, onConfirm, onDecline }: {
   };
   onConfirm: (id: number) => void;
   onDecline: (id: number) => void;
+  onSendQuote: (id: number) => void;
 }) {
   return (
     <div className={`rounded-xl border p-5 space-y-4 transition-all ${
@@ -378,24 +381,34 @@ function BookingCard({ booking, onConfirm, onDecline }: {
 
       {/* Actions — only for pending */}
       {booking.status === "pending" && (
-        <div className="flex gap-3 pt-1">
+        <div className="flex flex-col gap-2 pt-1">
           <Button
             size="lg"
-            className="flex-1 gap-2 bg-green-600 hover:bg-green-700 text-white font-bold text-base"
-            onClick={() => onConfirm(booking.id)}
+            className="w-full gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-base"
+            onClick={() => onSendQuote(booking.id)}
           >
-            <CheckCircle2 className="w-5 h-5" />
-            ACCEPT
+            <DollarSign className="w-5 h-5" />
+            SEND QUOTE
           </Button>
-          <Button
-            size="lg"
-            variant="outline"
-            className="flex-1 gap-2 border-red-500/50 text-red-400 hover:bg-red-500/10 font-bold text-base"
-            onClick={() => onDecline(booking.id)}
-          >
-            <XCircle className="w-5 h-5" />
-            DECLINE
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              className="flex-1 gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold"
+              onClick={() => onConfirm(booking.id)}
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              Confirm Direct
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1 gap-2 border-red-500/50 text-red-400 hover:bg-red-500/10 font-semibold"
+              onClick={() => onDecline(booking.id)}
+            >
+              <XCircle className="w-4 h-4" />
+              Decline
+            </Button>
+          </div>
         </div>
       )}
     </div>
@@ -408,8 +421,10 @@ export default function ArtistDashboard() {
   const [tab, setTab] = useState<"inbox" | "calendar">("inbox");
   const [confirmingId, setConfirmingId] = useState<number | null>(null);
   const [decliningId, setDecliningId] = useState<number | null>(null);
+  const [quotingId, setQuotingId] = useState<number | null>(null);
   const [confirmForm, setConfirmForm] = useState({ date: "", time: "" });
   const [declineForm, setDeclineForm] = useState({ reason: "", nextDate: "" });
+  const [quoteForm, setQuoteForm] = useState({ amount: "", message: "", isMultiSession: false });
 
   const utils = trpc.useUtils();
   const { data: inbox = [], isLoading } = trpc.booking.artistInbox.useQuery();
@@ -420,6 +435,16 @@ export default function ArtistDashboard() {
       utils.booking.artistInbox.invalidate();
       setConfirmingId(null);
       toast.success("Booking confirmed! The customer has been notified.");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const sendQuote = trpc.booking.sendQuote.useMutation({
+    onSuccess: (data) => {
+      utils.booking.artistInbox.invalidate();
+      setQuotingId(null);
+      setQuoteForm({ amount: "", message: "", isMultiSession: false });
+      toast.success(`Quote sent! Platform fee: $${(data.platformFeeCents / 100).toFixed(2)} (13%). Client will be notified.`);
     },
     onError: (e) => toast.error(e.message),
   });
@@ -543,6 +568,7 @@ export default function ArtistDashboard() {
                         booking={b}
                         onConfirm={setConfirmingId}
                         onDecline={setDecliningId}
+                        onSendQuote={setQuotingId}
                       />
                     ))}
                   </div>
@@ -556,6 +582,7 @@ export default function ArtistDashboard() {
                         booking={b}
                         onConfirm={setConfirmingId}
                         onDecline={setDecliningId}
+                        onSendQuote={setQuotingId}
                       />
                     ))}
                   </div>
@@ -613,6 +640,82 @@ export default function ArtistDashboard() {
                 })}
               >
                 {confirm.isPending ? "Confirming…" : "Confirm Booking"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Send Quote Dialog */}
+      <Dialog open={!!quotingId} onOpenChange={() => setQuotingId(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black tracking-wider" style={{ fontFamily: "'Bebas Neue', Georgia, serif" }}>
+              Send Quote
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <p className="text-sm text-muted-foreground">
+              Enter the <strong>total price</strong> for the entire piece. We collect a <strong>13% platform fee</strong> from the client when they accept.
+            </p>
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-1">Total Quote (USD)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">$</span>
+                <Input
+                  type="number"
+                  min="1"
+                  step="0.01"
+                  placeholder="e.g. 500"
+                  className="pl-7"
+                  value={quoteForm.amount}
+                  onChange={e => setQuoteForm(f => ({ ...f, amount: e.target.value }))}
+                />
+              </div>
+              {quoteForm.amount && parseFloat(quoteForm.amount) > 0 && (
+                <p className="text-xs text-primary mt-1 font-semibold">
+                  Platform fee: ${(parseFloat(quoteForm.amount) * 0.13).toFixed(2)} (13%) — paid by client
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-1">Message to Client (optional)</label>
+              <Textarea
+                placeholder="e.g. This includes 2 sessions, approx 4hrs each. Price covers design, stencil and all sessions."
+                value={quoteForm.message}
+                onChange={e => setQuoteForm(f => ({ ...f, message: e.target.value }))}
+                rows={3}
+              />
+            </div>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 border border-border">
+              <input
+                type="checkbox"
+                id="multi-session"
+                checked={quoteForm.isMultiSession}
+                onChange={e => setQuoteForm(f => ({ ...f, isMultiSession: e.target.checked }))}
+                className="w-4 h-4 rounded"
+              />
+              <div>
+                <label htmlFor="multi-session" className="text-sm font-semibold cursor-pointer flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-primary" />
+                  Multi-session piece
+                </label>
+                <p className="text-xs text-muted-foreground mt-0.5">Client pays our fee once. Follow-up sessions are booked directly with you.</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setQuotingId(null)}>Cancel</Button>
+              <Button
+                className="flex-1 font-bold"
+                disabled={sendQuote.isPending || !quoteForm.amount || parseFloat(quoteForm.amount) <= 0}
+                onClick={() => sendQuote.mutate({
+                  bookingId: quotingId!,
+                  quotedAmountCents: Math.round(parseFloat(quoteForm.amount) * 100),
+                  quoteMessage: quoteForm.message || undefined,
+                  isMultiSession: quoteForm.isMultiSession,
+                })}
+              >
+                {sendQuote.isPending ? "Sending…" : "Send Quote"}
               </Button>
             </div>
           </div>

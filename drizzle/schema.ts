@@ -51,7 +51,7 @@ export const credits = mysqlTable("credits", {
   userId: int("userId").notNull().unique(),
   balance: int("balance").notNull().default(0),
   lifetimeTotal: int("lifetimeTotal").notNull().default(0),
-  plan: mysqlEnum("plan", ["free", "starter", "pro", "studio", "unlimited"]).notNull().default("free"),
+  plan: mysqlEnum("plan", ["free", "starter", "pro", "studio", "unlimited", "member"]).notNull().default("free"),
   stripeCustomerId: varchar("stripeCustomerId", { length: 255 }),
   stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 255 }),
   subscriptionStatus: varchar("subscriptionStatus", { length: 64 }),
@@ -196,7 +196,7 @@ export const bookings = mysqlTable("bookings", {
   customerId: int("customerId").notNull(),
   artistId: int("artistId").notNull(),
   tattooGenerationId: int("tattooGenerationId"),
-  status: mysqlEnum("status", ["pending", "deposit_paid", "confirmed", "completed", "cancelled"]).notNull().default("pending"),
+  status: mysqlEnum("status", ["pending", "quote_sent", "deposit_paid", "confirmed", "completed", "cancelled"]).notNull().default("pending"),
   message: text("message"),
   stripeSessionId: varchar("stripeSessionId", { length: 256 }),
   depositAmountCents: int("depositAmountCents"),
@@ -206,6 +206,13 @@ export const bookings = mysqlTable("bookings", {
   customerNotes: text("customerNotes"),
   declineReason: text("declineReason"),
   nextAvailableDate: varchar("nextAvailableDate", { length: 10 }),
+  // Quote & platform fee fields
+  quotedAmountCents: int("quotedAmountCents"),
+  platformFeeCents: int("platformFeeCents"),
+  quoteMessage: text("quoteMessage"),
+  isMultiSession: boolean("isMultiSession").default(false).notNull(),
+  quoteStripeSessionId: varchar("quoteStripeSessionId", { length: 256 }),
+  quoteAcceptedAt: timestamp("quoteAcceptedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -840,3 +847,20 @@ export type InsertInAppNotification = typeof inAppNotifications.$inferInsert;
 
 // ── Extend bookings table: add declined reason + next available date ──────────
 // (handled via ALTER TABLE migration below — existing table already has core fields)
+
+// ── Marketing Budgets ─────────────────────────────────────────────────────────
+export const marketingBudgets = mysqlTable("marketing_budgets", {
+  id: int("id").autoincrement().primaryKey(),
+  month: varchar("month", { length: 7 }).notNull(), // "2026-02" format
+  totalBudget: int("totalBudget").notNull(), // cents
+  status: mysqlEnum("status", ["draft", "active", "paused", "completed"]).default("draft").notNull(),
+  allocations: json("allocations").$type<Array<{
+    channel: string;
+    amount: number; // cents
+    reasoning: string;
+  }>>(),
+  actualSpend: int("actualSpend").default(0).notNull(), // cents
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type MarketingBudget = typeof marketingBudgets.$inferSelect;

@@ -11,6 +11,7 @@ import healthRouter from "../health";
 import stripeWebhookRouter from "../stripeWebhook";
 import { handleUnsubscribe, runWeeklyAdJob } from "../mailing-list-router";
 import cron from "node-cron";
+import { seedBlogPosts } from "../blog-seed";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -81,7 +82,14 @@ async function startServer() {
   });
 }
 
-startServer().catch(console.error);
+startServer()
+  .then(() => {
+    // Seed blog posts after server is up (only inserts missing posts)
+    seedBlogPosts()
+      .then(n => { if (n > 0) console.log(`[BlogSeed] Inserted ${n} new tattoo blog posts`); })
+      .catch(err => console.error("[BlogSeed] Error:", err));
+  })
+  .catch(console.error);
 
 // ── Weekly Ad Cron Job ────────────────────────────────────────────────────────
 // Fires every Monday at 09:00 UTC

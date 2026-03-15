@@ -1,0 +1,42 @@
+{
+  "name": "tattooo.shop — AI Tattoo Design & Booking",
+  "short_name": "tattooo",
+  "description": "Design your tattoo with AI, then book a verified artist anywhere in the world.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["lifestyle", "shopping", "art"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Design a Tattoo",
+      "short_name": "Design",
+      "description": "Start generating your tattoo design with AI",
+      "url": "/studio",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Find an Artist",
+      "short_name": "Artists",
+      "description": "Browse verified tattoo artists worldwide",
+      "url": "/artists",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

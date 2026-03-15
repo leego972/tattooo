@@ -4,20 +4,17 @@ import { getDb } from "./db";
 import { credits } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { getStripe } from "./stripe";
-import { SUBSCRIPTION_PLANS } from "./products";
-
-export { SUBSCRIPTION_PLANS };
+import { USER_MEMBERSHIP, MEMBERSHIP_FEATURES, FREE_LIMITS } from "./products";
 
 export const subscriptionRouter = router({
-  // Get current subscription status — reads from credits table
+  // Get current subscription status
   getStatus: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new Error("DB unavailable");
     const rows = await db.select().from(credits).where(eq(credits.userId, ctx.user.id)).limit(1);
     const c = rows[0];
-    if (!c) return { plan: "free", status: "active", currentPeriodEnd: null, stripeCustomerId: null, balance: 0 };
+    if (!c) return { plan: "free", status: "active", currentPeriodEnd: null, stripeCustomerId: null, isMember: false };
 
-    // If subscribed, fetch current period end from Stripe
     let currentPeriodEnd: number | null = null;
     if (c.stripeSubscriptionId) {
       try {
@@ -28,43 +25,59 @@ export const subscriptionRouter = router({
       }
     }
 
+    const isMember = c.plan === "member" && c.subscriptionStatus === "active";
     return {
       plan: c.plan || "free",
       status: c.subscriptionStatus || "active",
       currentPeriodEnd,
       stripeCustomerId: c.stripeCustomerId || null,
-      balance: c.balance ?? 0,
+      isMember,
     };
   }),
 
-  // Get all plans
+  // Get membership plans for display
   getPlans: publicProcedure.query(() => {
-    return Object.values(SUBSCRIPTION_PLANS);
+    return {
+      monthly: USER_MEMBERSHIP.monthly,
+      yearly: USER_MEMBERSHIP.yearly,
+      features: MEMBERSHIP_FEATURES,
+      freeLimits: FREE_LIMITS,
+    };
   }),
 
-  // Create checkout session for subscription upgrade — always uses recurring price IDs
+  // Create membership checkout session — monthly or yearly
   createCheckout: protectedProcedure
-    .input(z.object({ plan: z.enum(["pro", "studio"]), origin: z.string() }))
+    .input(z.object({ interval: z.enum(["monthly", "yearly"]), origin: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const plan = SUBSCRIPTION_PLANS[input.plan];
-
+      const plan = USER_MEMBERSHIP[input.interval];
       const session = await getStripe().checkout.sessions.create({
         mode: "subscription",
         customer_email: ctx.user.email ?? undefined,
         client_reference_id: ctx.user.id.toString(),
         metadata: {
-          type: "subscription_upgrade",
-          user_id: ctx.user.id.toString(),
-          plan: input.plan,
+          type: "membership",
+          userId: ctx.user.id.toString(),
+          interval: input.interval,
           customer_email: ctx.user.email ?? "",
           customer_name: ctx.user.name ?? "",
         },
-        line_items: [{ price: plan.stripePriceId, quantity: 1 }],
+        line_items: [
+          plan.stripePriceId
+            ? { price: plan.stripePriceId, quantity: 1 }
+            : {
+                price_data: {
+                  currency: "usd",
+                  product_data: { name: plan.name, description: plan.description },
+                  unit_amount: plan.price,
+                  recurring: { interval: plan.interval },
+                },
+                quantity: 1,
+              },
+        ],
         allow_promotion_codes: true,
-        success_url: `${input.origin}/payment-success?type=subscription&plan=${input.plan}`,
-        cancel_url: `${input.origin}/subscription`,
+        success_url: `${input.origin}/payment-success?type=membership`,
+        cancel_url: `${input.origin}/pricing`,
       });
-
       return { url: session.url };
     }),
 

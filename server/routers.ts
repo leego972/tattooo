@@ -8,6 +8,8 @@ import { affiliateRouter } from "./affiliate-router";
 import { creditRouter } from "./credit-router";
 import { subscriptionRouter } from "./subscription-router";
 import { seoRouter } from "./seo-router";
+import { blogRouter } from "./blog-router";
+import { contentCreatorRouter } from "./content-creator-router";
 import { marketingRouter } from "./marketing-router";
 import { mailingListRouter } from "./mailing-list-router";
 import { bookingRouter, availabilityRouter, notificationsRouter } from "./booking-router";
@@ -40,7 +42,7 @@ import {
   getUserById,
   updatePassword,
 } from "./emailAuth";
-import { createCheckoutSession, CREDIT_PACKS, type PackId } from "./stripe";
+import { createMembershipCheckoutSession } from "./stripe";
 import { buildSizeAndPlacementContext } from "../shared/tattoo";
 import {
   parseSizeCm,
@@ -298,37 +300,18 @@ const creditsRouter = router({
     };
   }),
 
-  packs: publicProcedure.query(() => CREDIT_PACKS),
-
-  checkout: protectedProcedure
-    .input(z.object({ packId: z.enum(["starter", "pro", "unlimited"]), origin: z.string().url() }))
+  // Membership checkout — $10/month or $99/year
+  membershipCheckout: protectedProcedure
+    .input(z.object({ interval: z.enum(["monthly", "yearly"]), origin: z.string().url() }))
     .mutation(async ({ input, ctx }) => {
-      // Check if user has an unapplied promo discount
-      let discountPercent: number | undefined;
-      try {
-        const db = await getDb();
-        if (db) {
-          const userRows = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
-          const u = userRows[0];
-          if (u?.appliedPromoCode && u.promoDiscountUsed) {
-            const promoRows = await db.select().from(promoCodes).where(eq(promoCodes.code, u.appliedPromoCode)).limit(1);
-            if (promoRows[0]?.isActive) {
-              discountPercent = promoRows[0].discountPercent;
-            }
-          }
-        }
-      } catch (e) {
-        console.warn("[Checkout] Failed to look up promo discount:", e);
-      }
-      const url = await createCheckoutSession(
+      const url = await createMembershipCheckoutSession(
         ctx.user.id,
-        input.packId as PackId,
-        `${input.origin}/payment-success?type=credits`,
+        input.interval,
+        `${input.origin}/payment-success`,
         `${input.origin}/pricing`,
-        ctx.user.email ?? undefined,
-        discountPercent
+        ctx.user.email ?? undefined
       );
-      return { url, discountPercent };
+      return { url };
     }),
 
   transactions: protectedProcedure.query(async ({ ctx }) => {
@@ -785,15 +768,16 @@ const artistsRouter = router({
       const bookingId = (result as { insertId: number }).insertId;
 
       // Create Stripe checkout for deposit
-      const { createBookingDepositSession } = await import("./stripe");
-      const checkoutUrl = await createBookingDepositSession(
+      const { createBookingFeeSession } = await import("./stripe");
+      const checkoutUrl = await createBookingFeeSession(
         ctx.user.id,
         bookingId,
         depositCents,
         artist.name,
+        `$${(depositCents / 100).toFixed(2)}`,
         `${input.origin}/payment-success?type=booking`,
         `${input.origin}/artists/${input.artistId}`,
-        ctx.user.email ?? undefined
+        ctx.user.email ?? ""
       );
 
       return { bookingId, checkoutUrl };
@@ -1918,6 +1902,8 @@ export const appRouter = router({
   booking: bookingRouter,
   availability: availabilityRouter,
   notifications: notificationsRouter,
+  blog: blogRouter,
+  contentCreator: contentCreatorRouter,
 });
 
 export type AppRouter = typeof appRouter;

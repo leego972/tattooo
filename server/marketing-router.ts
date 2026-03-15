@@ -9,7 +9,7 @@ import { z } from "zod";
 import { router, adminProcedure } from "./_core/trpc";
 import { getDb } from "./db";
 import {
-  // (null as any),
+  marketingBudgets,
   marketingCampaigns,
   marketingContent,
   marketingPerformance,
@@ -121,9 +121,9 @@ export const marketingRouter = router({
 
     const rows = await db
       .select()
-      .from((null as any))
-      .where(eq((null as any).month, currentMonth))
-      .orderBy(desc((null as any).createdAt))
+      .from(marketingBudgets)
+      .where(eq(marketingBudgets.month, currentMonth))
+      .orderBy(desc(marketingBudgets.createdAt))
       .limit(1);
 
     return rows[0] || null;
@@ -136,8 +136,8 @@ export const marketingRouter = router({
 
     return db
       .select()
-      .from((null as any))
-      .orderBy(desc((null as any).createdAt))
+      .from(marketingBudgets)
+      .orderBy(desc(marketingBudgets.createdAt))
       .limit(12);
   }),
 
@@ -151,7 +151,7 @@ export const marketingRouter = router({
       const allocations = await allocateBudget({ monthlyBudget: input.monthlyBudget });
       const month = new Date().toISOString().substring(0, 7);
 
-      await db.insert((null as any)).values({
+      await db.insert(marketingBudgets).values({
         month,
         totalBudget: Math.round(input.monthlyBudget * 100),
         status: "active",

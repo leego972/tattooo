@@ -1,114 +1,76 @@
 /**
  * tatt-ooo Stripe Products & Prices
  *
- * Price IDs are created in Stripe (test mode) and stored here.
- * When switching to live keys, re-run the setup script and update these IDs.
+ * Business model:
+ *   - Users: $10/month OR $99/year (saves ~17%)
+ *   - Artists/Studios: $29/year directory listing fee
+ *   - Booking fee: 13% of artist's quoted price, charged at booking confirmation
  *
- * Test Price IDs (created 2026-03-15):
+ * Price IDs are created in Stripe (test mode) and stored here.
+ * When switching to live keys, update the env vars in Settings → Payment.
  */
 
-// ─── Credit Packs (one-time purchases) ────────────────────────────────────────
-export const CREDIT_PACKS = [
-  {
-    id: "starter" as const,
-    name: "Starter Pack",
-    credits: 50,
-    price: 999, // cents = $9.99
-    priceDisplay: "$9.99",
-    description: "50 AI tattoo designs",
-    popular: false,
-    stripePriceId: process.env.STRIPE_STARTER_PRICE_ID || "price_1TB7dSK1nQvj50bs8oRIXXk4",
-    isSubscription: false,
+// ─── User Membership ──────────────────────────────────────────────────────────
+export const USER_MEMBERSHIP = {
+  monthly: {
+    id: "member_monthly" as const,
+    name: "Tattooo Member — Monthly",
+    price: 1000,          // cents = $10.00/month
+    priceDisplay: "$10/month",
+    interval: "month" as const,
+    description: "Full access to AI tattoo designer, artist directory, and booking system",
+    stripePriceId: process.env.STRIPE_MEMBER_MONTHLY_PRICE_ID || "",
   },
-  {
-    id: "pro" as const,
-    name: "Pro Pack",
-    credits: 150,
-    price: 2499, // cents = $24.99
-    priceDisplay: "$24.99",
-    description: "150 AI tattoo designs",
-    popular: true,
-    stripePriceId: process.env.STRIPE_PRO_CREDITS_PRICE_ID || "price_1TB7dUK1nQvj50bstdjicg9C",
-    isSubscription: false,
-  },
-  {
-    id: "unlimited" as const,
-    name: "Unlimited",
-    credits: 500,
-    price: 4999, // cents = $49.99/month
-    priceDisplay: "$49.99/mo",
-    description: "500 AI tattoo designs per month",
-    popular: false,
-    stripePriceId: process.env.STRIPE_UNLIMITED_PRICE_ID || "price_1TB7dVK1nQvj50bskyJtD6mD",
-    isSubscription: true,
-  },
-] as const;
-
-export type PackId = (typeof CREDIT_PACKS)[number]["id"];
-
-// ─── Subscription Plans ────────────────────────────────────────────────────────
-export const SUBSCRIPTION_PLANS = {
-  free: {
-    id: "free" as const,
-    name: "Free",
-    price: 0,
-    monthlyCredits: 5,
-    features: [
-      "5 AI tattoo designs",
-      "Basic styles",
-      "Share designs",
-      "Public gallery",
-    ],
-    stripePriceId: null,
-  },
-  pro: {
-    id: "pro" as const,
-    name: "Pro",
-    price: 19,
-    monthlyCredits: 50,
-    features: [
-      "50 AI designs/month",
-      "All 40+ styles & variations",
-      "3-way comparison view",
-      "Skin overlay preview",
-      "Animated reveal video",
-      "Priority support",
-    ],
-    stripePriceId: process.env.STRIPE_PRO_PRICE_ID || "price_1TB7dXK1nQvj50bsbZR2za4n",
-  },
-  studio: {
-    id: "studio" as const,
-    name: "Studio",
-    price: 49,
-    monthlyCredits: 200,
-    features: [
-      "200 AI designs/month",
-      "Everything in Pro",
-      "Bulk generation",
-      "Commercial license",
-      "Artist collaboration tools",
-      "White-label exports",
-    ],
-    stripePriceId: process.env.STRIPE_STUDIO_PRICE_ID || "price_1TB7dYK1nQvj50bs1M4m5C58",
+  yearly: {
+    id: "member_yearly" as const,
+    name: "Tattooo Member — Yearly",
+    price: 9900,          // cents = $99.00/year (~$8.25/month, saves ~17%)
+    priceDisplay: "$99/year",
+    interval: "year" as const,
+    description: "Full access — save 17% vs monthly",
+    stripePriceId: process.env.STRIPE_MEMBER_YEARLY_PRICE_ID || "",
   },
 } as const;
 
-export type PlanId = keyof typeof SUBSCRIPTION_PLANS;
+export type MembershipInterval = keyof typeof USER_MEMBERSHIP;
 
 // ─── Artist Directory Fee ──────────────────────────────────────────────────────
 export const ARTIST_FEE = {
-  amount: 2900, // cents = $29.00
+  amount: 2900,           // cents = $29.00/year
   display: "$29/year",
-  description: "Annual directory listing — get discovered by clients",
+  description: "Annual directory listing — get discovered by clients, receive real bookings",
   stripePriceId: process.env.STRIPE_ARTIST_FEE_PRICE_ID || "price_1TB7dZK1nQvj50bsRYtNu02O",
 };
 
-// ─── Credit costs per action ───────────────────────────────────────────────────
-export const CREDIT_COSTS = {
-  generate: 1,        // 1 credit per AI tattoo generation
-  generateVideo: 5,   // 5 credits per animated reveal video
-  variation: 1,       // 1 credit per variation
-} as const;
+// ─── Booking Fee ──────────────────────────────────────────────────────────────
+export const BOOKING_FEE_PERCENT = 13; // 13% of artist's quoted price
 
-// ─── Free signup credits ───────────────────────────────────────────────────────
-export const SIGNUP_FREE_CREDITS = 5;
+/**
+ * Calculate the booking fee amount in cents given the artist's quoted price.
+ * @param quotedAmountCents - Artist's quote in cents
+ * @returns Booking fee in cents (rounded up to nearest cent)
+ */
+export function calcBookingFee(quotedAmountCents: number): number {
+  return Math.ceil(quotedAmountCents * BOOKING_FEE_PERCENT / 100);
+}
+
+// ─── Membership features (for display on Pricing page) ────────────────────────
+export const MEMBERSHIP_FEATURES = [
+  "Unlimited AI tattoo designs",
+  "All 40+ styles & variations",
+  "3-way comparison view",
+  "Skin overlay preview",
+  "Animated reveal video",
+  "Browse verified artist directory",
+  "Send booking requests to artists",
+  "Secure booking via platform",
+  "Design-to-artist email delivery",
+  "Priority support",
+];
+
+// ─── Free (non-member) limits ─────────────────────────────────────────────────
+export const FREE_LIMITS = {
+  designsPerDay: 3,       // 3 free designs per day to try the tool
+  canBook: false,         // booking requires membership
+  canBrowseArtists: true, // browsing is free
+};

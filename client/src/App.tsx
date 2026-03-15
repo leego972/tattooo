@@ -36,6 +36,13 @@ import Credits from "./pages/Credits";
 import MailingList from "./pages/MailingList";
 import ArtistDashboard from "./pages/ArtistDashboard";
 import MyBookings from "./pages/MyBookings";
+import BlogPage from "./pages/BlogPage";
+import BlogAdmin from "./pages/BlogAdmin";
+import SeoDashboard from "./pages/SeoDashboard";
+import ContentCreatorPage from "./pages/ContentCreatorPage";
+import MarketingPage from "./pages/MarketingPage";
+import TermsPage from "./pages/TermsPage";
+import AccountSettings from "./pages/AccountSettings";
 
 import Navbar from "./components/Navbar";
 
@@ -122,6 +129,25 @@ function Router() {
           </Route>
           <Route path="/my-bookings">
             {() => <ProtectedRoute component={MyBookings} />}
+          </Route>
+          {/* ── Public content routes ──────────────────────────────────── */}
+          <Route path="/blog" component={BlogPage} />
+          <Route path="/terms" component={TermsPage} />
+          {/* ── Protected user & admin routes ─────────────────────────── */}
+          <Route path="/settings">
+            {() => <ProtectedRoute component={AccountSettings} />}
+          </Route>
+          <Route path="/admin/blog">
+            {() => <ProtectedRoute component={BlogAdmin} />}
+          </Route>
+          <Route path="/admin/seo">
+            {() => <ProtectedRoute component={SeoDashboard} />}
+          </Route>
+          <Route path="/admin/content">
+            {() => <ProtectedRoute component={ContentCreatorPage} />}
+          </Route>
+          <Route path="/admin/marketing">
+            {() => <ProtectedRoute component={MarketingPage} />}
           </Route>
 
           {/* ── Fallback ──────────────────────────────────────────── */}

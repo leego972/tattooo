@@ -407,3 +407,78 @@
 - [x] Frontend: Navbar — My Bookings + Artist Dashboard links
 - [x] Email: booking request email to artist, confirmation/decline email to user
 - [x] Theme: tattoo studio aesthetic (crimson red, aged gold, Bebas Neue, noise texture)
+
+## Mailing List Expansion — AU/NZ Studios
+- [x] Add 14 Australian studios to studio_mailing_list
+- [x] Add 10 New Zealand studios to studio_mailing_list
+- [ ] Send English info pack to all 24 new studios (pending — use Mailing List admin page)
+
+## Auth Persistence Audit & Fix
+- [ ] Audit: signup saves name, email, password hash to users table
+- [ ] Audit: session cookie is persistent (maxAge set, not session-only)
+- [ ] Audit: auth.me returns correct user after page refresh
+- [ ] Fix: any gaps in session persistence or user data storage
+
+## New Business Model — Freemium + Booking Fee
+- [ ] Remove credit system from products.ts, UI, and generation gate
+- [ ] Add user membership: $10/mo or $99/yr Stripe recurring price IDs
+- [ ] Auth gate: free users can browse/design limited; members get full access + booking
+- [ ] Stripe webhook: handle membership subscription events (grant/revoke access)
+- [ ] Booking flow: user sends request (details + tattoo image + preferred date + body area)
+- [ ] Booking flow: artist receives request, sends back quote + available time slots
+- [ ] Booking flow: user reviews quote, selects slot, pays 13% booking fee via Stripe
+- [ ] Booking flow: on payment success, confirm booking to artist with locked slot
+- [ ] Booking flow: if artist unavailable, user gets next date + alternative artist option
+- [ ] Email notifications for all booking events (request, quote, payment, confirmation, decline)
+- [ ] PWA manifest + service worker for iOS/Android home screen install
+- [ ] Mobile-responsive polish across all pages
+- [ ] Update Pricing page to reflect new model (remove credits, show membership)
+- [ ] Update Subscription page to reflect new model
+- [ ] Keep $29/yr artist directory listing fee (unchanged)
+- [ ] AU/NZ studios: insert 24 studios into DB and send English info pack
+
+## Terms & Conditions Page
+- [ ] Frontend: /terms page with full T&C covering platform liability, AI art disclaimers, tattoo outcome responsibility
+- [ ] T&C: AI-generated designs are for reference only — quality of final tattoo is solely the responsibility of artist and client
+- [ ] T&C: Platform not liable for misuse of designs, copyright claims, or health outcomes
+- [ ] T&C: Booking fee is non-refundable once artist confirms slot
+- [ ] T&C: Artist membership and user membership terms
+- [ ] Footer: Link to /terms on all pages
+- [ ] Signup: Checkbox "I agree to Terms & Conditions" required before account creation
+
+## Business Model Restructuring
+- [ ] Rebuild products.ts: single user membership
+- [ ] Rebuild stripe.ts: membership checkout
+- [ ] Rebuild subscription-router: monthly/yearly intervals
+- [ ] Update Pricing page: single tier
+- [ ] Landing Page Overhaul: hero, how-it-works, value props, pricing preview
+- [ ] Quote/Booking Fee System: artist quote, user accepts, 13% Stripe fee
+- [ ] Terms and Conditions page
+- [ ] PWA manifest for iOS/Android
+
+## Business Model Restructure + Landing Page Overhaul (Mar 2026)
+- [x] Business model: remove credit packs, replace with $10/mo or $99/yr membership
+- [x] stripe.ts: rewritten — USER_MEMBERSHIP (monthly/yearly), ARTIST_LISTING, createBookingFeeSession
+- [x] stripeWebhook.ts: rewritten — membership + booking_fee handlers, no credit packs
+- [x] subscription-router.ts: rewritten — single membership tier, getPlans, createCheckout, portal
+- [x] Pricing.tsx: rewritten — single membership tier, monthly/yearly toggle, no credit pack UI
+- [x] Landing page (Home.tsx): global positioning, realistic 2026 social proof stats, how-it-works, country flags, artist CTA
+- [x] index.html: full SEO meta tags (OG, Twitter Card, keywords, description), PWA manifest link
+- [x] manifest.json: PWA manifest for iOS/Android home screen install
+- [x] Blog seed data: replaced Archibald Titan cybersecurity content with 10 tattoo SEO articles
+- [x] Blog seed: wired into server startup, 10 posts inserted into database
+- [x] Blog/SEO/content server files retargeted from Archibald Titan to tattooo.shop
+- [x] marketingBudgets table: added to schema.ts and database
+- [x] quote_sent status: added to bookings enum in schema and database
+- [x] Booking flow: sendQuote procedure (artist sends total quote + multi-session flag + 13% fee calc)
+- [x] Booking flow: acceptQuote procedure (client accepts → Stripe checkout for 13% platform fee)
+- [x] ArtistDashboard.tsx: Send Quote button + dialog with multi-session checkbox
+- [x] MyBookings.tsx: Quote review card with Accept Quote button and Stripe redirect
+- [x] Bookings.tsx: quote_sent status badge added to STATUS_CONFIG
+- [x] TermsPage.tsx: rewritten for tattooo.shop with AI art and tattoo outcome disclaimers
+- [x] AccountSettings.tsx: removed AT-specific identityProviders/userSecrets/TwoFactorSetup sections
+- [x] BlogPage.tsx: retargeted from Archibald Titan to tattooo.shop
+- [x] App.tsx: blog, SEO, content creator, terms, account-settings routes wired
+- [x] Ad creatives: 8 images generated (Instagram ads, artist recruitment, styles showcase, affiliate referral)
+- [x] features.test.ts: updated credits.packs tests → subscription.getPlans tests
+- [x] Tests: 29/29 passing

@@ -18,6 +18,8 @@ import {
   AlertCircle,
   RefreshCw,
   User,
+  DollarSign,
+  Layers,
 } from "lucide-react";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -43,6 +45,7 @@ function StatusIcon({ status }: { status: string }) {
 function statusLabel(status: string) {
   const map: Record<string, { label: string; className: string }> = {
     pending:      { label: "Waiting for Artist",  className: "bg-amber-500/15 text-amber-400 border-amber-500/30" },
+    quote_sent:   { label: "Quote Received!",      className: "bg-primary/15 text-primary border-primary/30" },
     confirmed:    { label: "Confirmed!",           className: "bg-green-500/15 text-green-400 border-green-500/30" },
     cancelled:    { label: "Declined",             className: "bg-red-500/15 text-red-400 border-red-500/30" },
     deposit_paid: { label: "Deposit Paid",         className: "bg-blue-500/15 text-blue-400 border-blue-500/30" },
@@ -221,8 +224,22 @@ function AlternativeArtists({ alternatives }: {
 export default function MyBookings() {
   const { user } = useAuth();
   const [newBookingOpen, setNewBookingOpen] = useState(false);
+  const [acceptingQuoteId, setAcceptingQuoteId] = useState<number | null>(null);
 
+  const utils = trpc.useUtils();
   const { data: bookings = [], isLoading } = trpc.booking.myBookings.useQuery();
+
+  const acceptQuote = trpc.booking.acceptQuote.useMutation({
+    onSuccess: (data) => {
+      utils.booking.myBookings.invalidate();
+      setAcceptingQuoteId(null);
+      if (data.checkoutUrl) {
+        toast.success("Redirecting to payment...");
+        window.open(data.checkoutUrl, "_blank");
+      }
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
   if (!user) {
     return (
@@ -236,6 +253,7 @@ export default function MyBookings() {
     );
   }
 
+  const quotesReceived = bookings.filter(b => (b.status as string) === "quote_sent");
   const pending = bookings.filter(b => b.status === "pending");
   const confirmed = bookings.filter(b => b.status === "confirmed" || b.status === "deposit_paid");
   const past = bookings.filter(b => b.status === "cancelled" || b.status === "completed");
@@ -293,6 +311,19 @@ export default function MyBookings() {
           </div>
         ) : (
           <div className="space-y-6">
+            {/* Quotes Received */}
+            {quotesReceived.length > 0 && (
+              <section className="space-y-3">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+                  <DollarSign className="w-3.5 h-3.5" />
+                  Quote Received — Action Required ({quotesReceived.length})
+                </h2>
+                {quotesReceived.map(b => (
+                  <BookingCard key={b.id} booking={b} onAcceptQuote={() => setAcceptingQuoteId(b.id)} />
+                ))}
+              </section>
+            )}
+
             {/* Pending */}
             {pending.length > 0 && (
               <section className="space-y-3">
@@ -330,6 +361,63 @@ export default function MyBookings() {
       </div>
 
       <NewBookingDialog open={newBookingOpen} onClose={() => setNewBookingOpen(false)} />
+
+      {/* Accept Quote Dialog */}
+      <Dialog open={!!acceptingQuoteId} onOpenChange={() => setAcceptingQuoteId(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black tracking-wider" style={{ fontFamily: "'Bebas Neue', Georgia, serif" }}>
+              Accept Quote
+            </DialogTitle>
+          </DialogHeader>
+          {acceptingQuoteId && (() => {
+            const b = bookings.find(x => x.id === acceptingQuoteId);
+            const fee = b?.platformFeeCents ? (b.platformFeeCents / 100).toFixed(2) : null;
+            const total = b?.quotedAmountCents ? (b.quotedAmountCents / 100).toFixed(2) : null;
+            return (
+              <div className="space-y-4 pt-2">
+                {b?.quoteMessage && (
+                  <div className="rounded-lg bg-secondary/50 p-3 text-sm text-muted-foreground italic">
+                    "{b.quoteMessage}"
+                  </div>
+                )}
+                <div className="rounded-lg border border-border p-4 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Total quote</span>
+                    <span className="font-bold">${total}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Platform fee (13%)</span>
+                    <span className="font-bold text-primary">${fee}</span>
+                  </div>
+                  <div className="border-t border-border pt-2 flex justify-between text-sm">
+                    <span className="font-semibold">You pay now</span>
+                    <span className="font-black text-base">${fee}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Remaining balance paid directly to your artist.</p>
+                </div>
+                {b?.isMultiSession && (
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-secondary/50 border border-border text-sm">
+                    <Layers className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                    <p className="text-muted-foreground">This is a <strong className="text-foreground">multi-session piece</strong>. Your platform fee covers the full work. Follow-up sessions will be scheduled directly with your artist.</p>
+                  </div>
+                )}
+                <div className="flex gap-3">
+                  <Button variant="outline" className="flex-1" onClick={() => setAcceptingQuoteId(null)}>Cancel</Button>
+                  <Button
+                    className="flex-1 font-bold gap-2"
+                    disabled={acceptQuote.isPending}
+                    onClick={() => acceptQuote.mutate({ bookingId: acceptingQuoteId })}
+                  >
+                    <DollarSign className="w-4 h-4" />
+                    {acceptQuote.isPending ? "Processing…" : `Pay $${fee}`}
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -338,6 +426,7 @@ export default function MyBookings() {
 function BookingCard({
   booking,
   onRebook,
+  onAcceptQuote,
 }: {
   booking: {
     id: number;
@@ -348,6 +437,10 @@ function BookingCard({
     declineReason?: string | null;
     nextAvailableDate?: string | null;
     createdAt: Date;
+    quotedAmountCents?: number | null;
+    platformFeeCents?: number | null;
+    quoteMessage?: string | null;
+    isMultiSession?: boolean | null;
     artistId?: number | null;
     artistName?: string | null;
     artistCity?: string | null;
@@ -356,6 +449,7 @@ function BookingCard({
     artistSpecialties?: string | null;
   };
   onRebook?: () => void;
+  onAcceptQuote?: () => void;
 }) {
   // Parse alternatives from notification data if available
   const isDeclined = booking.status === "cancelled";

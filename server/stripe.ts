@@ -1,12 +1,12 @@
 /**
  * Stripe integration for tatt-ooo.
- * All products and prices are managed via server/products.ts.
+ * Business model:
+ *   - Users: $10/month OR $99/year membership (unlimited designs + booking access)
+ *   - Artists: $29/year directory listing fee
+ *   - Booking fee: 13% of artist's quoted price, charged at booking confirmation
  */
 import Stripe from "stripe";
-import { CREDIT_PACKS, ARTIST_FEE, type PackId } from "./products";
-
-// Re-export for backward compatibility
-export { CREDIT_PACKS, type PackId };
+import { ARTIST_FEE, USER_MEMBERSHIP, type MembershipInterval } from "./products";
 
 export function getStripe(): Stripe {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -15,58 +15,50 @@ export function getStripe(): Stripe {
 }
 
 /**
- * Create a Stripe Checkout Session for a credit pack purchase.
- * Uses pre-created Stripe price IDs for clean dashboard reporting.
- * Falls back to price_data when a promo discount is applied.
+ * Create a Stripe Checkout Session for user membership.
+ * Supports monthly ($10/mo) and yearly ($99/yr) intervals.
+ * If no Stripe price ID is configured yet, falls back to price_data.
  */
-export async function createCheckoutSession(
+export async function createMembershipCheckoutSession(
   userId: number,
-  packId: PackId,
+  interval: MembershipInterval,
   successUrl: string,
   cancelUrl: string,
-  customerEmail?: string,
-  discountPercent?: number
+  customerEmail?: string
 ): Promise<string> {
   const stripe = getStripe();
-  const pack = CREDIT_PACKS.find((p) => p.id === packId);
-  if (!pack) throw new Error(`Unknown pack: ${packId}`);
+  const plan = USER_MEMBERSHIP[interval];
 
-  const isSubscription = pack.isSubscription;
-
-  // Use price_data only when applying a server-side promo discount
-  const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] =
-    discountPercent && discountPercent > 0
-      ? [
-          {
-            price_data: {
-              currency: "usd",
-              product_data: {
-                name: `tatt-ooo ${pack.name} (${discountPercent}% off)`,
-                description: pack.description,
-              },
-              unit_amount: Math.round(pack.price * (1 - discountPercent / 100)),
-              ...(isSubscription ? { recurring: { interval: "month" } } : {}),
+  // Use pre-created price ID if available, otherwise use price_data
+  const lineItem: Stripe.Checkout.SessionCreateParams.LineItem =
+    plan.stripePriceId
+      ? { price: plan.stripePriceId, quantity: 1 }
+      : {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: plan.name,
+              description: plan.description,
             },
-            quantity: 1,
+            unit_amount: plan.price,
+            recurring: { interval: plan.interval },
           },
-        ]
-      : [{ price: pack.stripePriceId, quantity: 1 }];
+          quantity: 1,
+        };
 
   const session = await stripe.checkout.sessions.create({
-    mode: isSubscription ? "subscription" : "payment",
+    mode: "subscription",
     customer_email: customerEmail,
-    allow_promotion_codes: !discountPercent,
-    line_items: lineItems,
+    allow_promotion_codes: true,
+    line_items: [lineItem],
     client_reference_id: String(userId),
     metadata: {
       userId: String(userId),
-      packId,
-      credits: String(pack.credits),
-      type: "credit_purchase",
-      discountPercent: discountPercent ? String(discountPercent) : "",
+      type: "membership",
+      interval,
       customer_email: customerEmail ?? "",
     },
-    success_url: `${successUrl}&session_id={CHECKOUT_SESSION_ID}&pack=${packId}`,
+    success_url: `${successUrl}?type=membership&interval=${interval}&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: cancelUrl,
   });
 
@@ -85,11 +77,26 @@ export async function createArtistRegistrationSession(
 ): Promise<string> {
   const stripe = getStripe();
 
+  const lineItem: Stripe.Checkout.SessionCreateParams.LineItem =
+    ARTIST_FEE.stripePriceId
+      ? { price: ARTIST_FEE.stripePriceId, quantity: 1 }
+      : {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: "Tattooo Artist Directory Listing",
+              description: ARTIST_FEE.description,
+            },
+            unit_amount: ARTIST_FEE.amount,
+          },
+          quantity: 1,
+        };
+
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     customer_email: customerEmail,
     allow_promotion_codes: true,
-    line_items: [{ price: ARTIST_FEE.stripePriceId, quantity: 1 }],
+    line_items: [lineItem],
     client_reference_id: String(pendingArtistId),
     metadata: {
       pendingArtistId: String(pendingArtistId),
@@ -97,6 +104,52 @@ export async function createArtistRegistrationSession(
       customer_email: customerEmail ?? "",
     },
     success_url: `${successUrl}&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: cancelUrl,
+  });
+
+  return session.url!;
+}
+
+/**
+ * Create a Stripe Checkout Session for the 13% booking fee.
+ * Dynamic amount — based on artist's quoted price.
+ */
+export async function createBookingFeeSession(
+  userId: number,
+  bookingId: number,
+  bookingFeeAmountCents: number,
+  artistName: string,
+  quotedAmountDisplay: string,
+  successUrl: string,
+  cancelUrl: string,
+  customerEmail?: string
+): Promise<string> {
+  const stripe = getStripe();
+
+  const session = await stripe.checkout.sessions.create({
+    mode: "payment",
+    customer_email: customerEmail,
+    line_items: [
+      {
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: `Booking Fee — ${artistName}`,
+            description: `Platform booking fee (13% of ${quotedAmountDisplay} quoted price). Secures your appointment.`,
+          },
+          unit_amount: bookingFeeAmountCents,
+        },
+        quantity: 1,
+      },
+    ],
+    client_reference_id: String(userId),
+    metadata: {
+      userId: String(userId),
+      bookingId: String(bookingId),
+      type: "booking_fee",
+      customer_email: customerEmail ?? "",
+    },
+    success_url: `${successUrl}?type=booking_fee&bookingId=${bookingId}&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: cancelUrl,
   });
 
@@ -113,51 +166,6 @@ export function constructWebhookEvent(
 ): Stripe.Event {
   const stripe = getStripe();
   return stripe.webhooks.constructEvent(payload, signature, secret);
-}
-
-/**
- * Create a Stripe Checkout Session for an artist booking deposit.
- * Booking deposits are dynamic amounts so price_data is used here.
- */
-export async function createBookingDepositSession(
-  userId: number,
-  bookingId: number,
-  depositAmountCents: number,
-  artistName: string,
-  successUrl: string,
-  cancelUrl: string,
-  customerEmail?: string
-): Promise<string> {
-  const stripe = getStripe();
-
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    customer_email: customerEmail,
-    line_items: [
-      {
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: `Booking Deposit — ${artistName}`,
-            description: "Deposit to secure your tattoo appointment",
-          },
-          unit_amount: depositAmountCents,
-        },
-        quantity: 1,
-      },
-    ],
-    client_reference_id: String(userId),
-    metadata: {
-      userId: String(userId),
-      bookingId: String(bookingId),
-      type: "booking_deposit",
-      customer_email: customerEmail ?? "",
-    },
-    success_url: `${successUrl}&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: cancelUrl,
-  });
-
-  return session.url!;
 }
 
 /**

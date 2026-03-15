@@ -8,6 +8,7 @@ import { Calendar, Clock, CheckCircle, XCircle, DollarSign, ArrowRight } from "l
 
 const STATUS_CONFIG = {
   pending: { label: "Pending", color: "border-yellow-500/30 text-yellow-400", icon: Clock },
+  quote_sent: { label: "Quote Received!", color: "border-cyan-400/40 text-cyan-300", icon: DollarSign },
   deposit_paid: { label: "Deposit Paid", color: "border-cyan-500/30 text-cyan-400", icon: DollarSign },
   confirmed: { label: "Confirmed", color: "border-green-500/30 text-green-400", icon: CheckCircle },
   completed: { label: "Completed", color: "border-purple-500/30 text-purple-400", icon: CheckCircle },

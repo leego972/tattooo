@@ -1,89 +1,60 @@
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Check, Zap, Star, Infinity, Loader2, Shield, Download, Video, Palette } from "lucide-react";
+import {
+  Check, Zap, Star, Globe, Loader2, Shield, Download, Video, Palette,
+  Users, Brush, BadgeCheck, ArrowRight,
+} from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { getLoginUrl } from "@/const";
 
-const PACKS = [
-  {
-    id: "starter" as const,
-    name: "Starter",
-    price: "$9.99",
-    credits: 5000,
-    icon: Zap,
-    color: "border-zinc-700 hover:border-zinc-500",
-    badge: null,
-    features: [
-      "5,000 tattoo design credits",
-      "All 40+ tattoo styles",
-      "Print-ready 300 DPI files",
-      "Body placement preview",
-      "Drawing board editor",
-      "Download & share",
-      "Skin overlay preview",
-    ],
-  },
-  {
-    id: "pro" as const,
-    name: "Pro",
-    price: "$24.99",
-    credits: 15000,
-    icon: Star,
-    color: "border-cyan-500 hover:border-cyan-400",
-    badge: "Most Popular",
-    features: [
-      "15,000 tattoo design credits",
-      "All 40+ tattoo styles",
-      "Print-ready 300 DPI files",
-      "Body placement preview",
-      "Drawing board editor",
-      "Download & share",
-      "Skin overlay preview",
-      "3-variation comparison",
-      "Animated reveal video (5 cr)",
-      "Priority generation",
-    ],
-  },
-  {
-    id: "unlimited" as const,
-    name: "Unlimited",
-    price: "$49.99/mo",
-    credits: null,
-    icon: Infinity,
-    color: "border-amber-500/60 hover:border-amber-400",
-    badge: "Best Value",
-    features: [
-      "Unlimited tattoo designs",
-      "All 40+ tattoo styles",
-      "Print-ready 300 DPI files",
-      "Body placement preview",
-      "Drawing board editor",
-      "Download & share",
-      "Skin overlay preview",
-      "3-variation comparison",
-      "Unlimited animated reveals",
-      "Priority generation",
-      "Cancel anytime",
-    ],
-  },
+const MEMBER_FEATURES = [
+  "Unlimited AI tattoo design generations",
+  "All 40+ tattoo styles (Black & Grey, Japanese, Neo-Trad, Geometric, Watercolour & more)",
+  "Print-ready 300 DPI files",
+  "Body placement preview tool",
+  "Drawing board editor",
+  "Skin overlay preview",
+  "3-variation comparison per design",
+  "Animated ink-reveal video",
+  "Access to verified global artist directory",
+  "Direct booking with artists worldwide",
+  "Priority generation queue",
+  "Cancel anytime",
 ];
 
-const FEATURES = [
-  { icon: Palette, label: "40+ Styles", desc: "Black & Grey, Neo-Trad, Watercolour, Geometric, Japanese & more" },
-  { icon: Download, label: "Print-Ready", desc: "300 DPI PNG files sized to your exact body placement" },
-  { icon: Video, label: "Animated Reveal", desc: "Cinematic ink-reveal video of your tattoo design" },
-  { icon: Shield, label: "Secure Payments", desc: "All transactions processed securely via Stripe" },
+const ARTIST_FEATURES = [
+  "Verified artist profile in global directory",
+  "Receive booking requests from members worldwide",
+  "Quote tool — send quotes directly to clients",
+  "13% platform fee on confirmed bookings only",
+  "Multi-session piece support",
+  "Portfolio showcase (unlimited images)",
+  "SEO-optimised artist page",
+  "Weekly feature in tattooo.shop email campaigns",
+  "Access to content & marketing tools",
+  "Cancel anytime",
+];
+
+const HIGHLIGHTS = [
+  { icon: Palette, label: "40+ Styles", desc: "Every major tattoo style, AI-trained on real ink" },
+  { icon: Download, label: "Print-Ready", desc: "300 DPI PNG files sized to your exact placement" },
+  { icon: Video, label: "Animated Reveal", desc: "Cinematic ink-reveal video of your design" },
+  { icon: Globe, label: "Global Artists", desc: "Book verified artists in 35+ countries" },
+  { icon: Shield, label: "Secure Payments", desc: "All transactions processed via Stripe" },
+  { icon: BadgeCheck, label: "Verified Artists", desc: "Every artist is manually reviewed" },
 ];
 
 export default function Pricing() {
   const [, navigate] = useLocation();
-  const { user, isAuthenticated } = useAuth();
-  const { data: balance } = trpc.credits.balance.useQuery(undefined, { enabled: isAuthenticated });
+  const { isAuthenticated } = useAuth();
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
 
-  const checkoutMutation = trpc.credits.checkout.useMutation({
-    onSuccess: ({ url }) => {
-      window.open(url, "_blank");
+  const checkoutMutation = trpc.credits.membershipCheckout.useMutation({
+    onSuccess: (data) => {
+      if (data.url) window.open(data.url, "_blank");
       toast.success("Redirecting to secure checkout...");
     },
     onError: (err) => {
@@ -91,18 +62,38 @@ export default function Pricing() {
     },
   });
 
-  const handleBuy = (packId: "starter" | "pro" | "unlimited") => {
+  const artistCheckoutMutation = trpc.credits.membershipCheckout.useMutation({
+    onSuccess: (data) => {
+      if (data.url) window.open(data.url, "_blank");
+      toast.success("Redirecting to artist checkout...");
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to start checkout. Please try again.");
+    },
+  });
+
+  const handleMemberCheckout = () => {
     if (!isAuthenticated) {
-      toast.error("Please sign in to purchase credits.");
-      navigate("/login");
+      window.location.href = getLoginUrl();
       return;
     }
-    checkoutMutation.mutate({ packId, origin: window.location.origin });
+    checkoutMutation.mutate({ interval: billingCycle, origin: window.location.origin });
   };
+
+  const handleArtistCheckout = () => {
+    if (!isAuthenticated) {
+      window.location.href = getLoginUrl();
+      return;
+    }
+    artistCheckoutMutation.mutate({ interval: "yearly", origin: window.location.origin });
+  };
+
+  const monthlyPrice = billingCycle === "yearly" ? "$8.25" : "$10";
+  const yearlyTotal = billingCycle === "yearly" ? "$99/yr" : null;
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
-      {/* Background glow */}
+      {/* Background glows */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-cyan-500/5 rounded-full blur-[140px]" />
         <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-amber-500/3 rounded-full blur-[100px]" />
@@ -116,106 +107,143 @@ export default function Pricing() {
             Simple, transparent pricing
           </div>
           <h1 className="text-4xl md:text-5xl font-bold mb-3">
-            Fuel Your Creativity
+            One Membership. Everything Included.
           </h1>
           <p className="text-zinc-400 text-lg max-w-xl mx-auto">
-            Every new account starts with{" "}
-            <span className="text-cyan-400 font-semibold">500 free credits</span>.
-            Top up whenever you need more.
+            Unlimited AI designs, global artist access, and direct booking — all for less than a coffee a week.
           </p>
-          {isAuthenticated && balance !== undefined && (
-            <div className="mt-4 inline-flex items-center gap-2 bg-zinc-800 border border-zinc-700 rounded-full px-4 py-2 text-sm">
-              <span className="text-zinc-400">Your balance:</span>
-              <span className="text-cyan-400 font-bold">
-                {balance.balance === 99999 ? "∞" : balance.balance.toLocaleString()} credits
+
+          {/* Billing toggle */}
+          <div className="mt-8 inline-flex items-center bg-zinc-900 border border-zinc-800 rounded-full p-1 gap-1">
+            <button
+              onClick={() => setBillingCycle("monthly")}
+              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${
+                billingCycle === "monthly"
+                  ? "bg-cyan-500 text-black"
+                  : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setBillingCycle("yearly")}
+              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all flex items-center gap-2 ${
+                billingCycle === "yearly"
+                  ? "bg-cyan-500 text-black"
+                  : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              Yearly
+              <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                billingCycle === "yearly" ? "bg-black/20 text-black" : "bg-amber-500/20 text-amber-400"
+              }`}>
+                Save 17%
               </span>
-            </div>
-          )}
-        </div>
-
-        {/* Free tier banner */}
-        <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div>
-            <div className="font-semibold text-white mb-1">Free Tier — Always Available</div>
-            <div className="text-zinc-400 text-sm">
-              Every new account gets <span className="text-cyan-400 font-medium">500 free credits</span> — enough for hundreds of designs. No credit card required.
-            </div>
+            </button>
           </div>
-          <Button
-            onClick={() => navigate(isAuthenticated ? "/studio" : "/login")}
-            variant="outline"
-            className="border-zinc-600 text-zinc-300 hover:bg-zinc-800 whitespace-nowrap"
-          >
-            {isAuthenticated ? "Go to Studio" : "Start Free"}
-          </Button>
         </div>
 
-        {/* Paid packs */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
-          {PACKS.map((pack) => {
-            const Icon = pack.icon;
-            const isLoading = checkoutMutation.isPending && checkoutMutation.variables?.packId === pack.id;
-            const isUnlimited = pack.id === "unlimited";
-
-            return (
-              <div
-                key={pack.id}
-                className={`relative bg-zinc-900/60 border-2 ${pack.color} rounded-2xl p-6 transition-all duration-200 ${isUnlimited ? "bg-gradient-to-b from-amber-950/20 to-zinc-900/60" : ""}`}
-              >
-                {pack.badge && (
-                  <div className={`absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-bold px-3 py-1 rounded-full ${pack.id === "unlimited" ? "bg-amber-500 text-black" : "bg-cyan-500 text-black"}`}>
-                    {pack.badge}
-                  </div>
-                )}
-
-                <div className="flex items-center gap-3 mb-4">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isUnlimited ? "bg-amber-500/10" : "bg-zinc-800"}`}>
-                    <Icon className={`w-5 h-5 ${isUnlimited ? "text-amber-400" : "text-cyan-400"}`} />
-                  </div>
-                  <div>
-                    <div className="font-bold text-white">{pack.name}</div>
-                    <div className="text-zinc-400 text-xs">
-                      {pack.credits ? `${pack.credits.toLocaleString()} credits` : "Unlimited credits"}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="text-3xl font-bold text-white mb-5">{pack.price}</div>
-
-                <ul className="space-y-2.5 mb-6">
-                  {pack.features.map((f) => (
-                    <li key={f} className="flex items-center gap-2 text-sm text-zinc-300">
-                      <Check className={`w-4 h-4 flex-shrink-0 ${isUnlimited ? "text-amber-400" : "text-cyan-400"}`} />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-
-                <Button
-                  onClick={() => handleBuy(pack.id)}
-                  disabled={isLoading}
-                  className={`w-full h-10 font-semibold ${
-                    pack.id === "pro"
-                      ? "bg-cyan-500 hover:bg-cyan-400 text-black"
-                      : pack.id === "unlimited"
-                      ? "bg-amber-500 hover:bg-amber-400 text-black"
-                      : "bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700"
-                  }`}
-                >
-                  {isLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    `Get ${pack.name}`
-                  )}
-                </Button>
+        {/* Two-column pricing cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
+          {/* Member Card */}
+          <div className="relative bg-gradient-to-b from-cyan-950/30 to-zinc-900/60 border-2 border-cyan-500 rounded-2xl p-7 flex flex-col">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-cyan-500 text-black text-xs font-bold px-4 py-1 rounded-full">
+              For Tattoo Enthusiasts
+            </div>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-11 h-11 rounded-xl bg-cyan-500/10 flex items-center justify-center">
+                <Star className="w-5 h-5 text-cyan-400" />
               </div>
-            );
-          })}
+              <div>
+                <div className="font-bold text-white text-lg">Member</div>
+                <div className="text-zinc-400 text-xs">Full platform access</div>
+              </div>
+            </div>
+
+            <div className="mb-1">
+              <span className="text-4xl font-black text-white">{monthlyPrice}</span>
+              <span className="text-zinc-400 text-sm ml-1">/mo</span>
+              {yearlyTotal && (
+                <span className="ml-2 text-zinc-500 text-sm">({yearlyTotal} billed annually)</span>
+              )}
+            </div>
+            <p className="text-zinc-500 text-xs mb-6">Cancel anytime. No lock-in.</p>
+
+            <ul className="space-y-2.5 mb-8 flex-1">
+              {MEMBER_FEATURES.map((f) => (
+                <li key={f} className="flex items-start gap-2 text-sm text-zinc-300">
+                  <Check className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+
+            <Button
+              onClick={handleMemberCheckout}
+              disabled={checkoutMutation.isPending}
+              className="w-full h-11 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-base"
+            >
+              {checkoutMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  Get Started
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </>
+              )}
+            </Button>
+          </div>
+
+          {/* Artist Card */}
+          <div className="relative bg-gradient-to-b from-amber-950/20 to-zinc-900/60 border-2 border-amber-500/60 rounded-2xl p-7 flex flex-col">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500 text-black text-xs font-bold px-4 py-1 rounded-full">
+              For Tattoo Artists & Studios
+            </div>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-11 h-11 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                <Brush className="w-5 h-5 text-amber-400" />
+              </div>
+              <div>
+                <div className="font-bold text-white text-lg">Artist Listing</div>
+                <div className="text-zinc-400 text-xs">Global directory + booking</div>
+              </div>
+            </div>
+
+            <div className="mb-1">
+              <span className="text-4xl font-black text-white">$99</span>
+              <span className="text-zinc-400 text-sm ml-1">/yr</span>
+            </div>
+            <p className="text-zinc-500 text-xs mb-6">+ 13% platform fee on confirmed bookings only. No upfront risk.</p>
+
+            <ul className="space-y-2.5 mb-8 flex-1">
+              {ARTIST_FEATURES.map((f) => (
+                <li key={f} className="flex items-start gap-2 text-sm text-zinc-300">
+                  <Check className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+
+            <Button
+              onClick={handleArtistCheckout}
+              disabled={artistCheckoutMutation.isPending}
+              className="w-full h-11 bg-amber-500 hover:bg-amber-400 text-black font-bold text-base"
+            >
+              {artistCheckoutMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  Join as Artist
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* Feature highlights */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-          {FEATURES.map(({ icon: Icon, label, desc }) => (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-12">
+          {HIGHLIGHTS.map(({ icon: Icon, label, desc }) => (
             <div key={label} className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-4 text-center">
               <Icon className="w-6 h-6 text-cyan-400 mx-auto mb-2" />
               <div className="font-semibold text-white text-sm mb-1">{label}</div>
@@ -224,25 +252,39 @@ export default function Pricing() {
           ))}
         </div>
 
-        {/* Artist CTA */}
-        <div className="bg-gradient-to-r from-zinc-900/80 to-zinc-800/40 border border-zinc-700 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div>
-            <div className="font-bold text-white text-lg mb-1">Are you a tattoo artist?</div>
-            <div className="text-zinc-400 text-sm">
-              Join our directory for <span className="text-amber-400 font-medium">$99/year</span> and get clients referred directly to you.
-              Only <span className="text-amber-400 font-medium">15% commission</span> on first bookings.
-            </div>
+        {/* FAQ strip */}
+        <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6 mb-8">
+          <h3 className="font-bold text-white text-lg mb-4">Common Questions</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[
+              {
+                q: "What happens after I subscribe?",
+                a: "Instant access to the full Studio — generate unlimited designs, browse the artist directory, and book directly.",
+              },
+              {
+                q: "How does the 13% booking fee work?",
+                a: "When an artist sends you a quote and you confirm, you pay the artist's quote plus a 13% platform fee. That's our only charge — no hidden costs.",
+              },
+              {
+                q: "What about multi-session tattoos?",
+                a: "The platform fee is charged once on the full quote. All follow-up sessions are booked directly with your artist in person.",
+              },
+              {
+                q: "Can I cancel anytime?",
+                a: "Yes — cancel your membership from your account settings at any time. No questions asked.",
+              },
+            ].map(({ q, a }) => (
+              <div key={q}>
+                <div className="font-semibold text-white text-sm mb-1">{q}</div>
+                <div className="text-zinc-400 text-sm leading-relaxed">{a}</div>
+              </div>
+            ))}
           </div>
-          <Button
-            onClick={() => navigate("/artist-signup")}
-            className="bg-amber-500 hover:bg-amber-400 text-black font-semibold whitespace-nowrap"
-          >
-            Join as Artist
-          </Button>
         </div>
 
-        <p className="text-center text-zinc-600 text-xs mt-8">
-          Secure payments via Stripe. Credits are added instantly after payment. No hidden fees.
+        <p className="text-center text-zinc-600 text-xs">
+          Secure payments via Stripe. Memberships activate instantly. No hidden fees.{" "}
+          <a href="/terms" className="text-zinc-500 hover:text-zinc-400 underline">Terms & Conditions</a>
         </p>
       </div>
     </div>

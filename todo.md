@@ -482,3 +482,8 @@
 - [x] Ad creatives: 8 images generated (Instagram ads, artist recruitment, styles showcase, affiliate referral)
 - [x] features.test.ts: updated credits.packs tests → subscription.getPlans tests
 - [x] Tests: 29/29 passing
+
+## Auth System Overhaul
+- [ ] Remove Manus OAuth completely — replace server context with pure JWT cookie verification
+- [ ] Remove all VITE_OAUTH_PORTAL_URL / getLoginUrl() / Manus OAuth references from client
+- [ ] Ensure email/password + Google login are the only auth methods

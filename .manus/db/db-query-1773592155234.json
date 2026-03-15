@@ -1,0 +1,242 @@
+{
+  "query": "SELECT id, studioName, email, country, emailStatus, infoPackStatus FROM studio_mailing_list WHERE country IN ('Australia', 'New Zealand') AND email IS NOT NULL AND emailStatus = 'found' AND infoPackStatus = 'not_sent' ORDER BY country, studioName;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 25vRfUBwvHKUCo5.root --database Pa7E4RBX4UbpFBvKpz2nxk --execute SELECT id, studioName, email, country, emailStatus, infoPackStatus FROM studio_mailing_list WHERE country IN ('Australia', 'New Zealand') AND email IS NOT NULL AND emailStatus = 'found' AND infoPackStatus = 'not_sent' ORDER BY country, studioName;",
+  "rows": [
+    {
+      "id": "30013",
+      "studioName": "Abstruse Tattoo Studio",
+      "email": "mail@abstrusetattoostudio.com.au",
+      "country": "Australia",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    },
+    {
+      "id": "30004",
+      "studioName": "Addikted To Ink",
+      "email": "info@addiktedtoinktattoo.com",
+      "country": "Australia",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    },
+    {
+      "id": "68",
+      "studioName": "Authentink",
+      "email": "shop@authentink.com",
+      "country": "Australia",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    },
+    {
+      "id": "30008",
+      "studioName": "Bad Apples Tattoo",
+      "email": "info@badapplestattoo.com.au",
+      "country": "Australia",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    },
+    {
+      "id": "30010",
+      "studioName": "Bloodlines Ink",
+      "email": "reception@bloodlinesink.com.au",
+      "country": "Australia",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    },
+    {
+      "id": "30001",
+      "studioName": "Bondi Ink",
+      "email": "info@bondiinktattoo.com.au",
+      "country": "Australia",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    },
+    {
+      "id": "67",
+      "studioName": "Bondi Ink",
+      "email": "info@bondiinktattoo.com.au",
+      "country": "Australia",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    },
+    {
+      "id": "30007",
+      "studioName": "CB Ink Tattoo",
+      "email": "info@cbinktattoo.com.au",
+      "country": "Australia",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    },
+    {
+      "id": "72",
+      "studioName": "Celebrity Ink",
+      "email": "gardencity@celebrityink.com",
+      "country": "Australia",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    },
+    {
+      "id": "71",
+      "studioName": "Chapel Tattoo",
+      "email": "info@chapeltattoo.com",
+      "country": "Australia",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    },
+    {
+      "id": "70",
+      "studioName": "Dynamic Tattoo",
+      "email": "info@dynamictattoo.com",
+      "country": "Australia",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    },
+    {
+      "id": "30006",
+      "studioName": "Good Luck Tattoo",
+      "email": "contact@goodlucktattoo.com.au",
+      "country": "Australia",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    },
+    {
+      "id": "30005",
+      "studioName": "Hidden Moon Tattoo",
+      "email": "hiddenmoontattoo@gmail.com",
+      "country": "Australia",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    },
+    {
+      "id": "69",
+      "studioName": "Lighthouse Tattoo",
+      "email": "contact@lighthousetattoo.com.au",
+      "country": "Australia",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    },
+    {
+      "id": "30011",
+      "studioName": "Primitive Tattoo Perth",
+      "email": "primitive.tattoo.perth@gmail.com",
+      "country": "Australia",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    },
+    {
+      "id": "30014",
+      "studioName": "Sacred Skin",
+      "email": "info@sacredskin.com.au",
+      "country": "Australia",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    },
+    {
+      "id": "30003",
+      "studioName": "Tattoora",
+      "email": "info@tattoora.com.au",
+      "country": "Australia",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    },
+    {
+      "id": "30009",
+      "studioName": "Valley Ink",
+      "email": "booking@valleyinktattoo.com.au",
+      "country": "Australia",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    },
+    {
+      "id": "30002",
+      "studioName": "Wicked Ink",
+      "email": "contact@wickedink.com.au",
+      "country": "Australia",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    },
+    {
+      "id": "30012",
+      "studioName": "Wild West Tattoo Studio",
+      "email": "info@wildwesttattoos.com.au",
+      "country": "Australia",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    },
+    {
+      "id": "30023",
+      "studioName": "B.LIST Tattoo Studio",
+      "email": "info@b-list.co.nz",
+      "country": "New Zealand",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    },
+    {
+      "id": "30018",
+      "studioName": "Bones Tattoo Studio",
+      "email": "bonestattooartist@gmail.com",
+      "country": "New Zealand",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    },
+    {
+      "id": "30016",
+      "studioName": "Buttercat Tattoo Studio",
+      "email": "info@buttercat.co.nz",
+      "country": "New Zealand",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    },
+    {
+      "id": "30017",
+      "studioName": "Cuba Street Tattoo",
+      "email": "cubasttattoo@gmail.com",
+      "country": "New Zealand",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    },
+    {
+      "id": "30021",
+      "studioName": "Otautahi Tattoo Auckland",
+      "email": "auckland@otautahitattoo.com",
+      "country": "New Zealand",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    },
+    {
+      "id": "30022",
+      "studioName": "Sunset Tattoo",
+      "email": "info@sunsettattoo.co.nz",
+      "country": "New Zealand",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    },
+    {
+      "id": "30019",
+      "studioName": "The Tattooed Heart",
+      "email": "tattoos@thetattooedheart.co.nz",
+      "country": "New Zealand",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    },
+    {
+      "id": "30015",
+      "studioName": "Union Tattoo",
+      "email": "info@uniontattoo.co.nz",
+      "country": "New Zealand",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    },
+    {
+      "id": "30024",
+      "studioName": "Zealand Tattoo",
+      "email": "studio@zealandtattoo.co.nz",
+      "country": "New Zealand",
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tstudioName\temail\tcountry\temailStatus\tinfoPackStatus\n30013\tAbstruse Tattoo Studio\tmail@abstrusetattoostudio.com.au\tAustralia\tfound\tnot_sent\n30004\tAddikted To Ink\tinfo@addiktedtoinktattoo.com\tAustralia\tfound\tnot_sent\n68\tAuthentink\tshop@authentink.com\tAustralia\tfound\tnot_sent\n30008\tBad Apples Tattoo\tinfo@badapplestattoo.com.au\tAustralia\tfound\tnot_sent\n30010\tBloodlines Ink\treception@bloodlinesink.com.au\tAustralia\tfound\tnot_sent\n30001\tBondi Ink\tinfo@bondiinktattoo.com.au\tAustralia\tfound\tnot_sent\n67\tBondi Ink\tinfo@bondiinktattoo.com.au\tAustralia\tfound\tnot_sent\n30007\tCB Ink Tattoo\tinfo@cbinktattoo.com.au\tAustralia\tfound\tnot_sent\n72\tCelebrity Ink\tgardencity@celebrityink.com\tAustralia\tfound\tnot_sent\n71\tChapel Tattoo\tinfo@chapeltattoo.com\tAustralia\tfound\tnot_sent\n70\tDynamic Tattoo\tinfo@dynamictattoo.com\tAustralia\tfound\tnot_sent\n30006\tGood Luck Tattoo\tcontact@goodlucktattoo.com.au\tAustralia\tfound\tnot_sent\n30005\tHidden Moon Tattoo\thiddenmoontattoo@gmail.com\tAustralia\tfound\tnot_sent\n69\tLighthouse Tattoo\tcontact@lighthousetattoo.com.au\tAustralia\tfound\tnot_sent\n30011\tPrimitive Tattoo Perth\tprimitive.tattoo.perth@gmail.com\tAustralia\tfound\tnot_sent\n30014\tSacred Skin\tinfo@sacredskin.com.au\tAustralia\tfound\tnot_sent\n30003\tTattoora\tinfo@tattoora.com.au\tAustralia\tfound\tnot_sent\n30009\tValley Ink\tbooking@valleyinktattoo.com.au\tAustralia\tfound\tnot_sent\n30002\tWicked Ink\tcontact@wickedink.com.au\tAustralia\tfound\tnot_sent\n30012\tWild West Tattoo Studio\tinfo@wildwesttattoos.com.au\tAustralia\tfound\tnot_sent\n30023\tB.LIST Tattoo Studio\tinfo@b-list.co.nz\tNew Zealand\tfound\tnot_sent\n30018\tBones Tattoo Studio\tbonestattooartist@gmail.com\tNew Zealand\tfound\tnot_sent\n30016\tButtercat Tattoo Studio\tinfo@buttercat.co.nz\tNew Zealand\tfound\tnot_sent\n30017\tCuba Street Tattoo\tcubasttattoo@gmail.com\tNew Zealand\tfound\tnot_sent\n30021\tOtautahi Tattoo Auckland\tauckland@otautahitattoo.com\tNew Zealand\tfound\tnot_sent\n30022\tSunset Tattoo\tinfo@sunsettattoo.co.nz\tNew Zealand\tfound\tnot_sent\n30019\tThe Tattooed Heart\ttattoos@thetattooedheart.co.nz\tNew Zealand\tfound\tnot_sent\n30015\tUnion Tattoo\tinfo@uniontattoo.co.nz\tNew Zealand\tfound\tnot_sent\n30024\tZealand Tattoo\tstudio@zealandtattoo.co.nz\tNew Zealand\tfound\tnot_sent\n",
+  "stderr": "",
+  "execution_time_ms": 1594
+}

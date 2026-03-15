@@ -421,7 +421,7 @@ export function scoreContentQuality(params: {
 
   // ── 4. Brand Alignment Score ──────────────────────────────────────────────
   let brandScore = 30;
-  const brandTerms = ["tatt" + "ooo", "tattoo", "ai design", "artist", "ink", "booking", "studio", "design", "global", "verified"];
+  const brandTerms = ["tattooo", "tattoo", "ai design", "artist", "ink", "booking", "studio", "design", "global", "verified"];
   const brandMatches = brandTerms.filter(t => bodyLower.includes(t)).length;
   brandScore += Math.min(brandMatches * 12, 50);
 

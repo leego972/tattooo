@@ -1,0 +1,29 @@
+{
+  "query": "SELECT * FROM studio_mailing_list LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 25vRfUBwvHKUCo5.root --database Pa7E4RBX4UbpFBvKpz2nxk --execute SELECT * FROM studio_mailing_list LIMIT 1;",
+  "rows": [
+    {
+      "id": "1",
+      "studioName": "Bang Bang NYC",
+      "city": "New York",
+      "country": "United States",
+      "language": "en",
+      "email": "info@bangbangnyc.com",
+      "emailStatus": "found",
+      "emailSource": "website",
+      "infoPackSentAt": "NULL",
+      "infoPackStatus": "not_sent",
+      "weeklyAdOptOut": "0",
+      "lastWeeklyAdSentAt": "NULL",
+      "weeklyAdSentCount": "0",
+      "unsubscribeToken": "hFMyoUTUGrVAkOHpLT8FJPNHoqWAeIhgi4WuTMcW4Bjxo9O5",
+      "notes": "NULL",
+      "createdAt": "2026-03-15 09:03:21",
+      "updatedAt": "2026-03-15 09:03:21"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tstudioName\tcity\tcountry\tlanguage\temail\temailStatus\temailSource\tinfoPackSentAt\tinfoPackStatus\tweeklyAdOptOut\tlastWeeklyAdSentAt\tweeklyAdSentCount\tunsubscribeToken\tnotes\tcreatedAt\tupdatedAt\n1\tBang Bang NYC\tNew York\tUnited States\ten\tinfo@bangbangnyc.com\tfound\twebsite\tNULL\tnot_sent\t0\tNULL\t0\thFMyoUTUGrVAkOHpLT8FJPNHoqWAeIhgi4WuTMcW4Bjxo9O5\tNULL\t2026-03-15 09:03:21\t2026-03-15 09:03:21\n",
+  "stderr": "",
+  "execution_time_ms": 1496
+}

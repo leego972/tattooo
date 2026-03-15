@@ -1,0 +1,16 @@
+{
+  "query": "SELECT id, email, role, passwordHash FROM users WHERE email = 'leego972@gmail.com' LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 25vRfUBwvHKUCo5.root --database Pa7E4RBX4UbpFBvKpz2nxk --execute SELECT id, email, role, passwordHash FROM users WHERE email = 'leego972@gmail.com' LIMIT 1;",
+  "rows": [
+    {
+      "id": "390005",
+      "email": "leego972@gmail.com",
+      "role": "admin",
+      "passwordHash": "$2b$10$placeholder_hash_for_oauth_login"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\temail\trole\tpasswordHash\n390005\tleego972@gmail.com\tadmin\t$2b$10$placeholder_hash_for_oauth_login\n",
+  "stderr": "",
+  "execution_time_ms": 1579
+}

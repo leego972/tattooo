@@ -324,3 +324,15 @@
 - [x] Frontend: Credits page — Manage Subscription button opens Stripe portal for paid users
 - [x] Frontend: Subscription page already had portal button (confirmed working)
 - [x] Fix: emailService.ts box-drawing UTF-8 chars replaced with plain ASCII (esbuild error resolved)
+
+## Auth Gate Bug Fix
+- [ ] Bug: All features accessible without login — ProtectedRoute not blocking unauthenticated users
+- [ ] Fix: Diagnose ProtectedRoute component and App.tsx routing
+- [ ] Fix: Ensure redirect to /login for all protected routes when not authenticated
+
+## Auth Gate + Logo Fix (Round 2)
+- [x] Bug: ProtectedRoute allows access when auth.me returns null (loading=false, user=null)
+- [x] Fix: ProtectedRoute now uses <Redirect> (synchronous) instead of useEffect — no content flash
+- [x] Fix: Home / route is now protected — unauthenticated users redirected to /login immediately
+- [x] Fix: Navbar shows ONLY Login, Sign Up, Join as Artist when logged out (no other nav items)
+- [x] Fix: Leego logo enlarged to w-36 h-36 with solid black rounded panel in both logged-in and logged-out sidebar

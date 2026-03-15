@@ -93,15 +93,59 @@ function CreditsBadge() {
 }
 
 export default function Navbar() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, loading, logout } = useAuth();
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const visibleLinks = isAuthenticated ? authNavLinks : publicNavLinks;
 
+  // When not authenticated, show a minimal public nav with only Login/Signup/Artist
+  if (!isAuthenticated && !loading) {
+    return (
+      <>
+        {/* Desktop minimal sidebar for logged-out users */}
+        <aside className="hidden md:flex flex-col w-52 shrink-0 h-screen sticky top-0 bg-zinc-950/95 border-r border-zinc-800/60 z-40 backdrop-blur-sm">
+          <Link href="/login" className="flex items-center gap-3 px-4 py-4 group border-b border-zinc-800/60">
+            <img src={LOGO_URL} alt="tatt-ooo" className="h-8 w-8 rounded-full object-cover ring-1 ring-cyan-500/30 group-hover:ring-cyan-500/60 transition-all" />
+            <span className="text-base font-bold text-white" style={{ fontFamily: "'Playfair Display', serif" }}>tatt-ooo</span>
+          </Link>
+          <nav className="flex flex-col gap-0.5 px-2 pt-3 flex-1">
+            {publicNavLinks.map(({ href, label, icon: Icon }) => (
+              <Link key={href} href={href}>
+                <Button variant="ghost" className="w-full justify-start gap-2.5 h-9 text-sm text-zinc-400 hover:text-white hover:bg-zinc-800/60 rounded-lg">
+                  <Icon size={15} />{label}
+                </Button>
+              </Link>
+            ))}
+          </nav>
+          <div className="flex flex-col items-center pb-4 pt-3 border-t border-zinc-800/40">
+            <p className="text-[9px] text-zinc-600 uppercase tracking-widest mb-2">Created by</p>
+            <div className="bg-black rounded-xl p-2 shadow-lg shadow-black/60">
+              <img src={LEEGO_URL} alt="Created by LEEGO" className="w-36 h-36 object-contain opacity-90 hover:opacity-100 transition-opacity" />
+            </div>
+          </div>
+        </aside>
+
+        {/* Mobile top bar for logged-out users */}
+        <header className="md:hidden sticky top-0 z-50 w-full bg-zinc-950/95 border-b border-zinc-800/60 backdrop-blur-sm">
+          <div className="flex items-center justify-between h-13 px-4 py-2">
+            <Link href="/login" className="flex items-center gap-2">
+              <img src={LOGO_URL} alt="tatt-ooo" className="h-7 w-7 rounded-full object-cover ring-1 ring-cyan-500/30" />
+              <span className="text-sm font-bold text-white" style={{ fontFamily: "'Playfair Display', serif" }}>tatt-ooo</span>
+            </Link>
+            <div className="flex items-center gap-2">
+              <Link href="/login"><Button size="sm" variant="ghost" className="text-zinc-400 hover:text-white text-xs h-8">Sign In</Button></Link>
+              <Link href="/signup"><Button size="sm" className="bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-xs h-8">Sign Up</Button></Link>
+            </div>
+          </div>
+        </header>
+      </>
+    );
+  }
+
   return (
     <>
-      {/* ── DESKTOP SIDEBAR ─────────────────────────────────────────────────── */}
+      {/* ── DESKTOP SIDEBAR ─────────────────────────────────────── */}
       <aside className="hidden md:flex flex-col w-52 shrink-0 h-screen sticky top-0 bg-zinc-950/95 border-r border-zinc-800/60 z-40 backdrop-blur-sm">
         {/* Brand */}
         <Link href="/" className="flex items-center gap-3 px-4 py-4 group border-b border-zinc-800/60">
@@ -193,10 +237,10 @@ export default function Navbar() {
         <div className="flex flex-col items-center pb-4 pt-3 border-t border-zinc-800/40">
           <p className="text-[9px] text-zinc-600 uppercase tracking-widest mb-2">Created by</p>
           <div className="bg-black rounded-xl p-2 shadow-lg shadow-black/60">
-            <img
+              <img
               src={LEEGO_URL}
               alt="Created by LEEGO"
-              className="w-28 h-28 object-contain opacity-90 hover:opacity-100 transition-opacity"
+              className="w-36 h-36 object-contain opacity-90 hover:opacity-100 transition-opacity"
             />
           </div>
         </div>

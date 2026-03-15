@@ -43,8 +43,7 @@ function Router() {
       {/* Main content area — takes remaining width beside sidebar */}
       <main className="flex-1 min-w-0 flex flex-col">
         <Switch>
-          {/* ── Public routes ─────────────────────────────────────── */}
-          <Route path="/" component={Home} />
+          {/* ── Public routes (no auth required) ─────────────────── */}
           <Route path="/login" component={Login} />
           <Route path="/signup" component={Login} />
           <Route path="/forgot-password" component={ForgotPassword} />
@@ -53,6 +52,11 @@ function Router() {
           <Route path="/payment-success" component={PaymentSuccess} />
           <Route path="/artist-signup/success" component={ArtistSignup} />
           <Route path="/artist-signup" component={ArtistSignup} />
+
+          {/* ── Home / landing — protected, redirects to /login if not authed ── */}
+          <Route path="/">
+            {() => <ProtectedRoute component={Home} />}
+          </Route>
 
           {/* ── Protected routes (require login) ──────────────────── */}
           <Route path="/studio">

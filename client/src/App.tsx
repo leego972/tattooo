@@ -64,12 +64,10 @@ function Router() {
           <Route path="/artist-signup/success" component={ArtistSignup} />
           <Route path="/artist-signup" component={ArtistSignup} />
 
-          {/* ── Home / landing — protected, redirects to /login if not authed ── */}
-          <Route path="/">
-            {() => <ProtectedRoute component={Home} />}
-          </Route>
+          {/* ── Home / landing — public so visitors can browse before signing up ── */}
+          <Route path="/" component={Home} />
 
-          {/* ── Protected routes (require login) ──────────────────── */}
+          {/* ── Protected routes (require login) ────────────────── */}
           <Route path="/studio">
             {() => <ProtectedRoute component={Studio} />}
           </Route>
@@ -85,15 +83,9 @@ function Router() {
           <Route path="/draw">
             {() => <ProtectedRoute component={DrawingBoard} />}
           </Route>
-          <Route path="/pricing">
-            {() => <ProtectedRoute component={Pricing} />}
-          </Route>
-          <Route path="/artists/:id">
-            {() => <ProtectedRoute component={ArtistProfile} />}
-          </Route>
-          <Route path="/artists">
-            {() => <ProtectedRoute component={Artists} />}
-          </Route>
+          <Route path="/pricing" component={Pricing} />
+          <Route path="/artists/:id" component={ArtistProfile} />
+          <Route path="/artists" component={Artists} />
           <Route path="/referral">
             {() => <ProtectedRoute component={Referral} />}
           </Route>

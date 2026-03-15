@@ -19,6 +19,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   // Parse returnTo from query string
   const params = new URLSearchParams(search);
@@ -64,6 +65,7 @@ export default function Login() {
     } else {
       if (!name.trim()) { toast.error("Please enter your name."); return; }
       if (password.length < 8) { toast.error("Password must be at least 8 characters."); return; }
+      if (!agreedToTerms) { toast.error("Please agree to the Terms & Conditions to continue."); return; }
       registerMutation.mutate({ name, email, password });
     }
   };
@@ -157,10 +159,29 @@ export default function Login() {
               </div>
             </div>
 
+            {mode === "register" && (
+              <div className="flex items-start gap-3 py-1">
+                <input
+                  type="checkbox"
+                  id="terms-agree"
+                  checked={agreedToTerms}
+                  onChange={(e) => setAgreedToTerms(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded border-zinc-600 bg-zinc-800 accent-cyan-500 cursor-pointer flex-shrink-0"
+                />
+                <label htmlFor="terms-agree" className="text-xs text-zinc-400 leading-relaxed cursor-pointer">
+                  I agree to the{" "}
+                  <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:text-cyan-300 underline underline-offset-2">
+                    Terms & Conditions
+                  </a>
+                  {" "}and understand that AI-generated designs are for reference only. The quality of the final tattoo is the sole responsibility of the artist and client.
+                </label>
+              </div>
+            )}
+
             <Button
               type="submit"
-              disabled={isLoading}
-              className="w-full h-11 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold mt-2"
+              disabled={isLoading || (mode === "register" && !agreedToTerms)}
+              className="w-full h-11 bg-cyan-500 hover:bg-cyan-400 text-black font-semibold mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

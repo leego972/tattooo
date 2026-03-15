@@ -22,6 +22,20 @@
       "when": 1773565100768,
       "tag": "0002_cultured_molten_man",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1773578833205,
+      "tag": "0003_steep_the_call",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1773579167824,
+      "tag": "0004_puzzling_star_brand",
+      "breakpoints": true
     }
   ]
 }

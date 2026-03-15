@@ -379,3 +379,31 @@
 - [x] Frontend: /mailing-list — admin page with Contacts, Send Campaigns, Preview tabs
 - [x] Frontend: Navbar — Mailing List link in admin section
 - [x] Email: unsubscribe footer on all outreach emails
+
+## Send Design to Artist Feature
+- [x] Backend: tattoo.sendDesignToArtist procedure — sends print-ready design email to artist/studio
+- [x] Backend: Professional HTML email template with design image, print specs table, body placement, style, booking details
+- [x] Frontend: "Send to Artist" button on My Tatts cards and design complete screen
+- [x] Frontend: Artist picker dialog (search by name/country from directory)
+- [x] Frontend: Booking details form (preferred date, contact info, notes)
+- [x] Frontend: Success confirmation toast after send
+
+## Booking Notification & Appointment Scheduler
+- [x] DB: artist_availability table (date, timeSlot, isBooked)
+- [x] DB: in_app_notifications table (userId, title, body, type, isRead, link)
+- [x] DB: bookings table extended with declineReason, nextAvailableDate, alternativeArtistIds
+- [x] Backend: booking.request — user sends booking request to artist
+- [x] Backend: booking.confirm — artist confirms booking, marks slot as booked
+- [x] Backend: booking.decline — artist declines with reason + next available date
+- [x] Backend: booking.artistInbox — artist sees all pending/confirmed bookings
+- [x] Backend: booking.myBookings — user sees all their bookings
+- [x] Backend: availability.setSlots — artist sets available dates
+- [x] Backend: availability.removeSlot — artist removes a slot
+- [x] Backend: availability.mySlots — artist views own slots
+- [x] Backend: availability.getSlots — public, get artist open slots
+- [x] Backend: notifications.list / unreadCount / markRead / markAllRead
+- [x] Frontend: /artist-dashboard — booking inbox (Accept/Decline), availability calendar, notification bell
+- [x] Frontend: /my-bookings — user booking status, declined reason + next date + rebook + alternative artists
+- [x] Frontend: Navbar — My Bookings + Artist Dashboard links
+- [x] Email: booking request email to artist, confirmation/decline email to user
+- [x] Theme: tattoo studio aesthetic (crimson red, aged gold, Bebas Neue, noise texture)

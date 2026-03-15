@@ -10,6 +10,7 @@ import { subscriptionRouter } from "./subscription-router";
 import { seoRouter } from "./seo-router";
 import { marketingRouter } from "./marketing-router";
 import { mailingListRouter } from "./mailing-list-router";
+import { bookingRouter, availabilityRouter, notificationsRouter } from "./booking-router";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { invokeLLM } from "./_core/llm";
 import { storagePut } from "./storage";
@@ -50,7 +51,7 @@ import {
   buildPrintSpec,
   PRINT_DPI,
 } from "./printUtils";
-import { sendPasswordResetEmail, sendArtistContactEmail, sendWelcomeEmail, sendPromoConfirmationEmail } from "./emailService";
+import { sendPasswordResetEmail, sendArtistContactEmail, sendWelcomeEmail, sendPromoConfirmationEmail, sendDesignToArtistEmail } from "./emailService";
 import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "./db";
@@ -608,6 +609,51 @@ Please create the optimal image generation prompt for this tattoo design.`;
         .where(eq(tattooGenerations.id, input.generationId));
 
       return { videoUrl: result.videoUrl, taskId: result.taskId };
+    }),
+});
+
+// ─── Send Design to Artist Router ──────────────────────────────────────────────
+
+const sendDesignRouter = router({
+  send: protectedProcedure
+    .input(z.object({
+      generationId: z.number().int().positive(),
+      artistId: z.number().int().positive(),
+      customerPhone: z.string().optional(),
+      preferredDate: z.string().optional(),
+      notes: z.string().max(1000).optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const genRows = await db.select().from(tattooGenerations)
+        .where(and(eq(tattooGenerations.id, input.generationId), eq(tattooGenerations.userId, ctx.user.id)))
+        .limit(1);
+      const gen = genRows[0];
+      if (!gen) throw new TRPCError({ code: "NOT_FOUND", message: "Design not found." });
+      const artistRows = await db.select().from(artists)
+        .where(eq(artists.id, input.artistId)).limit(1);
+      const artist = artistRows[0];
+      if (!artist) throw new TRPCError({ code: "NOT_FOUND", message: "Artist not found." });
+      if (!artist.contactEmail) throw new TRPCError({ code: "BAD_REQUEST", message: "This artist has no email address on file." });
+      await sendDesignToArtistEmail({
+        artistEmail: artist.contactEmail,
+        artistName: artist.name,
+        customerName: ctx.user.name || "A tatt-ooo user",
+        customerEmail: ctx.user.email || "",
+        customerPhone: input.customerPhone,
+        designImageUrl: gen.imageUrl,
+        printImageUrl: gen.printImageUrl ?? undefined,
+        style: gen.style ?? undefined,
+        bodyPlacement: gen.bodyPlacement ?? undefined,
+        sizeLabel: gen.sizeLabel ?? undefined,
+        sizeInCm: gen.sizeInCm ?? undefined,
+        printSpec: gen.printSpec ?? undefined,
+        preferredDate: input.preferredDate,
+        notes: input.notes,
+        bookingDepositAmount: artist.depositAmount ?? undefined,
+      });
+      return { success: true, artistName: artist.name, artistEmail: artist.contactEmail };
     }),
 });
 
@@ -1868,6 +1914,10 @@ export const appRouter = router({
   seo: seoRouter,
   marketing: marketingRouter,
   mailingList: mailingListRouter,
+  sendDesign: sendDesignRouter,
+  booking: bookingRouter,
+  availability: availabilityRouter,
+  notifications: notificationsRouter,
 });
 
 export type AppRouter = typeof appRouter;

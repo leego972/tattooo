@@ -34,6 +34,8 @@ import Subscription from "./pages/Subscription";
 import AdminPromos from "./pages/AdminPromos";
 import Credits from "./pages/Credits";
 import MailingList from "./pages/MailingList";
+import ArtistDashboard from "./pages/ArtistDashboard";
+import MyBookings from "./pages/MyBookings";
 
 import Navbar from "./components/Navbar";
 
@@ -115,6 +117,12 @@ function Router() {
           <Route path="/affiliates">
             {() => <ProtectedRoute component={AffiliateDashboard} />}
           </Route>
+          <Route path="/artist-dashboard">
+            {() => <ProtectedRoute component={ArtistDashboard} />}
+          </Route>
+          <Route path="/my-bookings">
+            {() => <ProtectedRoute component={MyBookings} />}
+          </Route>
 
           {/* ── Fallback ──────────────────────────────────────────── */}
           <Route path="/404" component={NotFound} />
@@ -134,9 +142,9 @@ function App() {
             theme="dark"
             toastOptions={{
               style: {
-                background: "oklch(0.10 0.008 250)",
-                border: "1px solid oklch(0.20 0.01 250)",
-                color: "oklch(0.93 0.005 250)",
+                background: "oklch(0.10 0.008 20)",
+                border: "1px solid oklch(0.22 0.010 20)",
+                color: "oklch(0.92 0.008 60)",
               },
             }}
           />

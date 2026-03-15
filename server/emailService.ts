@@ -501,3 +501,174 @@ export async function sendArtistTeamInviteEmail(
     ].join(""),
   });
 }
+
+// ── Send Design to Artist ─────────────────────────────────────────────────────
+export async function sendDesignToArtistEmail(opts: {
+  artistEmail: string;
+  artistName: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone?: string;
+  designImageUrl: string;
+  printImageUrl?: string;
+  style?: string;
+  bodyPlacement?: string;
+  sizeLabel?: string;
+  sizeInCm?: string;
+  printSpec?: string;
+  preferredDate?: string;
+  notes?: string;
+  bookingDepositAmount?: number;
+}): Promise<void> {
+  const specsRows = [
+    opts.style && `<tr><td style="padding:8px 12px;color:#94a3b8;font-size:13px;border-bottom:1px solid #1e293b;width:140px;">Style</td><td style="padding:8px 12px;color:#f1f5f9;font-size:13px;font-weight:600;border-bottom:1px solid #1e293b;">${opts.style}</td></tr>`,
+    opts.bodyPlacement && `<tr><td style="padding:8px 12px;color:#94a3b8;font-size:13px;border-bottom:1px solid #1e293b;">Placement</td><td style="padding:8px 12px;color:#f1f5f9;font-size:13px;font-weight:600;border-bottom:1px solid #1e293b;">${opts.bodyPlacement}</td></tr>`,
+    opts.sizeLabel && `<tr><td style="padding:8px 12px;color:#94a3b8;font-size:13px;border-bottom:1px solid #1e293b;">Size</td><td style="padding:8px 12px;color:#f1f5f9;font-size:13px;font-weight:600;border-bottom:1px solid #1e293b;">${opts.sizeLabel}${opts.sizeInCm ? ` (${opts.sizeInCm})` : ""}</td></tr>`,
+    opts.printSpec && `<tr><td style="padding:8px 12px;color:#94a3b8;font-size:13px;border-bottom:1px solid #1e293b;">Print Spec</td><td style="padding:8px 12px;color:#f1f5f9;font-size:13px;font-weight:600;border-bottom:1px solid #1e293b;">${opts.printSpec}</td></tr>`,
+    opts.preferredDate && `<tr><td style="padding:8px 12px;color:#94a3b8;font-size:13px;border-bottom:1px solid #1e293b;">Preferred Date</td><td style="padding:8px 12px;color:#f1f5f9;font-size:13px;font-weight:600;border-bottom:1px solid #1e293b;">${opts.preferredDate}</td></tr>`,
+    opts.customerPhone && `<tr><td style="padding:8px 12px;color:#94a3b8;font-size:13px;">Phone</td><td style="padding:8px 12px;color:#f1f5f9;font-size:13px;font-weight:600;">${opts.customerPhone}</td></tr>`,
+  ].filter(Boolean).join("\n");
+
+  const imageToShow = opts.printImageUrl || opts.designImageUrl;
+
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: opts.artistEmail,
+    replyTo: opts.customerEmail,
+    subject: `New Tattoo Design Request from ${opts.customerName} via tatt-ooo`,
+    html: [
+      "<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'/><meta name='viewport' content='width=device-width,initial-scale=1.0'/><title>New Tattoo Design Request</title></head>",
+      "<body style='margin:0;padding:0;background-color:#0a0a0a;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;'>",
+      "<table width='100%' cellpadding='0' cellspacing='0' style='background-color:#0a0a0a;padding:40px 20px;'><tr><td align='center'>",
+      "<table width='600' cellpadding='0' cellspacing='0' style='background-color:#111111;border-radius:12px;border:1px solid #222222;overflow:hidden;max-width:600px;width:100%;'>",
+      // Header
+      "<tr><td style='background:linear-gradient(135deg,#0a0a0a 0%,#111827 100%);padding:32px 40px;text-align:center;border-bottom:1px solid #1e3a5f;'>",
+      "<div style='font-size:30px;font-weight:900;letter-spacing:0.05em;color:#ffffff;'>tatt<span style='color:#06b6d4;'>-ooo</span></div>",
+      "<div style='font-size:11px;letter-spacing:0.2em;color:#64748b;margin-top:6px;text-transform:uppercase;'>New Appointment Request</div>",
+      "</td></tr>",
+      // Greeting
+      "<tr><td style='padding:36px 40px 0;'>",
+      `<h1 style='margin:0 0 8px;font-size:22px;font-weight:700;color:#f1f5f9;'>Hi ${opts.artistName},</h1>`,
+      `<p style='margin:0 0 24px;font-size:15px;line-height:1.6;color:#94a3b8;'><strong style='color:#f1f5f9;'>${opts.customerName}</strong> has sent you their AI-generated tattoo design and would like to book an appointment. All the details you need to prepare are below.</p>`,
+      "</td></tr>",
+      // Design Image
+      "<tr><td style='padding:0 40px 28px;'>",
+      "<p style='margin:0 0 12px;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#06b6d4;'>Design (Print-Ready)</p>",
+      `<a href='${imageToShow}' style='display:block;'><img src='${imageToShow}' alt='Tattoo design' style='width:100%;max-width:520px;border-radius:10px;border:1px solid #334155;display:block;'/></a>`,
+      "<p style='margin:8px 0 0;font-size:11px;color:#475569;text-align:center;'>Click image to open full resolution &middot; 300 DPI print-ready</p>",
+      "</td></tr>",
+      // Specs
+      specsRows ? [
+        "<tr><td style='padding:0 40px 28px;'>",
+        "<p style='margin:0 0 12px;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#06b6d4;'>Specifications &amp; Booking Details</p>",
+        "<table width='100%' cellpadding='0' cellspacing='0' style='background:#1e293b;border-radius:8px;overflow:hidden;border:1px solid #334155;'>",
+        specsRows,
+        "</table></td></tr>",
+      ].join("") : "",
+      // Notes
+      opts.notes ? [
+        "<tr><td style='padding:0 40px 28px;'>",
+        "<p style='margin:0 0 12px;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#06b6d4;'>Client Notes</p>",
+        "<div style='background:#1e293b;border-radius:8px;padding:16px 20px;border-left:3px solid #06b6d4;'>",
+        `<p style='margin:0;font-size:14px;line-height:1.7;color:#cbd5e1;font-style:italic;'>&ldquo;${opts.notes}&rdquo;</p>`,
+        "</div></td></tr>",
+      ].join("") : "",
+      // CTA
+      "<tr><td style='padding:0 40px 36px;'>",
+      "<table cellpadding='0' cellspacing='0'><tr><td style='border-radius:8px;background:linear-gradient(135deg,#0891b2,#0e7490);'>",
+      `<a href='mailto:${opts.customerEmail}?subject=Re: Your tattoo design request via tatt-ooo' style='display:inline-block;padding:13px 28px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;'>Reply to ${opts.customerName}</a>`,
+      "</td></tr></table>",
+      opts.bookingDepositAmount ? `<p style='margin:16px 0 0;font-size:12px;color:#64748b;'>Deposit required to confirm: <strong style='color:#f1f5f9;'>$${opts.bookingDepositAmount}</strong></p>` : "",
+      "</td></tr>",
+      // Footer
+      `<tr><td style='padding:20px 40px;border-top:1px solid #1e293b;text-align:center;'><p style='margin:0;font-size:12px;color:#475569;'>Sent via <a href='https://tattooo.shop' style='color:#06b6d4;text-decoration:none;'>tattooo.shop</a> &middot; AI Tattoo Designer &middot; &copy; ${new Date().getFullYear()}</p></td></tr>`,
+      "</table></td></tr></table></body></html>",
+    ].join(""),
+  });
+}
+
+// ── Booking Notification Emails ───────────────────────────────────────────────
+export async function sendBookingNotificationEmail(opts: {
+  to: string;
+  toName: string;
+  type: "new_request" | "confirmed" | "declined";
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  preferredDate?: string;
+  notes?: string;
+  artistName?: string;
+  confirmedDate?: string;
+  confirmedTime?: string;
+  reason?: string;
+  nextAvailableDate?: string;
+  alternatives?: Array<{ id: number; name: string; city?: string | null; country?: string | null }>;
+  bookingId?: number;
+}): Promise<void> {
+  const year = new Date().getFullYear();
+  const headerStyle = "background:linear-gradient(135deg,#1a0a00,#2d1200);padding:32px 40px;border-bottom:2px solid #c0392b;";
+  const logoHtml = "<h1 style='margin:0;font-size:28px;font-weight:900;letter-spacing:0.08em;color:#ffffff;font-family:Georgia,serif;'>TATT<span style='color:#c0392b;'>OOO</span></h1>";
+  const footerHtml = `<tr><td style='padding:20px 40px;border-top:1px solid #2d1200;text-align:center;background:#0d0500;'><p style='margin:0;font-size:12px;color:#7f6050;'>Sent via <a href='https://tattooo.shop' style='color:#c0392b;text-decoration:none;'>tattooo.shop</a> &middot; AI Tattoo Designer &middot; &copy; ${year}</p></td></tr>`;
+  const wrapStart = "<!DOCTYPE html><html><body style='margin:0;padding:0;background:#0d0500;font-family:Arial,sans-serif;'><table width='100%' cellpadding='0' cellspacing='0'><tr><td align='center' style='padding:40px 20px;'><table width='600' cellpadding='0' cellspacing='0' style='background:#1a0a00;border-radius:12px;overflow:hidden;border:1px solid #2d1200;'>";
+  const wrapEnd = footerHtml + "</table></td></tr></table></body></html>";
+
+  let subject = "";
+  let bodyRows = "";
+
+  if (opts.type === "new_request") {
+    subject = `New Booking Request from ${opts.customerName || "a customer"}`;
+    bodyRows = [
+      `<tr><td style='${headerStyle}'>${logoHtml}<p style='margin:8px 0 0;font-size:13px;color:#c0392b;letter-spacing:0.1em;text-transform:uppercase;'>New Booking Request</p></td></tr>`,
+      `<tr><td style='padding:32px 40px;'>`,
+      `<p style='margin:0 0 20px;font-size:17px;color:#f5e6d0;'>Hi <strong>${opts.toName}</strong>, you have a new booking request!</p>`,
+      `<table width='100%' style='background:#0d0500;border-radius:8px;border:1px solid #2d1200;margin-bottom:20px;'>`,
+      `<tr><td style='padding:14px 18px;border-bottom:1px solid #2d1200;'><div style='font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#c0392b;'>Customer</div><div style='font-size:16px;color:#f5e6d0;font-weight:700;margin-top:4px;'>${opts.customerName || ""}</div></td></tr>`,
+      opts.customerEmail ? `<tr><td style='padding:12px 18px;border-bottom:1px solid #2d1200;'><div style='font-size:10px;color:#7f6050;text-transform:uppercase;letter-spacing:0.1em;'>Email</div><div style='font-size:14px;color:#f5e6d0;margin-top:4px;'>${opts.customerEmail}</div></td></tr>` : "",
+      opts.customerPhone ? `<tr><td style='padding:12px 18px;border-bottom:1px solid #2d1200;'><div style='font-size:10px;color:#7f6050;text-transform:uppercase;letter-spacing:0.1em;'>Phone</div><div style='font-size:14px;color:#f5e6d0;margin-top:4px;'>${opts.customerPhone}</div></td></tr>` : "",
+      opts.preferredDate ? `<tr><td style='padding:12px 18px;border-bottom:1px solid #2d1200;'><div style='font-size:10px;color:#7f6050;text-transform:uppercase;letter-spacing:0.1em;'>Preferred Date</div><div style='font-size:16px;color:#f5e6d0;font-weight:700;margin-top:4px;'>${opts.preferredDate}</div></td></tr>` : "",
+      opts.notes ? `<tr><td style='padding:12px 18px;'><div style='font-size:10px;color:#7f6050;text-transform:uppercase;letter-spacing:0.1em;'>Notes</div><div style='font-size:14px;color:#f5e6d0;font-style:italic;margin-top:4px;'>"${opts.notes}"</div></td></tr>` : "",
+      `</table>`,
+      `<table cellpadding='0' cellspacing='0'><tr><td style='border-radius:8px;background:#c0392b;'><a href='https://tattooo.shop/artist-dashboard' style='display:inline-block;padding:13px 28px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;'>View in Dashboard &rarr;</a></td></tr></table>`,
+      `</td></tr>`,
+    ].join("");
+  } else if (opts.type === "confirmed") {
+    subject = `Your booking with ${opts.artistName || "your artist"} is confirmed!`;
+    bodyRows = [
+      `<tr><td style='${headerStyle}'>${logoHtml}<p style='margin:8px 0 0;font-size:13px;color:#27ae60;letter-spacing:0.1em;text-transform:uppercase;'>Booking Confirmed!</p></td></tr>`,
+      `<tr><td style='padding:32px 40px;'>`,
+      `<p style='margin:0 0 20px;font-size:17px;color:#f5e6d0;'>Great news, <strong>${opts.toName}</strong>! Your appointment is locked in.</p>`,
+      `<table width='100%' style='background:#0d0500;border-radius:8px;border:1px solid #2d1200;margin-bottom:20px;'>`,
+      `<tr><td style='padding:14px 18px;border-bottom:1px solid #2d1200;'><div style='font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#27ae60;'>Artist</div><div style='font-size:16px;color:#f5e6d0;font-weight:700;margin-top:4px;'>${opts.artistName || ""}</div></td></tr>`,
+      opts.confirmedDate ? `<tr><td style='padding:12px 18px;'><div style='font-size:10px;color:#7f6050;text-transform:uppercase;letter-spacing:0.1em;'>Date &amp; Time</div><div style='font-size:18px;color:#f5e6d0;font-weight:700;margin-top:4px;'>${opts.confirmedDate}${opts.confirmedTime ? " at " + opts.confirmedTime : ""}</div></td></tr>` : "",
+      `</table>`,
+      `<p style='margin:0 0 20px;font-size:14px;color:#a08060;'>Bring your printed design to the appointment. See you there!</p>`,
+      `<table cellpadding='0' cellspacing='0'><tr><td style='border-radius:8px;background:#c0392b;'><a href='https://tattooo.shop/my-bookings' style='display:inline-block;padding:13px 28px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;'>View My Bookings &rarr;</a></td></tr></table>`,
+      `</td></tr>`,
+    ].join("");
+  } else {
+    subject = `Booking Update from ${opts.artistName || "your artist"}`;
+    const altHtml = opts.alternatives && opts.alternatives.length > 0
+      ? `<p style='margin:20px 0 10px;font-size:14px;font-weight:700;color:#f5e6d0;'>Alternative Artists Near You:</p>` +
+        opts.alternatives.map((a) =>
+          `<div style='background:#0d0500;border:1px solid #2d1200;border-radius:8px;padding:12px 16px;margin-bottom:8px;'><strong style='color:#f5e6d0;'>${a.name}</strong> &mdash; <span style='color:#a08060;'>${a.city || ""}${a.city && a.country ? ", " : ""}${a.country || ""}</span><br><a href='https://tattooo.shop/artists/${a.id}' style='font-size:12px;color:#c0392b;'>View Profile &rarr;</a></div>`
+        ).join("")
+      : "";
+    bodyRows = [
+      `<tr><td style='${headerStyle}'>${logoHtml}<p style='margin:8px 0 0;font-size:13px;color:#e67e22;letter-spacing:0.1em;text-transform:uppercase;'>Booking Update</p></td></tr>`,
+      `<tr><td style='padding:32px 40px;'>`,
+      `<p style='margin:0 0 14px;font-size:17px;color:#f5e6d0;'>Hi <strong>${opts.toName}</strong>,</p>`,
+      `<p style='margin:0 0 20px;font-size:15px;color:#a08060;'>${opts.artistName || "Your artist"} is unable to take your booking${opts.reason ? ` &mdash; "${opts.reason}"` : ""}.</p>`,
+      opts.nextAvailableDate ? `<div style='background:#0d0500;border:1px solid #c0392b;border-radius:8px;padding:16px 20px;margin-bottom:20px;'><div style='font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#c0392b;'>Next Available Date</div><div style='font-size:20px;font-weight:700;color:#f5e6d0;margin-top:6px;'>${opts.nextAvailableDate}</div></div>` : "",
+      altHtml,
+      `<table cellpadding='0' cellspacing='0' style='margin-top:20px;'><tr><td style='border-radius:8px;background:#c0392b;'><a href='https://tattooo.shop/artists' style='display:inline-block;padding:13px 28px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;'>Browse All Artists &rarr;</a></td></tr></table>`,
+      `</td></tr>`,
+    ].join("");
+  }
+
+  await resend.emails.send({
+    from: "Tattooo <noreply@tattooo.shop>",
+    to: opts.to,
+    subject,
+    html: wrapStart + bodyRows + wrapEnd,
+  });
+}

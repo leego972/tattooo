@@ -21,6 +21,8 @@ import {
   Megaphone,
   CreditCard,
   Tag,
+  CalendarDays,
+  LayoutDashboard,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -41,8 +43,10 @@ const authNavLinks = [
   { href: "/history", label: "History", icon: Clock },
   { href: "/pricing", label: "Pricing", icon: DollarSign },
   { href: "/artists", label: "Find Artist", icon: Users },
+  { href: "/my-bookings", label: "My Bookings", icon: CalendarDays },
   { href: "/referral", label: "Refer & Earn", icon: Gift },
   { href: "/subscription", label: "Subscription", icon: CreditCard },
+  { href: "/artist-dashboard", label: "Artist Dashboard", icon: LayoutDashboard },
 ];
 
 // Links shown to everyone (logged out)

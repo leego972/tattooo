@@ -201,10 +201,14 @@ export const bookings = mysqlTable("bookings", {
   stripeSessionId: varchar("stripeSessionId", { length: 256 }),
   depositAmountCents: int("depositAmountCents"),
   scheduledAt: timestamp("scheduledAt"),
+  preferredDate: varchar("preferredDate", { length: 10 }),
+  customerPhone: varchar("customerPhone", { length: 64 }),
+  customerNotes: text("customerNotes"),
+  declineReason: text("declineReason"),
+  nextAvailableDate: varchar("nextAvailableDate", { length: 10 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
-
 export type Booking = typeof bookings.$inferSelect;
 export type InsertBooking = typeof bookings.$inferInsert;
 
@@ -797,3 +801,42 @@ export const infoPackAttachments = mysqlTable("info_pack_attachments", {
 });
 export type InfoPackAttachment = typeof infoPackAttachments.$inferSelect;
 export type InsertInfoPackAttachment = typeof infoPackAttachments.$inferInsert;
+
+// ── Artist Availability ───────────────────────────────────────────────────────
+// Artists mark their open time slots for bookings
+export const artistAvailability = mysqlTable("artist_availability", {
+  id: int("id").autoincrement().primaryKey(),
+  artistId: int("artistId").notNull(),
+  date: varchar("date", { length: 10 }).notNull(), // YYYY-MM-DD
+  timeSlot: varchar("timeSlot", { length: 10 }).notNull().default("all-day"), // e.g. "10:00", "14:00", "all-day"
+  isBooked: boolean("isBooked").notNull().default(false),
+  bookingId: int("bookingId"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ArtistAvailability = typeof artistAvailability.$inferSelect;
+export type InsertArtistAvailability = typeof artistAvailability.$inferInsert;
+
+// ── In-App Notifications ──────────────────────────────────────────────────────
+// Real-time notifications for both users and artists
+export const inAppNotifications = mysqlTable("in_app_notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  type: mysqlEnum("type", [
+    "booking_request",     // artist receives: new booking request
+    "booking_confirmed",   // user receives: artist confirmed
+    "booking_declined",    // user receives: artist declined + alternatives
+    "booking_cancelled",   // both: booking cancelled
+    "new_message",         // general message
+    "system",              // system announcement
+  ]).notNull(),
+  title: varchar("title", { length: 256 }).notNull(),
+  message: text("message").notNull(),
+  data: text("data"), // JSON string with extra context (bookingId, artistId, nextAvailableDate, etc.)
+  isRead: boolean("isRead").notNull().default(false),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type InAppNotification = typeof inAppNotifications.$inferSelect;
+export type InsertInAppNotification = typeof inAppNotifications.$inferInsert;
+
+// ── Extend bookings table: add declined reason + next available date ──────────
+// (handled via ALTER TABLE migration below — existing table already has core fields)

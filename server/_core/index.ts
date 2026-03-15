@@ -9,6 +9,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import healthRouter from "../health";
 import stripeWebhookRouter from "../stripeWebhook";
+import { handleUnsubscribe } from "../mailing-list-router";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -41,6 +42,17 @@ async function startServer() {
   registerOAuthRoutes(app);
   // Health check endpoint (used by Railway)
   app.use("/api", healthRouter);
+
+  // Unsubscribe endpoint for studio mailing list
+  app.get("/api/unsubscribe/:token", async (req, res) => {
+    const { token } = req.params;
+    const success = await handleUnsubscribe(token);
+    const html = success
+      ? `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Unsubscribed - tatt-ooo</title></head><body style="font-family:sans-serif;text-align:center;padding:60px;background:#0a0a0a;color:#94a3b8;"><div style="font-size:28px;font-weight:900;color:#fff;">tatt<span style="color:#06b6d4;">-ooo</span></div><p style="margin-top:24px;">You have been successfully unsubscribed.</p><p>You will no longer receive emails from us.</p></body></html>`
+      : `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Invalid Link - tatt-ooo</title></head><body style="font-family:sans-serif;text-align:center;padding:60px;background:#0a0a0a;color:#94a3b8;"><div style="font-size:28px;font-weight:900;color:#fff;">tatt<span style="color:#06b6d4;">-ooo</span></div><p style="margin-top:24px;">This unsubscribe link is invalid or has already been used.</p></body></html>`;
+    res.status(success ? 200 : 404).send(html);
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",

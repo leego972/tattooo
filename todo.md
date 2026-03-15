@@ -359,3 +359,23 @@
 - [x] Frontend: ArtistProfile page (/artists/:id) — full public profile with photo, bio, hours, portfolio, team info, book button
 - [x] Frontend: ArtistSignup — 5-step form with photo, address, phone, hours, team option
 - [x] Frontend: App.tsx — add /artists/:id route
+
+## Studio Mailing List System
+- [x] DB: studio_mailing_list table (100 studios seeded with researched emails)
+- [x] DB: weekly_ad_sends table (tracks per-studio weekly send history)
+- [x] DB: info_pack_attachments table (stores uploaded PDF info packs per language)
+- [x] Email research: 76/100 emails found, 2 studios closed, 22 no email found
+- [x] Backend: mailingList.list — admin, filter by country/email status/info pack status/search
+- [x] Backend: mailingList.stats — summary counts
+- [x] Backend: mailingList.updateEmail — update email + status
+- [x] Backend: mailingList.delete — remove studio from list
+- [x] Backend: mailingList.add — add studio manually
+- [x] Backend: mailingList.sendInfoPack — send AI-generated multilingual info pack to single studio
+- [x] Backend: mailingList.sendInfoPackBatch — send to all eligible studios at once
+- [x] Backend: mailingList.sendWeeklyAd — AI-generated picture ad to all opted-in studios
+- [x] Backend: mailingList.previewInfoPack — preview without sending
+- [x] Backend: mailingList.previewWeeklyAd — preview with AI image without sending
+- [x] Backend: GET /api/unsubscribe/:token — one-click unsubscribe endpoint (GDPR/CAN-SPAM)
+- [x] Frontend: /mailing-list — admin page with Contacts, Send Campaigns, Preview tabs
+- [x] Frontend: Navbar — Mailing List link in admin section
+- [x] Email: unsubscribe footer on all outreach emails

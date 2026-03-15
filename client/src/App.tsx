@@ -33,6 +33,7 @@ import AffiliateDashboard from "./pages/AffiliateDashboard";
 import Subscription from "./pages/Subscription";
 import AdminPromos from "./pages/AdminPromos";
 import Credits from "./pages/Credits";
+import MailingList from "./pages/MailingList";
 
 import Navbar from "./components/Navbar";
 
@@ -104,6 +105,9 @@ function Router() {
           </Route>
           <Route path="/outreach">
             {() => <ProtectedRoute component={Outreach} />}
+          </Route>
+          <Route path="/mailing-list">
+            {() => <ProtectedRoute component={MailingList} />}
           </Route>
           <Route path="/advertising">
             {() => <ProtectedRoute component={AdvertisingDashboard} />}

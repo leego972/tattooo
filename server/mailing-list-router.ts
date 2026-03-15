@@ -1,0 +1,431 @@
+/**
+ * Studio Mailing List Router
+ * Handles info pack sending, weekly ad generation, unsubscribe, and contact management.
+ */
+import { z } from "zod";
+import { eq, and, desc, isNotNull } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
+import { publicProcedure, protectedProcedure, router, adminProcedure } from "./_core/trpc";
+import { getDb } from "./db";
+import { studioMailingList, weeklyAdSends, infoPackAttachments } from "../drizzle/schema";
+import { invokeLLM } from "./_core/llm";
+import { generateImage } from "./_core/imageGeneration";
+import { sendOutreachEmail } from "./emailService";
+import { storagePut } from "./storage";
+import { nanoid } from "nanoid";
+
+// ── Language map for email content ────────────────────────────────────────────
+const LANG_NAMES: Record<string, string> = {
+  en: "English", de: "German", fr: "French", es: "Spanish", it: "Italian",
+  pt: "Portuguese", ja: "Japanese", ko: "Korean", nl: "Dutch", he: "Hebrew",
+};
+
+// ── Generate info pack email body for a given language ────────────────────────
+async function generateInfoPackEmail(language: string, studioName: string, origin: string): Promise<{ subject: string; htmlBody: string }> {
+  const langName = LANG_NAMES[language] || "English";
+  const response = await invokeLLM({
+    messages: [
+      {
+        role: "system",
+        content: `You are a professional marketing copywriter for tatt-ooo, an AI tattoo design platform. Write compelling outreach emails to tattoo studios in their native language. Always respond with valid JSON only.`,
+      },
+      {
+        role: "user",
+        content: `Write a professional info pack email to a tattoo studio called "${studioName}" in ${langName}.
+
+The email should:
+1. Introduce tatt-ooo as an AI tattoo design platform that helps clients visualise their tattoo ideas before booking
+2. Explain how it benefits their studio: clients come in with clear design briefs, reducing back-and-forth
+3. Mention that studios can list on the tatt-ooo artist directory for £29/year
+4. Include a clear call-to-action to visit ${origin}/artist-signup
+5. Be warm, professional, and respectful of their craft
+6. Be written entirely in ${langName}
+
+Respond with JSON: { "subject": "...", "htmlBody": "..." }
+The htmlBody should be clean HTML paragraphs (no full page wrapper, just the content body).`,
+      },
+    ],
+    response_format: {
+      type: "json_schema",
+      json_schema: {
+        name: "email_content",
+        strict: true,
+        schema: {
+          type: "object",
+          properties: {
+            subject: { type: "string" },
+            htmlBody: { type: "string" },
+          },
+          required: ["subject", "htmlBody"],
+          additionalProperties: false,
+        },
+      },
+    },
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content || typeof content !== "string") throw new Error("LLM returned empty content");
+  const parsed = JSON.parse(content);
+  return { subject: parsed.subject as string, htmlBody: parsed.htmlBody as string };
+}
+
+// ── Generate weekly ad email with AI image ────────────────────────────────────
+async function generateWeeklyAdEmail(language: string, studioName: string, origin: string): Promise<{ subject: string; htmlBody: string; imageUrl: string }> {
+  const langName = LANG_NAMES[language] || "English";
+  const weekNum = getISOWeek(new Date());
+
+  // Generate ad image
+  const adPrompts = [
+    "A stunning photorealistic tattoo sleeve with intricate geometric patterns and floral elements, professional studio photography, dark moody background",
+    "Beautiful watercolor tattoo design on skin showing a phoenix rising, vibrant colors, professional tattoo photography",
+    "Minimalist fine-line tattoo of a mountain range on forearm, crisp black lines, clean white studio background",
+    "Japanese traditional tattoo style dragon, bold colors, professional photography, dramatic lighting",
+    "Blackwork mandala tattoo on back, symmetrical, intricate dotwork, professional studio lighting",
+  ];
+  const prompt = adPrompts[weekNum % adPrompts.length];
+
+  let imageUrl = "";
+  try {
+    const result = await generateImage({ prompt: `${prompt}. Add subtle text overlay: "tatt-ooo.com" in elegant white font` });
+    imageUrl = result.url ?? "";
+  } catch {
+    // Fall back to no image if generation fails
+    imageUrl = "";
+  }
+
+  // Generate email copy
+  const response = await invokeLLM({
+    messages: [
+      {
+        role: "system",
+        content: `You are a marketing copywriter for tatt-ooo. Write short, punchy weekly reminder emails to tattoo studios. Always respond with valid JSON only.`,
+      },
+      {
+        role: "user",
+        content: `Write a short weekly reminder email to tattoo studio "${studioName}" in ${langName}.
+
+The email should:
+1. Be short (2-3 short paragraphs max)
+2. Remind them about tatt-ooo — the AI tattoo design tool their clients are using
+3. Mention one specific benefit (e.g., clients arrive with clearer briefs, saves consultation time)
+4. Include a soft CTA to list their studio at ${origin}/artist-signup
+5. Feel like a friendly weekly newsletter, not a hard sell
+6. Be written entirely in ${langName}
+
+Respond with JSON: { "subject": "...", "htmlBody": "..." }
+The htmlBody should be clean HTML paragraphs only (no full page wrapper).`,
+      },
+    ],
+    response_format: {
+      type: "json_schema",
+      json_schema: {
+        name: "email_content",
+        strict: true,
+        schema: {
+          type: "object",
+          properties: {
+            subject: { type: "string" },
+            htmlBody: { type: "string" },
+          },
+          required: ["subject", "htmlBody"],
+          additionalProperties: false,
+        },
+      },
+    },
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content || typeof content !== "string") throw new Error("LLM returned empty content");
+  const parsed = JSON.parse(content);
+
+  // Embed image into htmlBody if we have one
+  const imageHtml = imageUrl
+    ? `<div style="text-align:center;margin:24px 0;"><img src="${imageUrl}" alt="tatt-ooo AI Tattoo Design" style="max-width:100%;border-radius:8px;border:1px solid #1e293b;" /></div>`
+    : "";
+
+  return {
+    subject: parsed.subject,
+    htmlBody: imageHtml + parsed.htmlBody,
+    imageUrl,
+  };
+}
+
+// ── ISO week number helper ────────────────────────────────────────────────────
+function getISOWeek(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+}
+
+// ── Router ────────────────────────────────────────────────────────────────────
+export const mailingListRouter = router({
+  // List all studios with filters
+  list: adminProcedure
+    .input(z.object({
+      country: z.string().optional(),
+      emailStatus: z.enum(["found", "not_found", "bounced", "unsubscribed"]).optional(),
+      infoPackStatus: z.enum(["not_sent", "sent", "opened", "bounced"]).optional(),
+      search: z.string().optional(),
+    }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const rows = await db.select().from(studioMailingList).orderBy(desc(studioMailingList.createdAt));
+      return rows.filter((r) => {
+        if (input.country && r.country !== input.country) return false;
+        if (input.emailStatus && r.emailStatus !== input.emailStatus) return false;
+        if (input.infoPackStatus && r.infoPackStatus !== input.infoPackStatus) return false;
+        if (input.search) {
+          const q = input.search.toLowerCase();
+          if (!r.studioName.toLowerCase().includes(q) && !r.city?.toLowerCase().includes(q) && !r.email?.toLowerCase().includes(q)) return false;
+        }
+        return true;
+      });
+    }),
+
+  // Stats summary
+  stats: adminProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+    const rows = await db.select().from(studioMailingList);
+    return {
+      total: rows.length,
+      emailFound: rows.filter((r) => r.emailStatus === "found").length,
+      emailNotFound: rows.filter((r) => r.emailStatus === "not_found").length,
+      unsubscribed: rows.filter((r) => r.emailStatus === "unsubscribed").length,
+      infoPackSent: rows.filter((r) => r.infoPackStatus === "sent" || r.infoPackStatus === "opened").length,
+      weeklyOptOut: rows.filter((r) => r.weeklyAdOptOut).length,
+    };
+  }),
+
+  // Update a studio's email
+  updateEmail: adminProcedure
+    .input(z.object({
+      id: z.number().int().positive(),
+      email: z.string().email().optional(),
+      emailStatus: z.enum(["found", "not_found", "bounced", "unsubscribed"]).optional(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await db.update(studioMailingList).set({
+        ...(input.email !== undefined ? { email: input.email, emailStatus: "found" } : {}),
+        ...(input.emailStatus !== undefined ? { emailStatus: input.emailStatus } : {}),
+        ...(input.notes !== undefined ? { notes: input.notes } : {}),
+      }).where(eq(studioMailingList.id, input.id));
+      return { success: true };
+    }),
+
+  // Delete a studio from the list
+  delete: adminProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await db.delete(studioMailingList).where(eq(studioMailingList.id, input.id));
+      return { success: true };
+    }),
+
+  // Add a new studio manually
+  add: adminProcedure
+    .input(z.object({
+      studioName: z.string().min(1),
+      city: z.string().optional(),
+      country: z.string().min(1),
+      language: z.string().default("en"),
+      email: z.string().email().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const token = nanoid(48);
+      await db.insert(studioMailingList).values({
+        studioName: input.studioName,
+        city: input.city,
+        country: input.country,
+        language: input.language,
+        email: input.email,
+        emailStatus: input.email ? "found" : "not_found",
+        unsubscribeToken: token,
+      });
+      return { success: true };
+    }),
+
+  // Upload info pack PDF for a language
+  uploadInfoPack: adminProcedure
+    .input(z.object({
+      language: z.string().min(1),
+      fileBase64: z.string(), // base64 encoded PDF
+      fileName: z.string(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const buffer = Buffer.from(input.fileBase64, "base64");
+      const key = `info-packs/${input.language}-${nanoid(8)}.pdf`;
+      const { url } = await storagePut(key, buffer, "application/pdf");
+      // Upsert
+      const existing = await db.select().from(infoPackAttachments).where(eq(infoPackAttachments.language, input.language)).limit(1);
+      if (existing.length > 0) {
+        await db.update(infoPackAttachments).set({ fileUrl: url, fileName: input.fileName }).where(eq(infoPackAttachments.language, input.language));
+      } else {
+        await db.insert(infoPackAttachments).values({ language: input.language, fileUrl: url, fileName: input.fileName });
+      }
+      return { success: true, url };
+    }),
+
+  // Get all uploaded info packs
+  getInfoPacks: adminProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+    return db.select().from(infoPackAttachments).orderBy(infoPackAttachments.language);
+  }),
+
+  // Send info pack to a single studio
+  sendInfoPack: adminProcedure
+    .input(z.object({
+      studioId: z.number().int().positive(),
+      origin: z.string().url(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const rows = await db.select().from(studioMailingList).where(eq(studioMailingList.id, input.studioId)).limit(1);
+      const studio = rows[0];
+      if (!studio) throw new TRPCError({ code: "NOT_FOUND" });
+      if (!studio.email) throw new TRPCError({ code: "BAD_REQUEST", message: "No email address for this studio." });
+      if (studio.emailStatus === "unsubscribed") throw new TRPCError({ code: "BAD_REQUEST", message: "Studio has unsubscribed." });
+
+      const unsubscribeUrl = `${input.origin}/api/unsubscribe/${studio.unsubscribeToken}`;
+      const { subject, htmlBody } = await generateInfoPackEmail(studio.language, studio.studioName, input.origin);
+      const bodyWithUnsub = htmlBody + `<p style="margin-top:32px;font-size:12px;color:#64748b;">To unsubscribe from future emails, <a href="${unsubscribeUrl}" style="color:#06b6d4;">click here</a>.</p>`;
+
+      await sendOutreachEmail({ to: studio.email, toName: studio.studioName, subject, htmlBody: bodyWithUnsub });
+      await db.update(studioMailingList).set({ infoPackSentAt: new Date(), infoPackStatus: "sent" }).where(eq(studioMailingList.id, input.studioId));
+      return { success: true, subject };
+    }),
+
+  // Send info pack to ALL studios with emails (batch)
+  sendInfoPackBatch: adminProcedure
+    .input(z.object({ origin: z.string().url() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const studios = await db.select().from(studioMailingList)
+        .where(and(
+          isNotNull(studioMailingList.email),
+          eq(studioMailingList.emailStatus, "found"),
+          eq(studioMailingList.infoPackStatus, "not_sent"),
+        ));
+
+      let sent = 0;
+      let failed = 0;
+      const errors: string[] = [];
+
+      for (const studio of studios) {
+        if (!studio.email) continue;
+        try {
+          const unsubscribeUrl = `${input.origin}/api/unsubscribe/${studio.unsubscribeToken}`;
+          const { subject, htmlBody } = await generateInfoPackEmail(studio.language, studio.studioName, input.origin);
+          const bodyWithUnsub = htmlBody + `<p style="margin-top:32px;font-size:12px;color:#64748b;">To unsubscribe, <a href="${unsubscribeUrl}" style="color:#06b6d4;">click here</a>.</p>`;
+          await sendOutreachEmail({ to: studio.email, toName: studio.studioName, subject, htmlBody: bodyWithUnsub });
+          await db.update(studioMailingList).set({ infoPackSentAt: new Date(), infoPackStatus: "sent" }).where(eq(studioMailingList.id, studio.id));
+          sent++;
+          // Rate limit: 1 email per second to avoid Resend limits
+          await new Promise((r) => setTimeout(r, 1000));
+        } catch (err: unknown) {
+          failed++;
+          errors.push(`${studio.studioName}: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+      return { sent, failed, errors };
+    }),
+
+  // Send weekly ad to ALL opted-in studios with emails
+  sendWeeklyAd: adminProcedure
+    .input(z.object({ origin: z.string().url() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      const weekNum = getISOWeek(new Date());
+      const year = new Date().getFullYear();
+
+      // Get studios that haven't received this week's ad yet
+      const studios = await db.select().from(studioMailingList)
+        .where(and(
+          isNotNull(studioMailingList.email),
+          eq(studioMailingList.emailStatus, "found"),
+          eq(studioMailingList.weeklyAdOptOut, false),
+        ));
+
+      // Check which studios already got this week's ad
+      const alreadySent = await db.select({ studioId: weeklyAdSends.studioId })
+        .from(weeklyAdSends)
+        .where(and(eq(weeklyAdSends.weekNumber, weekNum), eq(weeklyAdSends.year, year)));
+      const alreadySentIds = new Set(alreadySent.map((r) => r.studioId));
+
+      const pending = studios.filter((s) => !alreadySentIds.has(s.id));
+
+      let sent = 0;
+      let failed = 0;
+      const errors: string[] = [];
+
+      for (const studio of pending) {
+        if (!studio.email) continue;
+        try {
+          const unsubscribeUrl = `${input.origin}/api/unsubscribe/${studio.unsubscribeToken}`;
+          const { subject, htmlBody, imageUrl } = await generateWeeklyAdEmail(studio.language, studio.studioName, input.origin);
+          const bodyWithUnsub = htmlBody + `<p style="margin-top:32px;font-size:12px;color:#64748b;">To unsubscribe, <a href="${unsubscribeUrl}" style="color:#06b6d4;">click here</a>.</p>`;
+
+          await sendOutreachEmail({ to: studio.email, toName: studio.studioName, subject, htmlBody: bodyWithUnsub });
+          await db.insert(weeklyAdSends).values({ studioId: studio.id, weekNumber: weekNum, year, subject, imageUrl, emailBodyHtml: htmlBody, status: "sent" });
+          await db.update(studioMailingList).set({ lastWeeklyAdSentAt: new Date(), weeklyAdSentCount: (studio.weeklyAdSentCount || 0) + 1 }).where(eq(studioMailingList.id, studio.id));
+          sent++;
+          await new Promise((r) => setTimeout(r, 1000));
+        } catch (err: unknown) {
+          failed++;
+          errors.push(`${studio.studioName}: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+      return { sent, failed, errors, weekNum, year };
+    }),
+
+  // Get weekly ad send history
+  weeklyAdHistory: adminProcedure
+    .input(z.object({ limit: z.number().int().positive().default(50) }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      return db.select().from(weeklyAdSends).orderBy(desc(weeklyAdSends.sentAt)).limit(input.limit);
+    }),
+
+  // Preview a generated info pack email (without sending)
+  previewInfoPack: adminProcedure
+    .input(z.object({ language: z.string(), studioName: z.string(), origin: z.string().url() }))
+    .mutation(async ({ input }) => {
+      const { subject, htmlBody } = await generateInfoPackEmail(input.language, input.studioName, input.origin);
+      return { subject, htmlBody };
+    }),
+
+  // Preview a generated weekly ad (without sending)
+  previewWeeklyAd: adminProcedure
+    .input(z.object({ language: z.string(), studioName: z.string(), origin: z.string().url() }))
+    .mutation(async ({ input }) => {
+      const { subject, htmlBody, imageUrl } = await generateWeeklyAdEmail(input.language, input.studioName, input.origin);
+      return { subject, htmlBody, imageUrl };
+    }),
+});
+
+// ── Public unsubscribe handler (used by Express route) ───────────────────────
+export async function handleUnsubscribe(token: string): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const rows = await db.select().from(studioMailingList).where(eq(studioMailingList.unsubscribeToken, token)).limit(1);
+  if (!rows[0]) return false;
+  await db.update(studioMailingList).set({ emailStatus: "unsubscribed", weeklyAdOptOut: true }).where(eq(studioMailingList.id, rows[0].id));
+  return true;
+}

@@ -56,6 +56,7 @@ const adminNavLinks = [
   { href: "/admin", label: "Admin Panel", icon: Users },
   { href: "/admin/promos", label: "Promo Codes", icon: Tag },
   { href: "/outreach", label: "Outreach", icon: Mail },
+  { href: "/mailing-list", label: "Mailing List", icon: Mail },
   { href: "/advertising", label: "Advertising", icon: Megaphone },
   { href: "/affiliates", label: "Affiliates", icon: BarChart2 },
 ];

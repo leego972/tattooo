@@ -9,6 +9,7 @@ import { creditRouter } from "./credit-router";
 import { subscriptionRouter } from "./subscription-router";
 import { seoRouter } from "./seo-router";
 import { marketingRouter } from "./marketing-router";
+import { mailingListRouter } from "./mailing-list-router";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { invokeLLM } from "./_core/llm";
 import { storagePut } from "./storage";
@@ -1866,6 +1867,7 @@ export const appRouter = router({
   subscription: subscriptionRouter,
   seo: seoRouter,
   marketing: marketingRouter,
+  mailingList: mailingListRouter,
 });
 
 export type AppRouter = typeof appRouter;

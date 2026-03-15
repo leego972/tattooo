@@ -745,3 +745,55 @@ export const referralConversions = mysqlTable("referral_conversions", {
   subscriptionId: varchar("subscriptionId", { length: 256 }), // Stripe subscription ID if they paid
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
+
+// ── Studio Mailing List ───────────────────────────────────────────────────────
+// Master list of tattoo studios for outreach (info packs + weekly ads)
+export const studioMailingList = mysqlTable("studio_mailing_list", {
+  id: int("id").autoincrement().primaryKey(),
+  studioName: varchar("studioName", { length: 256 }).notNull(),
+  city: varchar("city", { length: 128 }),
+  country: varchar("country", { length: 128 }).notNull(),
+  language: varchar("language", { length: 8 }).notNull().default("en"),
+  email: varchar("email", { length: 320 }),
+  emailStatus: mysqlEnum("emailStatus", ["found", "not_found", "bounced", "unsubscribed"]).notNull().default("not_found"),
+  emailSource: varchar("emailSource", { length: 128 }),
+  infoPackSentAt: timestamp("infoPackSentAt"),
+  infoPackStatus: mysqlEnum("infoPackStatus", ["not_sent", "sent", "opened", "bounced"]).notNull().default("not_sent"),
+  weeklyAdOptOut: boolean("weeklyAdOptOut").notNull().default(false),
+  lastWeeklyAdSentAt: timestamp("lastWeeklyAdSentAt"),
+  weeklyAdSentCount: int("weeklyAdSentCount").notNull().default(0),
+  unsubscribeToken: varchar("unsubscribeToken", { length: 64 }).unique(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type StudioMailingList = typeof studioMailingList.$inferSelect;
+export type InsertStudioMailingList = typeof studioMailingList.$inferInsert;
+
+// ── Weekly Ad Sends ───────────────────────────────────────────────────────────
+// Log of each weekly ad send to each studio
+export const weeklyAdSends = mysqlTable("weekly_ad_sends", {
+  id: int("id").autoincrement().primaryKey(),
+  studioId: int("studioId").notNull(),
+  weekNumber: int("weekNumber").notNull(), // ISO week number
+  year: int("year").notNull(),
+  subject: varchar("subject", { length: 512 }),
+  imageUrl: text("imageUrl"),
+  emailBodyHtml: text("emailBodyHtml"),
+  status: mysqlEnum("status", ["sent", "bounced", "failed"]).notNull().default("sent"),
+  sentAt: timestamp("sentAt").defaultNow().notNull(),
+});
+export type WeeklyAdSend = typeof weeklyAdSends.$inferSelect;
+export type InsertWeeklyAdSend = typeof weeklyAdSends.$inferInsert;
+
+// ── Info Pack Attachments ─────────────────────────────────────────────────────
+// PDF info packs uploaded per language
+export const infoPackAttachments = mysqlTable("info_pack_attachments", {
+  id: int("id").autoincrement().primaryKey(),
+  language: varchar("language", { length: 8 }).notNull().unique(),
+  fileUrl: text("fileUrl").notNull(),
+  fileName: varchar("fileName", { length: 256 }).notNull(),
+  uploadedAt: timestamp("uploadedAt").defaultNow().notNull(),
+});
+export type InfoPackAttachment = typeof infoPackAttachments.$inferSelect;
+export type InsertInfoPackAttachment = typeof infoPackAttachments.$inferInsert;

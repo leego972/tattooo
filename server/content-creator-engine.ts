@@ -1,5 +1,5 @@
 /**
- * Content Creator Engine v3.0 — Archibald Titan
+ * Content Creator Engine v3.0 — tattooo.shop
  *
  * Fully autonomous AI-powered content generation and distribution system.
  * Operates without manual intervention: generates, scores, auto-approves,
@@ -57,65 +57,65 @@ const log = createLogger("ContentCreatorEngine");
 
 // ─── Brand Context ─────────────────────────────────────────────────────────
 const BRAND = {
-  name: "Archibald Titan",
-  tagline: "The World's Most Advanced Local AI Agent",
-  website: "https://archibaldtitan.com",
-  tone: "Confident, technical, authoritative but approachable. Think Iron Man's JARVIS meets a world-class cybersecurity expert. Never corporate, always sharp.",
+  name: "tattooo.shop",
+  tagline: "Design Your Tattoo with AI. Book the World's Best Artists.",
+  website: "https://tattooo.shop",
+  tone: "Bold, creative, and passionate about tattoo culture. Think a world-class tattoo artist who also happens to be a tech visionary. Never corporate, always authentic.",
   voice: {
     hooks: [
-      "Most people don't know their credentials are already leaked.",
-      "Your password manager just became your biggest security risk.",
-      "I built an AI that runs entirely on your machine. Here's why that matters.",
-      "ChatGPT can't do this. Archibald Titan can.",
-      "Stop trusting the cloud with your secrets.",
-      "The AI that actually protects you — not just assists you.",
-      "Your data. Your machine. Your AI.",
-      "One breach can end a business. This prevents it.",
+      "Most people settle for a tattoo they found on Pinterest. You deserve better.",
+      "Your tattoo should be as unique as you are. AI makes that possible.",
+      "I built an AI that generates tattoo designs in seconds. Here's how it works.",
+      "No other platform combines AI design with verified global artists.",
+      "Stop scrolling Instagram for tattoo inspo. Generate your own.",
+      "The tattoo platform that actually gets your vision — not just assists you.",
+      "Your design. Your artist. Your ink.",
+      "One bad tattoo lasts forever. This prevents it.",
     ],
     ctaVariants: [
-      "Download free at archibaldtitan.com",
-      "Try Archibald Titan free — no cloud required",
-      "Get your free security audit at archibaldtitan.com",
-      "Start protecting your credentials today",
-      "Join 10,000+ security professionals using Titan",
+      "Design your tattoo free at tattooo.shop",
+      "Try tattooo.shop free — design your tattoo in seconds",
+      "Get your free AI tattoo design at tattooo.shop",
+      "Start designing your tattoo today",
+      "Join thousands of tattoo lovers on tattooo.shop",
     ],
   },
   keyFeatures: [
-    "AI-powered chat assistant with autonomous code execution",
-    "Secure credential vault with breach monitoring",
-    "TOTP two-factor authentication manager",
-    "Dark web leak scanner",
-    "Website replication engine",
-    "Sandbox code execution environment",
-    "Cross-platform (Web + Desktop via Electron)",
-    "Titan Builder — AI that builds full software for you",
+    "AI tattoo design generator — describe it, see it instantly",
+    "Global network of verified tattoo artists and studios",
+    "Secure booking with 13% platform fee on artist quotes",
+    "Multi-style support: fine line, Japanese, realism, neo-trad, geometric",
+    "Artist directory with portfolio reviews and verified credentials",
+    "Multi-session booking support for large pieces",
+    "Mobile-first PWA — installable on iOS and Android",
+    "SEO blog with tattoo guides, style breakdowns, and aftercare tips",
   ],
   targetAudiences: [
-    "Cybersecurity professionals and penetration testers",
-    "Software developers and DevOps engineers",
-    "IT administrators and security teams",
-    "Tech-savvy professionals who value privacy",
-    "Small business owners needing enterprise-grade security",
-    "CTOs and security leads at startups",
+    "First-time tattoo clients who want to visualise their design before committing",
+    "Experienced collectors looking for new artists globally",
+    "Tattoo artists and studios wanting more bookings",
+    "Travellers who want to get tattooed in a new city",
+    "People planning large multi-session pieces (sleeves, back pieces)",
+    "Tattoo enthusiasts who follow the art and culture",
   ],
   painPoints: [
-    "Credential breaches costing businesses millions",
-    "Cloud-based password managers being hacked",
-    "AI tools sending sensitive data to third-party servers",
-    "Manual code execution wasting developer time",
-    "No single tool combining AI + security + automation",
+    "Not knowing how a tattoo will look before it's permanent",
+    "Struggling to find the right artist for a specific style",
+    "Getting a bad tattoo from an unverified artist",
+    "Artists ghosting clients or being hard to book",
+    "No single platform combining AI design + verified global artists + secure booking",
   ],
-  competitors: ["1Password", "LastPass", "Bitwarden", "GitHub Copilot", "ChatGPT"],
+  competitors: ["Instagram", "Pinterest", "Tattoodo", "Booksy", "StyleSeat"],
   differentiators: [
-    "100% local — your data never leaves your machine",
-    "AI + security + automation in one platform",
-    "Titan Builder creates full software autonomously",
-    "Dark web monitoring built-in",
-    "No subscription required for core features",
+    "AI generates tattoo designs instantly from a text description",
+    "Global verified artist directory — not just local studios",
+    "Secure booking with transparent 13% platform fee",
+    "Multi-session support for large pieces like sleeves and back pieces",
+    "Free to design — no credit card required to generate",
   ],
   artStyle: {
-    prefix: "Dark futuristic cyberpunk digital art, chrome-armored AI knight warrior with glowing blue eyes, deep navy midnight blue background with electric blue circuit patterns and digital particles, metallic silver armor with blue LED accents, bold metallic 3D text,",
-    suffix: "high quality digital illustration, cinematic lighting, tech aesthetic, dark background with blue glow effects, professional marketing campaign art, 4K ultra-detailed",
+    prefix: "Premium tattoo art photography, dark moody studio lighting, tattooed skin close-up, bold ink designs, professional tattoo studio aesthetic, cinematic black and dark tones,",
+    suffix: "high quality photography, cinematic lighting, tattoo culture aesthetic, dark background with warm studio lighting, professional marketing campaign art, 4K ultra-detailed",
   },
   campaignImages: [
     "https://files.manuscdn.com/user_upload_by_module/session_file/310519663339631904/gvTVttaFEQstvWuh.png",
@@ -421,12 +421,12 @@ export function scoreContentQuality(params: {
 
   // ── 4. Brand Alignment Score ──────────────────────────────────────────────
   let brandScore = 30;
-  const brandTerms = ["archibald titan", "titan", "local ai", "credential", "security", "breach", "vault", "dark web", "titan builder", "autonomous"];
+  const brandTerms = ["tattooo.shop", "tattoo", "ai design", "artist", "ink", "booking", "studio", "design", "global", "verified"];
   const brandMatches = brandTerms.filter(t => bodyLower.includes(t)).length;
   brandScore += Math.min(brandMatches * 12, 50);
 
   // Check brand voice alignment
-  const toneWords = ["protect", "secure", "advanced", "powerful", "intelligent", "autonomous", "private"];
+  const toneWords = ["tattoo", "design", "artist", "ink", "style", "creative", "unique", "custom"];
   const toneMatches = toneWords.filter(t => bodyLower.includes(t)).length;
   brandScore += Math.min(toneMatches * 5, 20);
 
@@ -462,7 +462,7 @@ export function scoreContentQuality(params: {
     ctaScore = 40;
     const urgencyWords = ["now", "today", "free", "limited", "instant", "immediately"];
     if (urgencyWords.some(w => params.callToAction!.toLowerCase().includes(w))) ctaScore += 30;
-    if (params.callToAction.includes("archibaldtitan.com") || params.callToAction.includes("http")) ctaScore += 20;
+    if (params.callToAction.includes("tattooo.shop") || params.callToAction.includes("http")) ctaScore += 20;
     if (params.callToAction.length > 10 && params.callToAction.length < 80) ctaScore += 10;
   } else {
     suggestions.push("Add a CTA with urgency and a direct link");
@@ -599,7 +599,7 @@ Generate content that is genuinely valuable, not generic. Every piece must:
 1. Start with a pattern interrupt or surprising statement
 2. Deliver real value (tip, insight, or solution)
 3. Connect to a specific pain point
-4. End with a clear, urgent CTA linking to archibaldtitan.com
+4. End with a clear, urgent CTA linking to tattooo.shop
 
 Return ONLY valid JSON with this exact structure:
 {
@@ -617,7 +617,7 @@ Return ONLY valid JSON with this exact structure:
 
   const userPrompt = `Create ${config.label} content for ${BRAND.name}.
 
-Topic: ${params.topic || "Why Archibald Titan is the most advanced local AI agent"}
+Topic: ${params.topic || "Why tattooo.shop is the most advanced local AI agent"}
 Content Type: ${params.contentType}
 SEO Keywords: ${(params.seoKeywords || ["local AI agent", "credential security", "dark web scanner"]).join(", ")}
 Target Audience: ${params.targetAudience || BRAND.targetAudiences[0]}
@@ -640,7 +640,7 @@ Make this the highest-quality piece of content possible for this platform. Be sp
     parsed = JSON.parse(raw);
   } catch {
     parsed = {
-      title: params.topic || "Archibald Titan — Local AI Security Agent",
+      title: params.topic || "tattooo.shop — Local AI Security Agent",
       headline: viralHook,
       body: `${BRAND.name} is ${BRAND.tagline}. ${BRAND.keyFeatures[0]}. ${BRAND.keyFeatures[1]}.`,
       callToAction: BRAND.voice.ctaVariants[0],

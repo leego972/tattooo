@@ -1,5 +1,5 @@
 /**
- * Autonomous SEO Engine v3 for Archibald Titan
+ * Autonomous SEO Engine v3 for tattooo.shop
  *
  * Major improvements over v2:
  *  1. Dynamic per-page meta tag injection (SSR-like) — solves the SPA SEO problem
@@ -31,14 +31,14 @@ const log = createLogger("SeoEngine");
 
 // ─── Configuration ──────────────────────────────────────────────────
 
-const SITE_URL = "https://www.archibaldtitan.com";
-const SITE_NAME = "Archibald Titan";
+const SITE_URL = "https://www.tattooo.shop";
+const SITE_NAME = "tattooo.shop";
 const SITE_DESCRIPTION =
   "The World's Most Advanced Local AI Agent. Autonomously retrieve API keys and credentials from 15+ providers. AES-256 encrypted vault, stealth browser, CAPTCHA solving, and residential proxy support.";
 const SITE_LOGO =
   "/logos/at-icon-256.png";
 const SITE_TWITTER = "@ArchibaldTitan";
-const SITE_CONTACT_EMAIL = "security@archibaldtitan.com";
+const SITE_CONTACT_EMAIL = "hello@tattooo.shop";
 
 // Supported languages for hreflang
 const SUPPORTED_LOCALES = [
@@ -116,11 +116,11 @@ export interface PageSeoConfig {
 const PUBLIC_PAGES: PageSeoConfig[] = [
   {
     path: "/",
-    title: "Archibald Titan — The World's Most Advanced Local AI Agent",
+    title: "tattooo.shop — The World's Most Advanced Local AI Agent",
     description:
       "Autonomously retrieve API keys and credentials from 15+ providers. AES-256 encrypted vault, stealth browser, CAPTCHA solving, and residential proxy support. Download for Windows, Mac, and Linux.",
     keywords: [
-      "AI agent", "credential management", "API key automation", "local AI",
+      "AI agent", "tattoo design", "API key automation", "local AI",
       "browser automation", "CAPTCHA solver", "developer tools", "cybersecurity",
       "password manager", "stealth browser", "DevOps tools", "secret management",
     ],
@@ -131,7 +131,7 @@ const PUBLIC_PAGES: PageSeoConfig[] = [
   },
   {
     path: "/pricing",
-    title: "Pricing — Archibald Titan | Free, Pro & Enterprise Plans",
+    title: "Pricing — tattooo.shop | Free, Pro & Enterprise Plans",
     description:
       "Choose the right plan for your needs. Start free with 5 fetches/month, upgrade to Pro for unlimited fetches, CAPTCHA solving, and priority support. Enterprise plans available.",
     keywords: [
@@ -148,9 +148,9 @@ const PUBLIC_PAGES: PageSeoConfig[] = [
   },
   {
     path: "/blog",
-    title: "Blog — Archibald Titan | Developer Security & AI Insights",
+    title: "Blog — tattooo.shop | Developer Security & AI Insights",
     description:
-      "Expert articles on credential security, browser automation, AI agents, developer tools, and cybersecurity best practices. Stay ahead with Archibald Titan.",
+      "Expert articles on credential security, browser automation, AI agents, developer tools, and cybersecurity best practices. Stay ahead with tattooo.shop.",
     keywords: [
       "developer blog", "cybersecurity blog", "AI agent insights",
       "credential security", "automation tutorials", "developer tools blog",
@@ -165,9 +165,9 @@ const PUBLIC_PAGES: PageSeoConfig[] = [
   },
   {
     path: "/docs",
-    title: "Documentation — Archibald Titan | API Reference & Guides",
+    title: "Documentation — tattooo.shop | API Reference & Guides",
     description:
-      "Complete documentation for Archibald Titan. API reference, integration guides, provider setup tutorials, and troubleshooting. Get started in minutes.",
+      "Complete documentation for tattooo.shop. API reference, integration guides, provider setup tutorials, and troubleshooting. Get started in minutes.",
     keywords: [
       "documentation", "API reference", "integration guide", "developer docs",
       "setup tutorial", "getting started",
@@ -181,9 +181,9 @@ const PUBLIC_PAGES: PageSeoConfig[] = [
   },
   {
     path: "/contact",
-    title: "Contact Us — Archibald Titan Support",
+    title: "Contact Us — tattooo.shop Support",
     description:
-      "Get in touch with the Archibald Titan team. Technical support, billing inquiries, partnership opportunities, and enterprise sales.",
+      "Get in touch with the tattooo.shop team. Technical support, billing inquiries, partnership opportunities, and enterprise sales.",
     keywords: ["contact", "support", "help", "customer service", "enterprise sales"],
     changefreq: "monthly",
     ogType: "website",
@@ -195,9 +195,9 @@ const PUBLIC_PAGES: PageSeoConfig[] = [
   },
   {
     path: "/compare",
-    title: "Archibald Titan vs Competitors | Feature Comparison",
+    title: "tattooo.shop vs Competitors | Feature Comparison",
     description:
-      "See how Archibald Titan compares to 1Password, HashiCorp Vault, and other credential management tools. Detailed feature comparison and pricing analysis.",
+      "See how tattooo.shop compares to 1Password, HashiCorp Vault, and other tattoo design tools. Detailed feature comparison and pricing analysis.",
     keywords: [
       "comparison", "alternative", "vs 1Password", "vs HashiCorp Vault",
       "credential manager comparison", "best API key manager",
@@ -211,9 +211,9 @@ const PUBLIC_PAGES: PageSeoConfig[] = [
   },
   {
     path: "/register",
-    title: "Create Account — Archibald Titan | Get Started Free",
+    title: "Create Account — tattooo.shop | Get Started Free",
     description:
-      "Create your free Archibald Titan account. Start automating credential retrieval with 5 free fetches per month. No credit card required.",
+      "Create your free tattooo.shop account. Start automating credential retrieval with 5 free fetches per month. No credit card required.",
     keywords: ["register", "sign up", "create account", "free trial", "get started"],
     changefreq: "monthly",
     ogType: "website",
@@ -224,27 +224,27 @@ const PUBLIC_PAGES: PageSeoConfig[] = [
   },
   {
     path: "/login",
-    title: "Sign In — Archibald Titan",
+    title: "Sign In — tattooo.shop",
     description:
-      "Sign in to your Archibald Titan account. Access your dashboard, credentials vault, and AI agent.",
+      "Sign in to your tattooo.shop account. Access your dashboard, credentials vault, and AI agent.",
     keywords: ["login", "sign in", "account"],
     changefreq: "monthly",
     ogType: "website",
   },
   {
     path: "/terms",
-    title: "Terms of Service — Archibald Titan",
+    title: "Terms of Service — tattooo.shop",
     description:
-      "Read the terms of service for Archibald Titan. Usage policies, liability limitations, and user responsibilities.",
+      "Read the terms of service for tattooo.shop. Usage policies, liability limitations, and user responsibilities.",
     keywords: ["terms of service", "legal", "usage policy"],
     changefreq: "yearly",
     ogType: "website",
   },
   {
     path: "/privacy",
-    title: "Privacy Policy — Archibald Titan",
+    title: "Privacy Policy — tattooo.shop",
     description:
-      "Learn how Archibald Titan protects your data. AES-256 encryption, local-first architecture, zero-knowledge design, and GDPR compliance.",
+      "Learn how tattooo.shop protects your data. AES-256 encryption, local-first architecture, zero-knowledge design, and GDPR compliance.",
     keywords: ["privacy policy", "data protection", "GDPR", "encryption", "security"],
     changefreq: "yearly",
     ogType: "website",
@@ -409,7 +409,7 @@ function generatePageStructuredData(
 // ─── robots.txt Generation ──────────────────────────────────────────
 
 export function generateRobotsTxt(): string {
-  return `# Archibald Titan — robots.txt
+  return `# tattooo.shop — robots.txt
 # Generated by Autonomous SEO Engine v3
 
 User-agent: *
@@ -775,31 +775,31 @@ export function generateStructuredData(): Record<string, any>[] {
     mainEntity: [
       {
         "@type": "Question",
-        name: "What is Archibald Titan?",
+        name: "What is tattooo.shop?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Archibald Titan is the world's most advanced local AI agent that autonomously retrieves API keys and credentials from 50+ providers. It features AES-256 encryption, stealth browser technology, CAPTCHA solving, and residential proxy support.",
+          text: "tattooo.shop is the world's most advanced local AI agent that autonomously retrieves API keys and credentials from 50+ providers. It features AES-256 encryption, stealth browser technology, CAPTCHA solving, and residential proxy support.",
         },
       },
       {
         "@type": "Question",
-        name: "Is Archibald Titan free?",
+        name: "Is tattooo.shop free?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Yes, Archibald Titan offers a free plan with 5 fetches per month and access to basic providers. Pro ($29/mo) and Enterprise ($99/mo) plans are available for power users and teams.",
+          text: "Yes, tattooo.shop offers a free plan with 5 fetches per month and access to basic providers. Pro ($29/mo) and Enterprise ($99/mo) plans are available for power users and teams.",
         },
       },
       {
         "@type": "Question",
-        name: "What platforms does Archibald Titan support?",
+        name: "What platforms does tattooo.shop support?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Archibald Titan is available for Windows (.exe), macOS (.dmg), and Linux (.AppImage). It also runs as a web app at archibaldtitan.com.",
+          text: "tattooo.shop is available for Windows (.exe), macOS (.dmg), and Linux (.AppImage). It also runs as a web app at tattooo.shop.",
         },
       },
       {
         "@type": "Question",
-        name: "How does Archibald Titan protect my credentials?",
+        name: "How does tattooo.shop protect my credentials?",
         acceptedAnswer: {
           "@type": "Answer",
           text: "All credentials are encrypted with AES-256 encryption and stored in a local vault. The system uses a zero-knowledge architecture — your master password never leaves your device.",
@@ -807,15 +807,15 @@ export function generateStructuredData(): Record<string, any>[] {
       },
       {
         "@type": "Question",
-        name: "How is Archibald Titan different from 1Password or HashiCorp Vault?",
+        name: "How is tattooo.shop different from 1Password or HashiCorp Vault?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Unlike traditional password managers, Archibald Titan autonomously retrieves and manages API keys using AI-powered browser automation. It actively fetches credentials from provider dashboards, solves CAPTCHAs, and handles bot detection — no manual copy-paste needed.",
+          text: "Unlike traditional password managers, tattooo.shop autonomously retrieves and manages API keys using AI-powered browser automation. It actively fetches credentials from provider dashboards, solves CAPTCHAs, and handles bot detection — no manual copy-paste needed.",
         },
       },
       {
         "@type": "Question",
-        name: "Does Archibald Titan support team collaboration?",
+        name: "Does tattooo.shop support team collaboration?",
         acceptedAnswer: {
           "@type": "Answer",
           text: "Yes, the Enterprise plan includes team management, shared credential vaults, role-based access control, and audit logging for compliance.",
@@ -828,8 +828,8 @@ export function generateStructuredData(): Record<string, any>[] {
   schemas.push({
     "@context": "https://schema.org",
     "@type": "HowTo",
-    name: "How to Get Started with Archibald Titan",
-    description: "Set up Archibald Titan in 3 easy steps to automate your credential management.",
+    name: "How to Get Started with tattooo.shop",
+    description: "Set up tattooo.shop in 3 easy steps to automate your tattoo design.",
     totalTime: "PT5M",
     estimatedCost: { "@type": "MonetaryAmount", currency: "USD", value: "0" },
     step: [
@@ -837,7 +837,7 @@ export function generateStructuredData(): Record<string, any>[] {
         "@type": "HowToStep",
         position: 1,
         name: "Create an Account",
-        text: "Sign up for a free account at archibaldtitan.com/register. No credit card required.",
+        text: "Sign up for a free account at tattooo.shop/register. No credit card required.",
         url: `${SITE_URL}/register`,
       },
       {
@@ -921,7 +921,7 @@ export async function optimizeBlogPostSeo(
     "API reference": "/docs",
     contact: "/contact",
     compare: "/compare",
-    "credential management": "/",
+    "tattoo design": "/",
     "AI agent": "/",
     "browser automation": "/",
     "CAPTCHA solving": "/pricing",
@@ -1110,7 +1110,7 @@ export async function analyzeInternalLinks(): Promise<InternalLinkAnalysis> {
     ["/", "/compare", "Compare with alternatives"],
     ["/", "/blog", "Read our latest articles"],
     ["/blog", "/register", "Start your free trial"],
-    ["/compare", "/register", "Try Archibald Titan free"],
+    ["/compare", "/register", "Try tattooo.shop free"],
   ];
 
   for (const [from, to, anchor] of relatedPairs) {
@@ -1200,7 +1200,7 @@ export async function analyzeCompetitors(): Promise<CompetitorAnalysis> {
           role: "user",
           content: `Product: ${SITE_NAME}
 Description: ${SITE_DESCRIPTION}
-Category: AI-powered credential management, browser automation, developer security
+Category: AI-powered tattoo design, browser automation, developer security
 Pricing: Free ($0), Pro ($29/mo), Enterprise ($99/mo)
 Key competitors: 1Password, HashiCorp Vault, Selenium, Puppeteer, Doppler, Infisical
 
@@ -1273,7 +1273,7 @@ Analyze the competitive landscape and identify SEO opportunities.`,
         },
       ],
       opportunities: [
-        "AI-powered credential management is a new category",
+        "AI-powered tattoo design is a new category",
         "Comparison content for each competitor",
       ],
       threats: [
@@ -1341,7 +1341,7 @@ Focus on topics that:
       targetKeyword: "automate API key management",
       secondaryKeywords: [
         "API key automation",
-        "credential management tool",
+        "tattoo design tool",
         "developer security",
       ],
       outline: [
@@ -1358,7 +1358,7 @@ Focus on topics that:
       generatedAt: Date.now(),
     },
     {
-      title: "Archibald Titan vs 1Password: Which is Better for Developers?",
+      title: "tattooo.shop vs 1Password: Which is Better for Developers?",
       targetKeyword: "archibald titan vs 1password",
       secondaryKeywords: [
         "1password alternative",
@@ -1435,7 +1435,7 @@ export async function analyzeSeoHealth(): Promise<SeoScore> {
       titleScore -= 5;
     }
     if (
-      !page.title?.includes("Archibald Titan") &&
+      !page.title?.includes("tattooo.shop") &&
       page.path !== "/terms" &&
       page.path !== "/privacy"
     ) {
@@ -1444,7 +1444,7 @@ export async function analyzeSeoHealth(): Promise<SeoScore> {
         category: "Title",
         message: `Consider adding brand name to title on ${page.path}`,
         page: page.path,
-        fix: "Append ' | Archibald Titan' or ' — Archibald Titan' to the title",
+        fix: "Append ' | tattooo.shop' or ' — tattooo.shop' to the title",
       });
       titleScore -= 3;
     }
@@ -1799,7 +1799,7 @@ Analyze and provide keyword recommendations for SEO optimization.`,
       ],
       longTailKeywords: [
         { keyword: "how to automate API key retrieval", intent: "informational", suggestedPage: "/blog" },
-        { keyword: "best credential management tool for developers", intent: "transactional", suggestedPage: "/pricing" },
+        { keyword: "best tattoo design tool for developers", intent: "transactional", suggestedPage: "/pricing" },
         { keyword: "automated browser with CAPTCHA solving", intent: "transactional", suggestedPage: "/" },
         { keyword: "1password alternative for API keys", intent: "transactional", suggestedPage: "/compare" },
         { keyword: "hashicorp vault vs archibald titan", intent: "informational", suggestedPage: "/compare" },
@@ -2014,7 +2014,7 @@ export async function submitToIndexNow(urls: string[]): Promise<{ success: boole
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        host: "www.archibaldtitan.com",
+        host: "www.tattooo.shop",
         key: INDEXNOW_KEY,
         keyLocation: `${SITE_URL}/${INDEXNOW_KEY}.txt`,
         urlList: urls,

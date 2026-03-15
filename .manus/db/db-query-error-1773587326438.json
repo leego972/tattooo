@@ -1,0 +1,10 @@
+{
+  "query": "SELECT COUNT(*) as total FROM studio_mailing_list;\nSELECT id, email, studioName, country, language, status, infoPackSentAt FROM studio_mailing_list ORDER BY createdAt DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 25vRfUBwvHKUCo5.root --database Pa7E4RBX4UbpFBvKpz2nxk --execute SELECT COUNT(*) as total FROM studio_mailing_list;\nSELECT id, email, studioName, country, language, status, infoPackSentAt FROM studio_mailing_list ORDER BY createdAt DESC LIMIT 10;",
+  "returncode": 1,
+  "logs": [
+    "total",
+    "124",
+    "ERROR 1054 (42S22) at line 2: Unknown column 'status' in 'field list'"
+  ]
+}

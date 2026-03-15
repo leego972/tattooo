@@ -1,0 +1,34 @@
+{
+  "query": "SHOW TABLES LIKE '%mail%';\nSHOW TABLES LIKE '%contact%';\nSHOW TABLES LIKE '%outreach%';\nSHOW TABLES LIKE '%studio%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 25vRfUBwvHKUCo5.root --database Pa7E4RBX4UbpFBvKpz2nxk --execute SHOW TABLES LIKE '%mail%';\nSHOW TABLES LIKE '%contact%';\nSHOW TABLES LIKE '%outreach%';\nSHOW TABLES LIKE '%studio%';",
+  "rows": [
+    {
+      "Tables_in_Pa7E4RBX4UbpFBvKpz2nxk (%mail%)": "studio_mailing_list"
+    },
+    {
+      "Tables_in_Pa7E4RBX4UbpFBvKpz2nxk (%mail%)": "Tables_in_Pa7E4RBX4UbpFBvKpz2nxk (%contact%)"
+    },
+    {
+      "Tables_in_Pa7E4RBX4UbpFBvKpz2nxk (%mail%)": "outreach_contacts"
+    },
+    {
+      "Tables_in_Pa7E4RBX4UbpFBvKpz2nxk (%mail%)": "Tables_in_Pa7E4RBX4UbpFBvKpz2nxk (%outreach%)"
+    },
+    {
+      "Tables_in_Pa7E4RBX4UbpFBvKpz2nxk (%mail%)": "outreach_campaigns"
+    },
+    {
+      "Tables_in_Pa7E4RBX4UbpFBvKpz2nxk (%mail%)": "outreach_contacts"
+    },
+    {
+      "Tables_in_Pa7E4RBX4UbpFBvKpz2nxk (%mail%)": "Tables_in_Pa7E4RBX4UbpFBvKpz2nxk (%studio%)"
+    },
+    {
+      "Tables_in_Pa7E4RBX4UbpFBvKpz2nxk (%mail%)": "studio_mailing_list"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_Pa7E4RBX4UbpFBvKpz2nxk (%mail%)\nstudio_mailing_list\nTables_in_Pa7E4RBX4UbpFBvKpz2nxk (%contact%)\noutreach_contacts\nTables_in_Pa7E4RBX4UbpFBvKpz2nxk (%outreach%)\noutreach_campaigns\noutreach_contacts\nTables_in_Pa7E4RBX4UbpFBvKpz2nxk (%studio%)\nstudio_mailing_list\n",
+  "stderr": "",
+  "execution_time_ms": 2318
+}

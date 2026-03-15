@@ -1,0 +1,70 @@
+{
+  "query": "SELECT language, COUNT(*) as count FROM studio_mailing_list GROUP BY language ORDER BY count DESC;\nSELECT infoPackStatus, COUNT(*) as count FROM studio_mailing_list GROUP BY infoPackStatus;\nSELECT emailStatus, COUNT(*) as count FROM studio_mailing_list GROUP BY emailStatus;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 25vRfUBwvHKUCo5.root --database Pa7E4RBX4UbpFBvKpz2nxk --execute SELECT language, COUNT(*) as count FROM studio_mailing_list GROUP BY language ORDER BY count DESC;\nSELECT infoPackStatus, COUNT(*) as count FROM studio_mailing_list GROUP BY infoPackStatus;\nSELECT emailStatus, COUNT(*) as count FROM studio_mailing_list GROUP BY emailStatus;",
+  "rows": [
+    {
+      "language": "en",
+      "count": "62"
+    },
+    {
+      "language": "he",
+      "count": "10"
+    },
+    {
+      "language": "de",
+      "count": "8"
+    },
+    {
+      "language": "es",
+      "count": "8"
+    },
+    {
+      "language": "fr",
+      "count": "7"
+    },
+    {
+      "language": "it",
+      "count": "7"
+    },
+    {
+      "language": "pt",
+      "count": "6"
+    },
+    {
+      "language": "ja",
+      "count": "6"
+    },
+    {
+      "language": "ko",
+      "count": "5"
+    },
+    {
+      "language": "nl",
+      "count": "5"
+    },
+    {
+      "language": "infoPackStatus",
+      "count": "count"
+    },
+    {
+      "language": "not_sent",
+      "count": "124"
+    },
+    {
+      "language": "emailStatus",
+      "count": "count"
+    },
+    {
+      "language": "found",
+      "count": "100"
+    },
+    {
+      "language": "not_found",
+      "count": "24"
+    }
+  ],
+  "messages": [],
+  "stdout": "language\tcount\nen\t62\nhe\t10\nde\t8\nes\t8\nfr\t7\nit\t7\npt\t6\nja\t6\nko\t5\nnl\t5\ninfoPackStatus\tcount\nnot_sent\t124\nemailStatus\tcount\nfound\t100\nnot_found\t24\n",
+  "stderr": "",
+  "execution_time_ms": 2041
+}

@@ -4,48 +4,9 @@ import { getDb } from "./db";
 import { credits } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { getStripe } from "./stripe";
+import { SUBSCRIPTION_PLANS } from "./products";
 
-// ── Subscription Plans ─────────────────────────────────────────────────────────
-export const SUBSCRIPTION_PLANS = {
-  free: {
-    id: "free",
-    name: "Free",
-    price: 0,
-    credits: 5,
-    features: ["5 AI tattoo designs/month", "Basic styles", "Share designs"],
-    stripePriceId: undefined,
-  },
-  pro: {
-    id: "pro",
-    name: "Pro",
-    price: 19,
-    credits: 50,
-    features: [
-      "50 AI designs/month",
-      "All styles & variations",
-      "3 comparison views",
-      "Skin overlay preview",
-      "Animated reveal video",
-      "Priority support",
-    ],
-    stripePriceId: process.env.STRIPE_PRO_PRICE_ID || null,
-  },
-  studio: {
-    id: "studio",
-    name: "Studio",
-    price: 49,
-    credits: 200,
-    features: [
-      "200 AI designs/month",
-      "Everything in Pro",
-      "Bulk generation",
-      "Commercial license",
-      "Artist collaboration tools",
-      "White-label exports",
-    ],
-    stripePriceId: process.env.STRIPE_STUDIO_PRICE_ID || null,
-  },
-} as const;
+export { SUBSCRIPTION_PLANS };
 
 export const subscriptionRouter = router({
   // Get current subscription status — reads from credits table
@@ -54,12 +15,25 @@ export const subscriptionRouter = router({
     if (!db) throw new Error("DB unavailable");
     const rows = await db.select().from(credits).where(eq(credits.userId, ctx.user.id)).limit(1);
     const c = rows[0];
-    if (!c) return { plan: "free", status: "active", currentPeriodEnd: null, stripeCustomerId: null };
+    if (!c) return { plan: "free", status: "active", currentPeriodEnd: null, stripeCustomerId: null, balance: 0 };
+
+    // If subscribed, fetch current period end from Stripe
+    let currentPeriodEnd: number | null = null;
+    if (c.stripeSubscriptionId) {
+      try {
+        const sub = await getStripe().subscriptions.retrieve(c.stripeSubscriptionId) as any;
+        currentPeriodEnd = sub.current_period_end ?? null;
+      } catch {
+        // Subscription may have been cancelled — ignore
+      }
+    }
+
     return {
       plan: c.plan || "free",
       status: c.subscriptionStatus || "active",
-      currentPeriodEnd: null,
+      currentPeriodEnd,
       stripeCustomerId: c.stripeCustomerId || null,
+      balance: c.balance ?? 0,
     };
   }),
 
@@ -68,42 +42,11 @@ export const subscriptionRouter = router({
     return Object.values(SUBSCRIPTION_PLANS);
   }),
 
-  // Create checkout session for subscription upgrade
+  // Create checkout session for subscription upgrade — always uses recurring price IDs
   createCheckout: protectedProcedure
     .input(z.object({ plan: z.enum(["pro", "studio"]), origin: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const plan = SUBSCRIPTION_PLANS[input.plan];
-      if (!plan.stripePriceId) {
-        // Create a one-time price if no recurring price ID is configured
-        const session = await getStripe().checkout.sessions.create({
-          mode: "payment",
-          customer_email: ctx.user.email ?? undefined,
-          client_reference_id: ctx.user.id.toString(),
-          metadata: {
-            type: "subscription_upgrade",
-            user_id: ctx.user.id.toString(),
-            plan: input.plan,
-            customer_email: ctx.user.email ?? "",
-          },
-          line_items: [
-            {
-              price_data: {
-                currency: "usd",
-                product_data: {
-                  name: `tatt-ooo ${plan.name} Plan`,
-                  description: plan.features.join(", "),
-                },
-                unit_amount: plan.price * 100,
-              },
-              quantity: 1,
-            },
-          ],
-          allow_promotion_codes: true,
-          success_url: `${input.origin}/payment-success?type=subscription&plan=${input.plan}`,
-          cancel_url: `${input.origin}/subscription`,
-        });
-        return { url: session.url };
-      }
 
       const session = await getStripe().checkout.sessions.create({
         mode: "subscription",
@@ -114,16 +57,18 @@ export const subscriptionRouter = router({
           user_id: ctx.user.id.toString(),
           plan: input.plan,
           customer_email: ctx.user.email ?? "",
+          customer_name: ctx.user.name ?? "",
         },
         line_items: [{ price: plan.stripePriceId, quantity: 1 }],
         allow_promotion_codes: true,
         success_url: `${input.origin}/payment-success?type=subscription&plan=${input.plan}`,
         cancel_url: `${input.origin}/subscription`,
       });
+
       return { url: session.url };
     }),
 
-  // Create customer portal session for managing subscription
+  // Create customer portal session for managing/cancelling subscription
   createPortal: protectedProcedure
     .input(z.object({ origin: z.string() }))
     .mutation(async ({ ctx, input }) => {
@@ -139,5 +84,24 @@ export const subscriptionRouter = router({
         return_url: `${input.origin}/subscription`,
       });
       return { url: session.url };
+    }),
+
+  // Cancel subscription immediately
+  cancel: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      const db = await getDb();
+      if (!db) throw new Error("DB unavailable");
+      const rows = await db.select().from(credits).where(eq(credits.userId, ctx.user.id)).limit(1);
+      const stripeSubscriptionId = rows[0]?.stripeSubscriptionId;
+      if (!stripeSubscriptionId) throw new Error("No active subscription found.");
+
+      await getStripe().subscriptions.cancel(stripeSubscriptionId);
+
+      // Update local plan to free
+      await db.update(credits)
+        .set({ plan: "free", subscriptionStatus: "cancelled", stripeSubscriptionId: null })
+        .where(eq(credits.userId, ctx.user.id));
+
+      return { success: true };
     }),
 });

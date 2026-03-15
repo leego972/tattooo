@@ -1,0 +1,8 @@
+{
+  "query": "ALTER TABLE credits MODIFY COLUMN plan ENUM('free', 'starter', 'pro', 'studio', 'unlimited') NOT NULL DEFAULT 'free';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 25vRfUBwvHKUCo5.root --database Pa7E4RBX4UbpFBvKpz2nxk --execute ALTER TABLE credits MODIFY COLUMN plan ENUM('free', 'starter', 'pro', 'studio', 'unlimited') NOT NULL DEFAULT 'free';",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'plan' in 'credits'"
+  ]
+}

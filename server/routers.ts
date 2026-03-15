@@ -319,7 +319,7 @@ const creditsRouter = router({
       const url = await createCheckoutSession(
         ctx.user.id,
         input.packId as PackId,
-        `${input.origin}/payment-success`,
+        `${input.origin}/payment-success?type=credits`,
         `${input.origin}/pricing`,
         ctx.user.email ?? undefined,
         discountPercent
@@ -739,7 +739,7 @@ const artistsRouter = router({
         bookingId,
         depositCents,
         artist.name,
-        `${input.origin}/bookings/${bookingId}/success`,
+        `${input.origin}/payment-success?type=booking`,
         `${input.origin}/artists/${input.artistId}`,
         ctx.user.email ?? undefined
       );
@@ -797,7 +797,7 @@ const artistsRouter = router({
       const { createArtistRegistrationSession } = await import("./stripe");
       const checkoutUrl = await createArtistRegistrationSession(
         pendingArtistId,
-        `${input.origin}/artist-signup/success`,
+        `${input.origin}/payment-success?type=artist`,
         `${input.origin}/artist-signup`,
         input.contactEmail
       );

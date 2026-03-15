@@ -1,0 +1,9 @@
+{
+  "query": "\nALTER TABLE credits \n  ADD COLUMN plan ENUM('free', 'starter', 'pro', 'studio', 'unlimited') NOT NULL DEFAULT 'free',\n  ADD COLUMN stripeCustomerId VARCHAR(255) NULL,\n  ADD COLUMN stripeSubscriptionId VARCHAR(255) NULL,\n  ADD COLUMN subscriptionStatus VARCHAR(64) NULL;\n\nUPDATE credits c\n  JOIN subscriptions s ON s.userId = c.userId\n  SET \n    c.plan = CASE s.plan \n      WHEN 'enterprise' THEN 'studio'\n      ELSE s.plan \n    END,\n    c.stripeCustomerId = s.stripeCustomerId,\n    c.stripeSubscriptionId = s.stripeSubscriptionId,\n    c.subscriptionStatus = s.status;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 25vRfUBwvHKUCo5.root --database Pa7E4RBX4UbpFBvKpz2nxk --execute \nALTER TABLE credits \n  ADD COLUMN plan ENUM('free', 'starter', 'pro', 'studio', 'unlimited') NOT NULL DEFAULT 'free',\n  ADD COLUMN stripeCustomerId VARCHAR(255) NULL,\n  ADD COLUMN stripeSubscriptionId VARCHAR(255) NULL,\n  ADD COLUMN subscriptionStatus VARCHAR(64) NULL;\n\nUPDATE credits c\n  JOIN subscriptions s ON s.userId = c.userId\n  SET \n    c.plan = CASE s.plan \n      WHEN 'enterprise' THEN 'studio'\n      ELSE s.plan \n    END,\n    c.stripeCustomerId = s.stripeCustomerId,\n    c.stripeSubscriptionId = s.stripeSubscriptionId,\n    c.subscriptionStatus = s.status;\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 5599
+}

@@ -245,3 +245,56 @@
 - [x] Backend: subscription checkout uses correct Stripe API (no 'as any' cast)
 - [x] Backend: webhook handles subscription_upgrade event — grants credits + updates plan
 - [x] Backend: sendPromoConfirmationEmail added to emailService
+
+## Full Stripe Setup (Live Keys)
+- [ ] Create Stripe products: Starter Credits, Pro Credits, Unlimited Credits, Pro Subscription, Studio Subscription, Artist Directory Fee
+- [ ] Create Stripe prices: one-time for credit packs, recurring monthly for subscriptions, one-time for artist fee
+- [ ] Store price IDs in products.ts / env
+- [ ] Fix credit pack checkout to use Stripe price IDs (not manual amount)
+- [ ] Fix subscription checkout to use recurring price IDs
+- [ ] Fix artist signup checkout to use price ID
+- [ ] Fix booking deposit checkout (dynamic amount stays as-is)
+- [ ] Fix webhook: handle customer.subscription.updated for plan changes
+- [ ] Fix payment success page: show plan-specific message based on ?type= param
+- [ ] End-to-end test all payment flows with live keys
+
+## Credit & Membership Sync
+- [ ] Create Stripe products and prices via API script
+- [ ] Store price IDs in server/products.ts
+- [ ] Credit packs use Stripe price IDs (not price_data)
+- [ ] Subscription plans use recurring price IDs
+- [ ] Artist fee uses price ID
+- [ ] Webhook handles all event types correctly
+- [ ] Plan field stays in sync with subscription status
+- [ ] Monthly credit refresh on subscription renewal
+- [ ] Payment success page shows plan-specific message
+- [ ] UI: credits badge shows balance + plan tier
+
+## Credit & Membership Sync Audit
+- [ ] Audit: signup free credits (amount correct?)
+- [ ] Audit: credit pack purchase webhook awards correct amount
+- [ ] Audit: subscription upgrade awards correct monthly credits
+- [ ] Audit: generation deducts exactly 1 credit (or correct amount per action)
+- [ ] Audit: video generation deducts 5 credits
+- [ ] Audit: referral bonus credits awarded correctly
+- [ ] Audit: promo bonus credits awarded correctly
+- [ ] Audit: subscription cancellation does NOT wipe remaining balance
+- [ ] Audit: plan field on credits table stays in sync with subscription status
+- [ ] Fix: subscription monthly credit refresh (cron or webhook trigger)
+- [ ] Fix: plan limits enforced in generation gate (free=5/mo, pro=50/mo, studio=200/mo vs balance)
+- [ ] UI: credits badge shows balance + plan tier
+- [ ] UI: pricing page shows correct credit amounts per tier
+
+## Credit & Membership Sync (Full Audit Pass)
+- [x] DB: credits table was missing plan/stripeCustomerId/stripeSubscriptionId/subscriptionStatus — migrated
+- [x] DB: credits schema updated to include studio plan enum value
+- [x] DB: subscription data synced from subscriptions table to credits table
+- [x] Backend: signup grants 500 free credits (getOrCreateCredits)
+- [x] Backend: credit pack webhook awards correct amount from metadata
+- [x] Backend: subscription upgrade grants pro=50 / studio=200 credits + sets plan
+- [x] Backend: generation deducts 1 credit; unlimited plan bypasses gate
+- [x] Backend: subscription cancellation keeps remaining balance, downgrades plan to free
+- [x] Backend: all checkout success_urls pass ?type= and ?plan= or ?pack= params
+- [x] Backend: booking and artist success_url points to /payment-success with correct type
+- [x] Frontend: PaymentSuccess page shows plan-specific messages (subscription/artist/booking/credits)
+- [x] Frontend: subscription page uses monthlyCredits from products.ts

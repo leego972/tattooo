@@ -117,7 +117,7 @@ export default function Subscription() {
                     )}
                   </div>
                   <CardDescription className="text-gray-400">
-                    {plan.credits} AI designs per month
+                    {(plan as any).monthlyCredits} AI designs per month
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">

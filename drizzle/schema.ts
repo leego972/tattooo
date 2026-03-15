@@ -51,7 +51,7 @@ export const credits = mysqlTable("credits", {
   userId: int("userId").notNull().unique(),
   balance: int("balance").notNull().default(0),
   lifetimeTotal: int("lifetimeTotal").notNull().default(0),
-  plan: mysqlEnum("plan", ["free", "starter", "pro", "unlimited"]).notNull().default("free"),
+  plan: mysqlEnum("plan", ["free", "starter", "pro", "studio", "unlimited"]).notNull().default("free"),
   stripeCustomerId: varchar("stripeCustomerId", { length: 255 }),
   stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 255 }),
   subscriptionStatus: varchar("subscriptionStatus", { length: 64 }),

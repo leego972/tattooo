@@ -1,8 +1,12 @@
 /**
- * Stripe integration for tatt-ooo freemium credits system.
- * Handles checkout session creation and webhook fulfillment.
+ * Stripe integration for tatt-ooo.
+ * All products and prices are managed via server/products.ts.
  */
 import Stripe from "stripe";
+import { CREDIT_PACKS, ARTIST_FEE, type PackId } from "./products";
+
+// Re-export for backward compatibility
+export { CREDIT_PACKS, type PackId };
 
 export function getStripe(): Stripe {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -10,41 +14,10 @@ export function getStripe(): Stripe {
   return new Stripe(key, { apiVersion: "2026-02-25.clover" });
 }
 
-export const CREDIT_PACKS = [
-  {
-    id: "starter",
-    name: "Starter Pack",
-    credits: 5000,
-    price: 999, // cents = $9.99
-    priceDisplay: "$9.99",
-    description: "5,000 tattoo designs",
-    popular: false,
-  },
-  {
-    id: "pro",
-    name: "Pro Pack",
-    credits: 15000,
-    price: 2499, // cents = $24.99
-    priceDisplay: "$24.99",
-    description: "15,000 tattoo designs",
-    popular: true,
-  },
-  {
-    id: "unlimited",
-    name: "Unlimited",
-    credits: 99999,
-    price: 4999, // cents = $49.99/month
-    priceDisplay: "$49.99/mo",
-    description: "Unlimited designs monthly",
-    popular: false,
-    isSubscription: true,
-  },
-] as const;
-
-export type PackId = (typeof CREDIT_PACKS)[number]["id"];
-
 /**
  * Create a Stripe Checkout Session for a credit pack purchase.
+ * Uses pre-created Stripe price IDs for clean dashboard reporting.
+ * Falls back to price_data when a promo discount is applied.
  */
 export async function createCheckoutSession(
   userId: number,
@@ -58,39 +31,42 @@ export async function createCheckoutSession(
   const pack = CREDIT_PACKS.find((p) => p.id === packId);
   if (!pack) throw new Error(`Unknown pack: ${packId}`);
 
-  const isSubscription = "isSubscription" in pack && pack.isSubscription;
+  const isSubscription = pack.isSubscription;
 
-  // Apply promo discount if provided
-  const unitAmount = discountPercent && discountPercent > 0
-    ? Math.round(pack.price * (1 - discountPercent / 100))
-    : pack.price;
+  // Use price_data only when applying a server-side promo discount
+  const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] =
+    discountPercent && discountPercent > 0
+      ? [
+          {
+            price_data: {
+              currency: "usd",
+              product_data: {
+                name: `tatt-ooo ${pack.name} (${discountPercent}% off)`,
+                description: pack.description,
+              },
+              unit_amount: Math.round(pack.price * (1 - discountPercent / 100)),
+              ...(isSubscription ? { recurring: { interval: "month" } } : {}),
+            },
+            quantity: 1,
+          },
+        ]
+      : [{ price: pack.stripePriceId, quantity: 1 }];
 
   const session = await stripe.checkout.sessions.create({
     mode: isSubscription ? "subscription" : "payment",
     customer_email: customerEmail,
-    allow_promotion_codes: !discountPercent, // allow Stripe promo codes only if no server-side discount
-    line_items: [
-      {
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: `tatt-ooo ${pack.name}${discountPercent ? ` (${discountPercent}% off)` : ""}`,
-            description: pack.description,
-            images: [],
-          },
-          unit_amount: unitAmount,
-          ...(isSubscription ? { recurring: { interval: "month" } } : {}),
-        },
-        quantity: 1,
-      },
-    ],
+    allow_promotion_codes: !discountPercent,
+    line_items: lineItems,
+    client_reference_id: String(userId),
     metadata: {
       userId: String(userId),
       packId,
       credits: String(pack.credits),
+      type: "credit_purchase",
       discountPercent: discountPercent ? String(discountPercent) : "",
+      customer_email: customerEmail ?? "",
     },
-    success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
+    success_url: `${successUrl}&session_id={CHECKOUT_SESSION_ID}&pack=${packId}`,
     cancel_url: cancelUrl,
   });
 
@@ -113,24 +89,14 @@ export async function createArtistRegistrationSession(
     mode: "payment",
     customer_email: customerEmail,
     allow_promotion_codes: true,
-    line_items: [
-      {
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: "tatt-ooo Artist Directory Listing",
-            description: "Annual listing fee — get discovered by clients who've already designed their tattoo",
-          },
-          unit_amount: 2900, // $29.00
-        },
-        quantity: 1,
-      },
-    ],
+    line_items: [{ price: ARTIST_FEE.stripePriceId, quantity: 1 }],
+    client_reference_id: String(pendingArtistId),
     metadata: {
       pendingArtistId: String(pendingArtistId),
       type: "artist_registration",
+      customer_email: customerEmail ?? "",
     },
-    success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
+    success_url: `${successUrl}&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: cancelUrl,
   });
 
@@ -151,6 +117,7 @@ export function constructWebhookEvent(
 
 /**
  * Create a Stripe Checkout Session for an artist booking deposit.
+ * Booking deposits are dynamic amounts so price_data is used here.
  */
 export async function createBookingDepositSession(
   userId: number,
@@ -179,15 +146,25 @@ export async function createBookingDepositSession(
         quantity: 1,
       },
     ],
+    client_reference_id: String(userId),
     metadata: {
       userId: String(userId),
       bookingId: String(bookingId),
       type: "booking_deposit",
+      customer_email: customerEmail ?? "",
     },
-    success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
+    success_url: `${successUrl}&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: cancelUrl,
   });
 
   return session.url!;
 }
 
+/**
+ * Retrieve a completed checkout session from Stripe.
+ */
+export async function retrieveSession(sessionId: string): Promise<Stripe.Checkout.Session> {
+  return getStripe().checkout.sessions.retrieve(sessionId, {
+    expand: ["line_items", "customer"],
+  });
+}

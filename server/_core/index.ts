@@ -9,7 +9,8 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import healthRouter from "../health";
 import stripeWebhookRouter from "../stripeWebhook";
-import { handleUnsubscribe } from "../mailing-list-router";
+import { handleUnsubscribe, runWeeklyAdJob } from "../mailing-list-router";
+import cron from "node-cron";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -81,3 +82,16 @@ async function startServer() {
 }
 
 startServer().catch(console.error);
+
+// ── Weekly Ad Cron Job ────────────────────────────────────────────────────────
+// Fires every Monday at 09:00 UTC
+// Generates an AI picture ad and emails all opted-in studios in their language
+cron.schedule("0 9 * * 1", async () => {
+  console.log("[WeeklyAdCron] Starting weekly ad job...");
+  try {
+    const result = await runWeeklyAdJob();
+    console.log(`[WeeklyAdCron] Done — sent: ${result.sent}, failed: ${result.failed}`);
+  } catch (err) {
+    console.error("[WeeklyAdCron] Error:", err);
+  }
+}, { timezone: "UTC" });

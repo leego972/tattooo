@@ -1,0 +1,80 @@
+{
+  "query": "SELECT country, language, COUNT(*) as count FROM studio_mailing_list GROUP BY country, language ORDER BY country;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 25vRfUBwvHKUCo5.root --database Pa7E4RBX4UbpFBvKpz2nxk --execute SELECT country, language, COUNT(*) as count FROM studio_mailing_list GROUP BY country, language ORDER BY country;",
+  "rows": [
+    {
+      "country": "Argentina",
+      "language": "es",
+      "count": "1"
+    },
+    {
+      "country": "Australia",
+      "language": "en",
+      "count": "6"
+    },
+    {
+      "country": "Brazil",
+      "language": "pt",
+      "count": "6"
+    },
+    {
+      "country": "Canada",
+      "language": "en",
+      "count": "6"
+    },
+    {
+      "country": "France",
+      "language": "fr",
+      "count": "7"
+    },
+    {
+      "country": "Germany",
+      "language": "de",
+      "count": "8"
+    },
+    {
+      "country": "Israel",
+      "language": "he",
+      "count": "10"
+    },
+    {
+      "country": "Italy",
+      "language": "it",
+      "count": "7"
+    },
+    {
+      "country": "Japan",
+      "language": "ja",
+      "count": "6"
+    },
+    {
+      "country": "Netherlands",
+      "language": "nl",
+      "count": "5"
+    },
+    {
+      "country": "South Korea",
+      "language": "ko",
+      "count": "5"
+    },
+    {
+      "country": "Spain",
+      "language": "es",
+      "count": "7"
+    },
+    {
+      "country": "United Kingdom",
+      "language": "en",
+      "count": "10"
+    },
+    {
+      "country": "United States",
+      "language": "en",
+      "count": "16"
+    }
+  ],
+  "messages": [],
+  "stdout": "country\tlanguage\tcount\nArgentina\tes\t1\nAustralia\ten\t6\nBrazil\tpt\t6\nCanada\ten\t6\nFrance\tfr\t7\nGermany\tde\t8\nIsrael\the\t10\nItaly\tit\t7\nJapan\tja\t6\nNetherlands\tnl\t5\nSouth Korea\tko\t5\nSpain\tes\t7\nUnited Kingdom\ten\t10\nUnited States\ten\t16\n",
+  "stderr": "",
+  "execution_time_ms": 1650
+}

@@ -251,11 +251,31 @@ export async function sendOutreachEmail(opts: {
   toName?: string;
   subject: string;
   htmlBody: string;
+  attachmentUrl?: string;    // CDN URL of a PDF to attach
+  attachmentName?: string;   // Filename shown to recipient
+  unsubscribeToken?: string; // Token for one-click unsubscribe
+  adImageUrl?: string;       // Optional inline ad image shown above body
 }): Promise<void> {
+  // Build attachments array if a PDF URL is provided
+  type ResendAttachment = { filename: string; path: string };
+  const attachments: ResendAttachment[] = [];
+  if (opts.attachmentUrl) {
+    attachments.push({
+      filename: opts.attachmentName ?? "tattooo_info_pack.pdf",
+      path: opts.attachmentUrl,
+    });
+  }
+  const unsubscribeUrl = opts.unsubscribeToken
+    ? `https://tattooo.shop/api/unsubscribe/${opts.unsubscribeToken}`
+    : "#";
+  const adImageHtml = opts.adImageUrl
+    ? `<tr><td style="padding:0 40px 32px;"><img src="${opts.adImageUrl}" alt="tatt-ooo weekly" style="width:100%;border-radius:8px;display:block;" /></td></tr>`
+    : "";
   await resend.emails.send({
     from: FROM_EMAIL,
     to: opts.to,
     subject: opts.subject,
+    ...(attachments.length > 0 ? { attachments } : {}),
     html: `
 <!DOCTYPE html>
 <html lang="en">
@@ -277,6 +297,7 @@ export async function sendOutreachEmail(opts: {
               <div style="font-size:11px;letter-spacing:0.2em;color:#64748b;margin-top:4px;text-transform:uppercase;">AI Tattoo Designer</div>
             </td>
           </tr>
+          ${adImageHtml}
           <tr>
             <td style="padding:40px;color:#94a3b8;font-size:15px;line-height:1.7;">
               ${opts.htmlBody}
@@ -288,7 +309,7 @@ export async function sendOutreachEmail(opts: {
                 © ${new Date().getFullYear()} tatt-ooo · AI Tattoo Designer · Created by LEEGO
               </p>
               <p style="margin:8px 0 0;font-size:11px;color:#334155;">
-                You're receiving this because you're a tattoo artist. <a href="[UNSUBSCRIBE_URL]" style="color:#475569;">Unsubscribe</a>
+                You're receiving this because you're a tattoo artist or studio. <a href="${unsubscribeUrl}" style="color:#475569;">Unsubscribe</a>
               </p>
             </td>
           </tr>

@@ -299,11 +299,25 @@ export const mailingListRouter = router({
       if (!studio.email) throw new TRPCError({ code: "BAD_REQUEST", message: "No email address for this studio." });
       if (studio.emailStatus === "unsubscribed") throw new TRPCError({ code: "BAD_REQUEST", message: "Studio has unsubscribed." });
 
-      const unsubscribeUrl = `${input.origin}/api/unsubscribe/${studio.unsubscribeToken}`;
+       const unsubscribeUrl = `${input.origin}/api/unsubscribe/${studio.unsubscribeToken}`;
       const { subject, htmlBody } = await generateInfoPackEmail(studio.language, studio.studioName, input.origin);
       const bodyWithUnsub = htmlBody + `<p style="margin-top:32px;font-size:12px;color:#64748b;">To unsubscribe from future emails, <a href="${unsubscribeUrl}" style="color:#06b6d4;">click here</a>.</p>`;
-
-      await sendOutreachEmail({ to: studio.email, toName: studio.studioName, subject, htmlBody: bodyWithUnsub });
+      // Fetch language-specific PDF attachment
+      const lang = studio.language || "en";
+      const attachRows = await db.select().from(infoPackAttachments)
+        .where(eq(infoPackAttachments.language, lang)).limit(1);
+      const fallbackRows = attachRows.length ? attachRows : await db.select().from(infoPackAttachments)
+        .where(eq(infoPackAttachments.language, "en")).limit(1);
+      const attachment = fallbackRows[0];
+      await sendOutreachEmail({
+        to: studio.email,
+        toName: studio.studioName,
+        subject,
+        htmlBody: bodyWithUnsub,
+        unsubscribeToken: studio.unsubscribeToken ?? undefined,
+        attachmentUrl: attachment?.fileUrl,
+        attachmentName: attachment?.fileName,
+      });
       await db.update(studioMailingList).set({ infoPackSentAt: new Date(), infoPackStatus: "sent" }).where(eq(studioMailingList.id, input.studioId));
       return { success: true, subject };
     }),
@@ -331,11 +345,24 @@ export const mailingListRouter = router({
           const unsubscribeUrl = `${input.origin}/api/unsubscribe/${studio.unsubscribeToken}`;
           const { subject, htmlBody } = await generateInfoPackEmail(studio.language, studio.studioName, input.origin);
           const bodyWithUnsub = htmlBody + `<p style="margin-top:32px;font-size:12px;color:#64748b;">To unsubscribe, <a href="${unsubscribeUrl}" style="color:#06b6d4;">click here</a>.</p>`;
-          await sendOutreachEmail({ to: studio.email, toName: studio.studioName, subject, htmlBody: bodyWithUnsub });
+          // Fetch language-specific PDF
+          const lang = studio.language || "en";
+          const aRows = await db.select().from(infoPackAttachments).where(eq(infoPackAttachments.language, lang)).limit(1);
+          const fbRows = aRows.length ? aRows : await db.select().from(infoPackAttachments).where(eq(infoPackAttachments.language, "en")).limit(1);
+          const att = fbRows[0];
+          await sendOutreachEmail({
+            to: studio.email,
+            toName: studio.studioName,
+            subject,
+            htmlBody: bodyWithUnsub,
+            unsubscribeToken: studio.unsubscribeToken ?? undefined,
+            attachmentUrl: att?.fileUrl,
+            attachmentName: att?.fileName,
+          });
           await db.update(studioMailingList).set({ infoPackSentAt: new Date(), infoPackStatus: "sent" }).where(eq(studioMailingList.id, studio.id));
           sent++;
-          // Rate limit: 1 email per second to avoid Resend limits
-          await new Promise((r) => setTimeout(r, 1000));
+          // Rate limit: 1.5s per email to stay within Resend limits
+          await new Promise((r) => setTimeout(r, 1500));
         } catch (err: unknown) {
           failed++;
           errors.push(`${studio.studioName}: ${err instanceof Error ? err.message : String(err)}`);
@@ -428,4 +455,61 @@ export async function handleUnsubscribe(token: string): Promise<boolean> {
   if (!rows[0]) return false;
   await db.update(studioMailingList).set({ emailStatus: "unsubscribed", weeklyAdOptOut: true }).where(eq(studioMailingList.id, rows[0].id));
   return true;
+}
+
+// ── Weekly ad job (called by cron scheduler) ─────────────────────────────────
+// Uses the deployed site origin for links and unsubscribe URLs
+const PROD_ORIGIN = process.env.VITE_APP_ORIGIN || "https://tattooo.shop";
+
+export async function runWeeklyAdJob(): Promise<{ sent: number; failed: number; errors: string[] }> {
+  const db = await getDb();
+  if (!db) return { sent: 0, failed: 0, errors: ["Database unavailable"] };
+
+  const weekNum = getISOWeek(new Date());
+  const year = new Date().getFullYear();
+
+  const studios = await db.select().from(studioMailingList)
+    .where(and(
+      isNotNull(studioMailingList.email),
+      eq(studioMailingList.emailStatus, "found"),
+      eq(studioMailingList.weeklyAdOptOut, false),
+    ));
+
+  const alreadySent = await db.select({ studioId: weeklyAdSends.studioId })
+    .from(weeklyAdSends)
+    .where(and(eq(weeklyAdSends.weekNumber, weekNum), eq(weeklyAdSends.year, year)));
+  const alreadySentIds = new Set(alreadySent.map((r) => r.studioId));
+  const pending = studios.filter((s) => !alreadySentIds.has(s.id));
+
+  let sent = 0;
+  let failed = 0;
+  const errors: string[] = [];
+
+  for (const studio of pending) {
+    if (!studio.email) continue;
+    try {
+      const unsubscribeUrl = `${PROD_ORIGIN}/api/unsubscribe/${studio.unsubscribeToken}`;
+      const { subject, htmlBody, imageUrl } = await generateWeeklyAdEmail(studio.language, studio.studioName, PROD_ORIGIN);
+      const bodyWithUnsub = htmlBody + `<p style="margin-top:32px;font-size:12px;color:#64748b;">To unsubscribe, <a href="${unsubscribeUrl}" style="color:#06b6d4;">click here</a>.</p>`;
+      await sendOutreachEmail({
+        to: studio.email,
+        toName: studio.studioName,
+        subject,
+        htmlBody: bodyWithUnsub,
+        unsubscribeToken: studio.unsubscribeToken ?? undefined,
+        adImageUrl: imageUrl,
+      });
+      await db.insert(weeklyAdSends).values({ studioId: studio.id, weekNumber: weekNum, year, subject, imageUrl, emailBodyHtml: htmlBody, status: "sent" });
+      await db.update(studioMailingList).set({ lastWeeklyAdSentAt: new Date(), weeklyAdSentCount: (studio.weeklyAdSentCount || 0) + 1 }).where(eq(studioMailingList.id, studio.id));
+      sent++;
+      // Rate limit: 1.5s per email
+      await new Promise((r) => setTimeout(r, 1500));
+    } catch (err: unknown) {
+      failed++;
+      errors.push(`${studio.studioName}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  console.log(`[runWeeklyAdJob] Week ${weekNum}/${year} — sent: ${sent}, failed: ${failed}`);
+  return { sent, failed, errors };
 }

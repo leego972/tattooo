@@ -306,3 +306,21 @@
 - [x] Frontend: /credits page — summary card (current balance, plan, lifetime total)
 - [x] Frontend: /credits page — link from sidebar credits badge (badge now links to /credits)
 - [x] Navigation: Credits badge links to /credits; plan tier shown in badge
+
+## Low-Credit Alert + Admin Gift Credits + Stripe Portal
+- [ ] Backend: sendLowCreditAlert email in emailService.ts
+- [ ] Backend: deductCredit triggers low-credit email when balance drops below 5
+- [ ] Backend: admin.giftCredits procedure (userId, amount, reason)
+- [ ] Frontend: Admin Panel — Gift Credits dialog (user search by email, amount, reason)
+- [ ] Backend: credits.createPortalSession procedure — creates Stripe billing portal session
+- [ ] Frontend: Credits page — "Manage Subscription" button opens Stripe portal
+- [ ] Frontend: Subscription page — "Manage Subscription" button opens Stripe portal
+
+## Low-Credit Alert + Admin Gift Credits + Stripe Portal
+- [x] Backend: sendLowCreditAlert email function added to emailService.ts
+- [x] Backend: deductCredit fires low-credit alert when balance drops below 5
+- [x] Backend: admin.giftCredits procedure — gift credits to user by email
+- [x] Admin UI: Gift Credits tab with email input, amount, reason, and 6 quick presets
+- [x] Frontend: Credits page — Manage Subscription button opens Stripe portal for paid users
+- [x] Frontend: Subscription page already had portal button (confirmed working)
+- [x] Fix: emailService.ts box-drawing UTF-8 chars replaced with plain ASCII (esbuild error resolved)

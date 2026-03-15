@@ -4,6 +4,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 import {
   Zap,
   TrendingUp,
@@ -14,6 +15,7 @@ import {
   Crown,
   ArrowUpRight,
   Loader2,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -44,6 +46,10 @@ export default function Credits() {
   });
   const { data: transactions, isLoading: txLoading } = trpc.credits.transactions.useQuery(undefined, {
     enabled: isAuthenticated,
+  });
+  const createPortal = trpc.subscription.createPortal.useMutation({
+    onSuccess: (data) => { window.open(data.url, "_blank"); },
+    onError: (err) => toast.error(err.message),
   });
 
   if (!isAuthenticated) {
@@ -114,12 +120,23 @@ export default function Credits() {
                 <Badge className={cn("w-fit text-xs capitalize font-semibold", PLAN_COLORS[plan] ?? PLAN_COLORS.free)}>
                   {plan}
                 </Badge>
-                {plan === "free" && (
+                {plan === "free" ? (
                   <Link href="/subscription">
                     <Button size="sm" variant="outline" className="h-7 text-xs border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 gap-1">
                       Upgrade <ArrowUpRight className="w-3 h-3" />
                     </Button>
                   </Link>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs border-zinc-700 text-zinc-300 hover:bg-zinc-800 gap-1"
+                    disabled={createPortal.isPending}
+                    onClick={() => createPortal.mutate({ origin: window.location.origin })}
+                  >
+                    {createPortal.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Settings className="w-3 h-3" />}
+                    Manage
+                  </Button>
                 )}
               </div>
             )}

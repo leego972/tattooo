@@ -5,7 +5,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = "tatt-ooo <noreply@tatt-ooo.com>";
 const LOGO_URL = "https://cdn.manus.im/webdev-static-assets/tatt-ooo-logo.png";
 
-// ─── Password Reset Email ─────────────────────────────────────────────────────
+// Password Reset Email
 
 export async function sendPasswordResetEmail(
   toEmail: string,
@@ -86,7 +86,7 @@ export async function sendPasswordResetEmail(
   });
 }
 
-// ─── Artist Contact Email ─────────────────────────────────────────────────────
+// Artist Contact Email
 
 export async function sendArtistContactEmail(opts: {
   artistEmail: string;
@@ -167,7 +167,7 @@ export async function sendArtistContactEmail(opts: {
   });
 }
 
-// ─── Welcome Email ────────────────────────────────────────────────────────────
+// Welcome Email
 
 export async function sendWelcomeEmail(toEmail: string, toName: string | null): Promise<void> {
   const firstName = toName?.split(" ")[0] ?? "there";
@@ -244,7 +244,7 @@ export async function sendWelcomeEmail(toEmail: string, toName: string | null): 
   });
 }
 
-// ─── Outreach Email ───────────────────────────────────────────────────────────
+// Outreach Email
 
 export async function sendOutreachEmail(opts: {
   to: string;
@@ -302,7 +302,7 @@ export async function sendOutreachEmail(opts: {
   });
 }
 
-// ─── Artist Registration Confirmation ─────────────────────────────────────────
+// Artist Registration Confirmation
 export async function sendArtistRegistrationConfirmation(
   toEmail: string,
   artistName: string
@@ -357,7 +357,7 @@ export async function sendArtistRegistrationConfirmation(
   });
 }
 
-// ─── Promo Code Confirmation Email ─────────────────────────────────────────────
+// Promo Code Confirmation Email
 export async function sendPromoConfirmationEmail(
   toEmail: string,
   toName: string | null,
@@ -402,5 +402,48 @@ export async function sendPromoConfirmationEmail(
     </td></tr>
   </table>
 </body></html>`.trim(),
+  });
+}
+
+
+// Low Credit Alert Email
+export async function sendLowCreditAlert(
+  toEmail: string,
+  toName: string | null,
+  remainingCredits: number
+): Promise<void> {
+  const firstName = toName?.split(" ")[0] ?? "there";
+  const subject = `Running low on credits — ${remainingCredits} left`;
+  const body = [
+    "<!DOCTYPE html><html><head><meta charset='UTF-8'/></head>",
+    "<body style='margin:0;padding:0;background:#0a0a0a;font-family:Helvetica,Arial,sans-serif;'>",
+    "<table width='100%' cellpadding='0' cellspacing='0' style='background:#0a0a0a;padding:40px 20px;'>",
+    "<tr><td align='center'>",
+    "<table width='560' cellpadding='0' cellspacing='0' style='background:#111111;border-radius:12px;border:1px solid #222;overflow:hidden;max-width:560px;width:100%;'>",
+    "<tr><td style='background:linear-gradient(135deg,#1a0a00,#2d1100);padding:32px 40px;text-align:center;border-bottom:1px solid #7c2d12;'>",
+    "<div style='font-size:28px;font-weight:900;color:#fff;'>tatt<span style='color:#f97316;'>-ooo</span></div>",
+    "<div style='font-size:11px;letter-spacing:0.2em;color:#92400e;margin-top:4px;text-transform:uppercase;'>Low Credit Alert</div>",
+    "</td></tr>",
+    "<tr><td style='padding:40px;'>",
+    `<h1 style='margin:0 0 12px;font-size:22px;font-weight:700;color:#f1f5f9;text-align:center;'>Running Low on Credits</h1>`,
+    `<p style='margin:0 0 24px;font-size:15px;line-height:1.6;color:#94a3b8;text-align:center;'>Hey ${firstName}, you only have <strong style='color:#f97316;'>${remainingCredits} credit${remainingCredits === 1 ? "" : "s"}</strong> remaining. Top up now so you don't get interrupted mid-design.</p>`,
+    `<div style='background:#1a0a00;border:1px solid #7c2d12;border-radius:8px;padding:16px 20px;margin-bottom:24px;text-align:center;'>`,
+    "<div style='font-size:13px;color:#92400e;margin-bottom:4px;'>Credits remaining</div>",
+    `<div style='font-size:36px;font-weight:900;color:#f97316;'>${remainingCredits}</div>`,
+    "</div>",
+    "<table cellpadding='0' cellspacing='0' style='margin:0 auto 24px;'><tr><td style='border-radius:8px;background:linear-gradient(135deg,#ea580c,#c2410c);'>",
+    "<a href='https://tatt-ooo.manus.space/pricing' style='display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#fff;text-decoration:none;'>Top Up Credits</a>",
+    "</td></tr></table>",
+    "<p style='margin:0;font-size:12px;color:#475569;text-align:center;'>Or upgrade to a subscription plan for automatic monthly credit top-ups.</p>",
+    "</td></tr>",
+    `<tr><td style='padding:20px 40px;border-top:1px solid #1e293b;text-align:center;'><p style='margin:0;font-size:12px;color:#475569;'>&copy; ${new Date().getFullYear()} tatt-ooo &middot; AI Tattoo Designer &middot; Created by LEEGO</p></td></tr>`,
+    "</table></td></tr></table></body></html>",
+  ].join("\n");
+
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: toEmail,
+    subject,
+    html: body,
   });
 }

@@ -1,6 +1,9 @@
 import { eq, desc } from "drizzle-orm";
 import { getDb } from "./db";
-import { credits, creditTransactions } from "../drizzle/schema";
+import { credits, creditTransactions, users } from "../drizzle/schema";
+import { sendLowCreditAlert } from "./emailService";
+
+const LOW_CREDIT_THRESHOLD = 5;
 
 export const FREE_CREDITS = 500;
 
@@ -69,6 +72,21 @@ export async function deductCredit(userId: number): Promise<boolean> {
     type: "deduction",
     description: "Tattoo design generation",
   });
+
+  // Fire low-credit alert when balance crosses the threshold
+  const newBalance = userCredits.balance - 1;
+  if (newBalance > 0 && newBalance <= LOW_CREDIT_THRESHOLD) {
+    // Fetch user email asynchronously — don't block the generation response
+    getDb().then(async (db2) => {
+      if (!db2) return;
+      const userRows = await db2.select({ email: users.email, name: users.name })
+        .from(users).where(eq(users.id, userId)).limit(1);
+      const u = userRows[0];
+      if (u?.email) {
+        sendLowCreditAlert(u.email, u.name ?? null, newBalance).catch(() => {});
+      }
+    }).catch(() => {});
+  }
 
   return true;
 }

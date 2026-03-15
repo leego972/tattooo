@@ -1516,6 +1516,25 @@ Format your response as JSON with these fields:
       await db.update(promoCodes).set({ isActive: false }).where(eq(promoCodes.id, input.id));
       return { success: true };
     }),
+
+  // ── Gift Credits ─────────────────────────────────────────────────────────────
+  giftCredits: adminProcedure
+    .input(z.object({
+      email: z.string().email(),
+      amount: z.number().int().min(1).max(10000),
+      reason: z.string().min(1).max(200).default("Admin gift"),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const userRows = await db.select({ id: users.id, name: users.name, email: users.email })
+        .from(users).where(eq(users.email, input.email)).limit(1);
+      if (!userRows[0]) throw new TRPCError({ code: "NOT_FOUND", message: "No user found with that email" });
+      const targetUser = userRows[0];
+      await addCredits(targetUser.id, input.amount, "purchase", undefined, `Admin gift: ${input.reason}`);
+      return { success: true, userId: targetUser.id, name: targetUser.name, credited: input.amount };
+    }),
+
 });
 
 // ─── App Router ───────────────────────────────────────────────────────────────

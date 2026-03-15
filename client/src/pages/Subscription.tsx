@@ -36,8 +36,9 @@ export default function Subscription() {
     },
   });
 
-  const isMember = status?.plan === "member";
-  const features: string[] = (plans?.features as string[]) ?? [];
+  const isMember = !!status?.plan && status.plan !== "free";
+  const memberPlan = plans?.find((p) => p.id === "customer");
+  const features: string[] = memberPlan ? [...memberPlan.features] : [];
 
   const handleUpgrade = () => {
     if (!user) {
@@ -45,7 +46,11 @@ export default function Subscription() {
       return;
     }
     setLoading(true);
-    createCheckout.mutate({ interval, origin: window.location.origin });
+    createCheckout.mutate({
+      plan: "customer",
+      billing: interval === "monthly" ? "monthly" : "annual",
+      origin: window.location.origin,
+    });
   };
 
   return (

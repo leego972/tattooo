@@ -4,6 +4,7 @@
  * Business model:
  *   - Users: $10/month OR $99/year (saves ~17%)
  *   - Artists/Studios: $29/year directory listing fee
+ *   - Studio Teams: $49/month OR $479/year (up to 10 artists)
  *   - Booking fee: 13% of artist's quoted price, charged at booking confirmation
  *
  * Price IDs are created in Stripe (test mode) and stored here.
@@ -42,6 +43,34 @@ export const ARTIST_FEE = {
   stripePriceId: process.env.STRIPE_ARTIST_FEE_PRICE_ID || "price_1TB7dZK1nQvj50bsRYtNu02O",
 };
 
+// ─── Artist Team Plan ─────────────────────────────────────────────────────────
+// Studio team plan: up to 10 artists under one shared studio profile.
+// Team owner pays; all members get full artist dashboard access.
+export const TEAM_PLAN = {
+  monthly: {
+    id: "team_monthly" as const,
+    name: "Tattooo Studio Team — Monthly",
+    price: 4900,          // cents = $49.00/month (up to 10 artists)
+    priceDisplay: "$49/month",
+    interval: "month" as const,
+    description: "Up to 10 artists — shared studio profile, team inbox, booking management",
+    maxMembers: 10,
+    stripePriceId: process.env.STRIPE_TEAM_MONTHLY_PRICE_ID || "",
+  },
+  yearly: {
+    id: "team_yearly" as const,
+    name: "Tattooo Studio Team — Yearly",
+    price: 47900,         // cents = $479.00/year (~$39.92/month, saves ~18%)
+    priceDisplay: "$479/year",
+    interval: "year" as const,
+    description: "Up to 10 artists — save 18% vs monthly",
+    maxMembers: 10,
+    stripePriceId: process.env.STRIPE_TEAM_YEARLY_PRICE_ID || "",
+  },
+} as const;
+
+export type TeamInterval = keyof typeof TEAM_PLAN;
+
 // ─── Booking Fee ──────────────────────────────────────────────────────────────
 export const BOOKING_FEE_PERCENT = 13; // 13% of artist's quoted price
 
@@ -66,6 +95,17 @@ export const MEMBERSHIP_FEATURES = [
   "Secure booking via platform",
   "Design-to-artist email delivery",
   "Priority support",
+];
+
+// ─── Team plan features (for display on Pricing/Artist pages) ─────────────────
+export const TEAM_FEATURES = [
+  "Everything in individual artist plan",
+  "Up to 10 artists per studio",
+  "Shared studio profile page",
+  "Team booking inbox",
+  "Studio-level analytics",
+  "Priority listing in directory",
+  "Dedicated account support",
 ];
 
 // ─── Free (non-member) limits ─────────────────────────────────────────────────

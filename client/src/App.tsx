@@ -23,6 +23,7 @@ import MyTatts from "./pages/MyTatts";
 import DrawingBoard from "./pages/DrawingBoard";
 import Pricing from "./pages/Pricing";
 import Artists from "./pages/Artists";
+import ArtistProfile from "./pages/ArtistProfile";
 import Admin from "./pages/Admin";
 import Referral from "./pages/Referral";
 import Bookings from "./pages/Bookings";
@@ -76,6 +77,9 @@ function Router() {
           </Route>
           <Route path="/pricing">
             {() => <ProtectedRoute component={Pricing} />}
+          </Route>
+          <Route path="/artists/:id">
+            {() => <ProtectedRoute component={ArtistProfile} />}
           </Route>
           <Route path="/artists">
             {() => <ProtectedRoute component={Artists} />}

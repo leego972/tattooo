@@ -87,22 +87,47 @@ export const passwordResetTokens = mysqlTable("password_reset_tokens", {
 
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 
-// ── Artists ───────────────────────────────────────────────────────────────────
+// ── Artists ─────────────────────────────────────────────────────────────────────────
 export const artists = mysqlTable("artists", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId"),
   name: varchar("name", { length: 128 }).notNull(),
   bio: text("bio"),
+  // Location
   location: varchar("location", { length: 128 }),
+  address: varchar("address", { length: 255 }),
+  city: varchar("city", { length: 128 }),
+  state: varchar("state", { length: 128 }),
   country: varchar("country", { length: 64 }),
-  specialties: varchar("specialties", { length: 512 }),
-  instagram: varchar("instagram", { length: 128 }),
-  website: varchar("website", { length: 255 }),
+  postcode: varchar("postcode", { length: 20 }),
+  // Contact
+  phone: varchar("phone", { length: 32 }),
   contactEmail: varchar("contactEmail", { length: 320 }),
+  // Social
+  instagram: varchar("instagram", { length: 128 }),
+  tiktok: varchar("tiktok", { length: 128 }),
+  facebook: varchar("facebook", { length: 128 }),
+  website: varchar("website", { length: 255 }),
+  // Media
   avatarUrl: text("avatarUrl"),
+  profilePhotoUrl: text("profilePhotoUrl"),
+  portfolioImages: json("portfolioImages").$type<string[]>(),
+  // Professional
+  specialties: varchar("specialties", { length: 512 }),
+  yearsExperience: int("yearsExperience"),
+  priceRange: varchar("priceRange", { length: 64 }),
+  languages: varchar("languages", { length: 256 }),
+  businessHours: json("businessHours").$type<Record<string, { open: string; close: string; closed?: boolean }>>()
+    .default({ mon: { open: "09:00", close: "17:00" }, tue: { open: "09:00", close: "17:00" }, wed: { open: "09:00", close: "17:00" }, thu: { open: "09:00", close: "17:00" }, fri: { open: "09:00", close: "17:00" }, sat: { closed: true, open: "", close: "" }, sun: { closed: true, open: "", close: "" } }),
+  // Pricing
   hourlyRate: int("hourlyRate"),
   depositAmount: int("depositAmount"),
+  // Team
+  teamId: int("teamId"),
+  isTeamOwner: boolean("isTeamOwner").default(false).notNull(),
+  // Stripe
   stripeAccountId: varchar("stripeAccountId", { length: 128 }),
+  // Status
   verified: boolean("verified").default(false).notNull(),
   featured: boolean("featured").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -111,6 +136,47 @@ export const artists = mysqlTable("artists", {
 
 export type Artist = typeof artists.$inferSelect;
 export type InsertArtist = typeof artists.$inferInsert;
+
+// ── Artist Teams ──────────────────────────────────────────────────────────────
+export const artistTeams = mysqlTable("artist_teams", {
+  id: int("id").autoincrement().primaryKey(),
+  ownerId: int("ownerId").notNull(),
+  studioName: varchar("studioName", { length: 255 }).notNull(),
+  studioDescription: text("studioDescription"),
+  studioLogoUrl: text("studioLogoUrl"),
+  studioAddress: varchar("studioAddress", { length: 255 }),
+  studioCity: varchar("studioCity", { length: 128 }),
+  studioState: varchar("studioState", { length: 128 }),
+  studioCountry: varchar("studioCountry", { length: 64 }),
+  studioPostcode: varchar("studioPostcode", { length: 20 }),
+  studioPhone: varchar("studioPhone", { length: 32 }),
+  studioEmail: varchar("studioEmail", { length: 320 }),
+  studioWebsite: varchar("studioWebsite", { length: 255 }),
+  studioInstagram: varchar("studioInstagram", { length: 128 }),
+  maxMembers: int("maxMembers").default(10).notNull(),
+  plan: mysqlEnum("plan", ["team", "enterprise"]).default("team").notNull(),
+  stripeCustomerId: varchar("stripeCustomerId", { length: 128 }),
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 128 }),
+  subscriptionStatus: mysqlEnum("subscriptionStatus", ["active", "inactive", "trialing", "past_due", "canceled"]).default("inactive").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type ArtistTeam = typeof artistTeams.$inferSelect;
+export type InsertArtistTeam = typeof artistTeams.$inferInsert;
+
+// ── Artist Team Members ───────────────────────────────────────────────────────
+export const artistTeamMembers = mysqlTable("artist_team_members", {
+  id: int("id").autoincrement().primaryKey(),
+  teamId: int("teamId").notNull(),
+  artistId: int("artistId").notNull(),
+  role: mysqlEnum("role", ["owner", "member"]).default("member").notNull(),
+  inviteToken: varchar("inviteToken", { length: 64 }),
+  inviteEmail: varchar("inviteEmail", { length: 320 }),
+  status: mysqlEnum("status", ["pending", "active", "removed"]).default("pending").notNull(),
+  joinedAt: timestamp("joinedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ArtistTeamMember = typeof artistTeamMembers.$inferSelect;
 
 // ── Design Shares ─────────────────────────────────────────────────────────────
 export const designShares = mysqlTable("design_shares", {

@@ -336,3 +336,26 @@
 - [x] Fix: Home / route is now protected — unauthenticated users redirected to /login immediately
 - [x] Fix: Navbar shows ONLY Login, Sign Up, Join as Artist when logged out (no other nav items)
 - [x] Fix: Leego logo enlarged to w-36 h-36 with solid black rounded panel in both logged-in and logged-out sidebar
+
+## Artist Profile System + Team Tier
+- [x] DB: Extend artists table with photo, address, phone, businessHours, bio, specialties, instagram, website, isVerified, teamId
+- [x] DB: New artist_teams table (id, ownerId, name, studioName, plan, memberCount, stripeCustomerId, stripeSubscriptionId)
+- [x] DB: New artist_team_members table (teamId, artistId, role: owner/member, joinedAt)
+- [ ] DB: Stripe: add Team plan to products.ts (monthly recurring, up to 10 artists)
+- [x] Backend: artist.getById — public, returns full profile with team members
+- [x] Backend: artist.list — public, returns all verified artists with name/country/location/specialty filters
+- [x] Backend: team.create — protected, creates team + sets owner
+- [x] Backend: team.getMembers — protected owner
+- [x] Frontend: /artist-signup — 5-step form (profile, location, portfolio, hours/pricing, payment)
+- [x] Frontend: /artists/:id — full public profile page (photo, bio, specialties, hours, location, portfolio, team, booking CTA)
+- [x] Frontend: /artists — listing with profile photos, specialties, location, link to profile
+
+## Artist Profile + Search System
+- [x] Backend: artists.list supports name search (partial match on name field)
+- [x] Backend: artists.list supports country filter
+- [x] Frontend: Artists page — name search bar
+- [x] Frontend: Artists page — country dropdown filter
+- [x] Frontend: Artists page — artist cards link to /artists/:id
+- [x] Frontend: ArtistProfile page (/artists/:id) — full public profile with photo, bio, hours, portfolio, team info, book button
+- [x] Frontend: ArtistSignup — 5-step form with photo, address, phone, hours, team option
+- [x] Frontend: App.tsx — add /artists/:id route

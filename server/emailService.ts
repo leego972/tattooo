@@ -447,3 +447,36 @@ export async function sendLowCreditAlert(
     html: body,
   });
 }
+
+export async function sendArtistTeamInviteEmail(
+  toEmail: string,
+  studioName: string,
+  inviteUrl: string
+): Promise<void> {
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: toEmail,
+    subject: `You've been invited to join ${studioName} on tatt-ooo`,
+    html: [
+      "<!DOCTYPE html><html><head><meta charset='UTF-8'/></head>",
+      "<body style='margin:0;padding:0;background:#0a0a0a;font-family:Helvetica,Arial,sans-serif;'>",
+      "<table width='100%' cellpadding='0' cellspacing='0' style='background:#0a0a0a;padding:40px 20px;'>",
+      "<tr><td align='center'>",
+      "<table width='560' cellpadding='0' cellspacing='0' style='background:#111111;border-radius:12px;border:1px solid #222;overflow:hidden;max-width:560px;width:100%;'>",
+      "<tr><td style='background:linear-gradient(135deg,#0c0a1e,#1a1040);padding:32px 40px;text-align:center;border-bottom:1px solid #2d1b69;'>",
+      "<div style='font-size:28px;font-weight:900;color:#fff;'>tatt<span style='color:#a78bfa;'>-ooo</span></div>",
+      "<div style='font-size:11px;letter-spacing:0.2em;color:#6d28d9;margin-top:4px;text-transform:uppercase;'>Team Invitation</div>",
+      "</td></tr>",
+      "<tr><td style='padding:40px;'>",
+      "<h1 style='margin:0 0 12px;font-size:22px;font-weight:700;color:#f1f5f9;text-align:center;'>You're Invited!</h1>",
+      `<p style='margin:0 0 24px;font-size:15px;line-height:1.6;color:#94a3b8;text-align:center;'>You've been invited to join <strong style='color:#a78bfa;'>${studioName}</strong> as a team member on tatt-ooo. Complete your artist profile to get listed in our directory.</p>`,
+      "<table cellpadding='0' cellspacing='0' style='margin:0 auto 24px;'><tr><td style='border-radius:8px;background:linear-gradient(135deg,#7c3aed,#6d28d9);'>",
+      `<a href='${inviteUrl}' style='display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#fff;text-decoration:none;'>Accept Invitation</a>`,
+      "</td></tr></table>",
+      "<p style='margin:0;font-size:12px;color:#475569;text-align:center;'>This invitation expires in 7 days. If you did not expect this, you can safely ignore it.</p>",
+      "</td></tr>",
+      `<tr><td style='padding:20px 40px;border-top:1px solid #1e293b;text-align:center;'><p style='margin:0;font-size:12px;color:#475569;'>&copy; ${new Date().getFullYear()} tatt-ooo &middot; AI Tattoo Designer &middot; Created by LEEGO</p></td></tr>`,
+      "</table></td></tr></table></body></html>",
+    ].join(""),
+  });
+}

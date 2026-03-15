@@ -14,7 +14,7 @@ import { generateImage } from "./_core/imageGeneration";
 import { getDb } from "./db";
 import * as schema from "../drizzle/schema";
 import {
-  // (null as any),
+  marketingBudgets,
   marketingCampaigns,
   marketingContent,
   marketingPerformance,
@@ -1064,7 +1064,7 @@ export async function runAutonomousCycle(): Promise<{
 
       // Save new allocations as a budget record
       const month = new Date().toISOString().substring(0, 7);
-      await db!.insert((null as any)).values({
+      await db!.insert(marketingBudgets).values({
         month,
         totalBudget: Math.round(monthlyBudget * 100), // cents
         status: "active",

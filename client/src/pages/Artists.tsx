@@ -1,6 +1,5 @@
-import { useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import { useLocation } from "wouter";
+import { useState, useMemo } from "react";
+import { useLocation, Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +14,13 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   MapPin,
   Instagram,
   Globe,
@@ -25,12 +31,19 @@ import {
   Send,
   Users,
   Calendar,
-  DollarSign,
-  CheckCircle,
-  UserPlus,
   Shield,
   CreditCard,
+  ChevronRight,
+  SlidersHorizontal,
 } from "lucide-react";
+
+const COUNTRIES = [
+  "All Countries",
+  "Australia", "United Kingdom", "United States", "Canada", "New Zealand",
+  "Germany", "France", "Spain", "Italy", "Netherlands", "Sweden", "Norway", "Denmark",
+  "Japan", "South Korea", "Brazil", "Mexico", "Argentina", "South Africa",
+  "India", "Singapore", "Thailand", "Indonesia", "Philippines", "Other",
+];
 
 interface ContactFormData {
   customerName: string;
@@ -40,13 +53,13 @@ interface ContactFormData {
 }
 
 export default function Artists() {
-  const { user } = useAuth();
   const [, navigate] = useLocation();
+  const [nameSearch, setNameSearch] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
   const [specialtyFilter, setSpecialtyFilter] = useState("");
+  const [countryFilter, setCountryFilter] = useState("All Countries");
   const [selectedArtist, setSelectedArtist] = useState<number | null>(null);
   const [bookingArtist, setBookingArtist] = useState<number | null>(null);
-  const [showRegister, setShowRegister] = useState(false);
   const [contactForm, setContactForm] = useState<ContactFormData>({
     customerName: "",
     customerEmail: "",
@@ -54,12 +67,19 @@ export default function Artists() {
   });
   const [bookingMsg, setBookingMsg] = useState("");
 
-
   const { data: artistList = [], isLoading } = trpc.artists.list.useQuery({
     location: locationFilter || undefined,
     specialty: specialtyFilter || undefined,
-    limit: 50,
+    limit: 100,
   });
+
+  const filtered = useMemo(() => {
+    return artistList.filter((a) => {
+      if (nameSearch && !a.name?.toLowerCase().includes(nameSearch.toLowerCase())) return false;
+      if (countryFilter && countryFilter !== "All Countries" && a.country?.toLowerCase() !== countryFilter.toLowerCase()) return false;
+      return true;
+    });
+  }, [artistList, nameSearch, countryFilter]);
 
   const contactMutation = trpc.artists.contact.useMutation({
     onSuccess: () => {
@@ -100,9 +120,8 @@ export default function Artists() {
     });
   };
 
-  const selectedArtistData = artistList.find((a) => a.id === selectedArtist);
-  const bookingArtistData = artistList.find((a) => a.id === bookingArtist);
-  const _ = showRegister; // used in JSX below
+  const selectedArtistData = filtered.find((a) => a.id === selectedArtist);
+  const bookingArtistData = filtered.find((a) => a.id === bookingArtist);
 
   return (
     <div className="min-h-screen bg-background">
@@ -124,26 +143,58 @@ export default function Artists() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-8">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Filter by location (e.g. London, NYC)"
-              value={locationFilter}
-              onChange={(e) => setLocationFilter(e.target.value)}
-              className="pl-10 bg-card border-border"
-            />
+        {/* Search + Filters */}
+        <div className="bg-card border border-border rounded-2xl p-4 mb-8">
+          <div className="flex items-center gap-2 mb-3">
+            <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-medium text-foreground">Search &amp; Filter</span>
           </div>
-          <div className="relative flex-1">
-            <Palette className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Filter by style (e.g. Japanese, Blackwork)"
-              value={specialtyFilter}
-              onChange={(e) => setSpecialtyFilter(e.target.value)}
-              className="pl-10 bg-card border-border"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name..."
+                value={nameSearch}
+                onChange={(e) => setNameSearch(e.target.value)}
+                className="pl-10 bg-background border-border"
+              />
+            </div>
+            <Select value={countryFilter} onValueChange={setCountryFilter}>
+              <SelectTrigger className="bg-background border-border">
+                <SelectValue placeholder="All Countries" />
+              </SelectTrigger>
+              <SelectContent>
+                {COUNTRIES.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="City or suburb..."
+                value={locationFilter}
+                onChange={(e) => setLocationFilter(e.target.value)}
+                className="pl-10 bg-background border-border"
+              />
+            </div>
+            <div className="relative">
+              <Palette className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Style (e.g. Japanese, Blackwork)"
+                value={specialtyFilter}
+                onChange={(e) => setSpecialtyFilter(e.target.value)}
+                className="pl-10 bg-background border-border"
+              />
+            </div>
           </div>
+          {filtered.length > 0 && (
+            <p className="text-xs text-muted-foreground mt-3">
+              Showing {filtered.length} artist{filtered.length !== 1 ? "s" : ""}
+              {countryFilter !== "All Countries" ? ` in ${countryFilter}` : ""}
+              {nameSearch ? ` matching "${nameSearch}"` : ""}
+            </p>
+          )}
         </div>
 
         {/* Artists Grid */}
@@ -156,31 +207,31 @@ export default function Artists() {
               />
             ))}
           </div>
-        ) : artistList.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <div className="text-center py-20">
             <div className="w-16 h-16 rounded-2xl bg-muted/30 flex items-center justify-center mx-auto mb-4">
               <Users className="w-8 h-8 text-muted-foreground" />
             </div>
             <h3 className="text-lg font-semibold text-foreground mb-2">No artists found</h3>
             <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-              {locationFilter || specialtyFilter
+              {nameSearch || countryFilter !== "All Countries" || locationFilter || specialtyFilter
                 ? "Try adjusting your filters to see more artists."
                 : "The artist directory is coming soon. Check back shortly!"}
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {artistList.map((artist) => (
+            {filtered.map((artist) => (
+              <Link key={artist.id} href={`/artists/${artist.id}`}>
               <div
-                key={artist.id}
-                className="bg-card border border-border rounded-2xl p-6 hover:border-cyan-500/40 transition-all duration-200 group"
+                className="bg-card border border-border rounded-2xl p-6 hover:border-cyan-500/40 hover:shadow-lg hover:shadow-cyan-500/5 transition-all duration-200 group cursor-pointer h-full flex flex-col"
               >
                 {/* Avatar */}
                 <div className="flex items-start gap-4 mb-4">
                   <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500/20 to-purple-500/20 border border-border flex items-center justify-center flex-shrink-0 overflow-hidden">
-                    {artist.avatarUrl ? (
+                    {(artist.profilePhotoUrl || artist.avatarUrl) ? (
                       <img
-                        src={artist.avatarUrl}
+                        src={artist.profilePhotoUrl || artist.avatarUrl || ""}
                         alt={artist.name}
                         className="w-full h-full object-cover"
                       />
@@ -192,16 +243,16 @@ export default function Artists() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-foreground truncate">{artist.name}</h3>
+                      <h3 className="font-bold text-foreground truncate group-hover:text-cyan-400 transition-colors">{artist.name}</h3>
                       {artist.verified && (
                         <Star className="w-3.5 h-3.5 text-cyan-400 fill-cyan-400 flex-shrink-0" />
                       )}
                     </div>
-                    {artist.location && (
+                    {(artist.city || artist.country || artist.location) && (
                       <div className="flex items-center gap-1 mt-0.5">
                         <MapPin className="w-3 h-3 text-muted-foreground" />
                         <span className="text-xs text-muted-foreground truncate">
-                          {artist.location}
+                          {[artist.city, artist.country || artist.location].filter(Boolean).join(", ")}
                         </span>
                       </div>
                     )}
@@ -230,16 +281,17 @@ export default function Artists() {
                   </div>
                 )}
 
-                {/* Links + Contact */}
+                {/* Links + CTA */}
                 <div className="flex items-center gap-2 mt-auto">
                   {artist.instagram && (
                     <a
                       href={`https://instagram.com/${artist.instagram.replace("@", "")}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-2 rounded-lg bg-muted/30 hover:bg-pink-500/10 hover:text-pink-400 text-muted-foreground transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                      className="p-1.5 rounded-lg bg-muted/30 hover:bg-pink-500/10 hover:text-pink-400 text-muted-foreground transition-colors"
                     >
-                      <Instagram className="w-4 h-4" />
+                      <Instagram className="w-3.5 h-3.5" />
                     </a>
                   )}
                   {artist.website && (
@@ -247,34 +299,19 @@ export default function Artists() {
                       href={artist.website}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-2 rounded-lg bg-muted/30 hover:bg-cyan-500/10 hover:text-cyan-400 text-muted-foreground transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                      className="p-1.5 rounded-lg bg-muted/30 hover:bg-cyan-500/10 hover:text-cyan-400 text-muted-foreground transition-colors"
                     >
-                      <Globe className="w-4 h-4" />
+                      <Globe className="w-3.5 h-3.5" />
                     </a>
                   )}
-                  <div className="ml-auto flex gap-1.5">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 text-xs"
-                      onClick={() => setBookingArtist(artist.id)}
-                    >
-                      <Calendar className="w-3 h-3 mr-1" />
-                      Book
-                    </Button>
-                    {artist.contactEmail && (
-                      <Button
-                        size="sm"
-                        className="bg-cyan-500 hover:bg-cyan-600 text-black text-xs font-bold"
-                        onClick={() => setSelectedArtist(artist.id)}
-                      >
-                        <Mail className="w-3 h-3 mr-1" />
-                        Contact
-                      </Button>
-                    )}
+                  <div className="ml-auto flex items-center gap-1 text-xs text-cyan-400 font-medium">
+                    View Profile
+                    <ChevronRight className="w-3.5 h-3.5" />
                   </div>
                 </div>
               </div>
+              </Link>
             ))}
           </div>
         )}

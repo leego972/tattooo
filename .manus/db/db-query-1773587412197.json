@@ -1,0 +1,23 @@
+{
+  "query": "SELECT emailStatus, infoPackStatus, COUNT(*) as count FROM studio_mailing_list GROUP BY emailStatus, infoPackStatus ORDER BY emailStatus, infoPackStatus;\nSELECT COUNT(*) as sendable FROM studio_mailing_list WHERE emailStatus = 'found' AND infoPackStatus = 'not_sent' AND email IS NOT NULL;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 25vRfUBwvHKUCo5.root --database Pa7E4RBX4UbpFBvKpz2nxk --execute SELECT emailStatus, infoPackStatus, COUNT(*) as count FROM studio_mailing_list GROUP BY emailStatus, infoPackStatus ORDER BY emailStatus, infoPackStatus;\nSELECT COUNT(*) as sendable FROM studio_mailing_list WHERE emailStatus = 'found' AND infoPackStatus = 'not_sent' AND email IS NOT NULL;",
+  "rows": [
+    {
+      "emailStatus": "found",
+      "infoPackStatus": "not_sent",
+      "count": "100"
+    },
+    {
+      "emailStatus": "not_found",
+      "infoPackStatus": "not_sent",
+      "count": "24"
+    }
+  ],
+  "messages": [
+    "sendable",
+    "100"
+  ],
+  "stdout": "emailStatus\tinfoPackStatus\tcount\nfound\tnot_sent\t100\nnot_found\tnot_sent\t24\nsendable\n100\n",
+  "stderr": "",
+  "execution_time_ms": 1770
+}

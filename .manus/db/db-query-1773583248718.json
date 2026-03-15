@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `marketing_budgets` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `month` varchar(7) NOT NULL,\n  `totalBudget` int NOT NULL,\n  `status` enum('draft','active','paused','completed') NOT NULL DEFAULT 'draft',\n  `allocations` json,\n  `actualSpend` int NOT NULL DEFAULT 0,\n  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 25vRfUBwvHKUCo5.root --database Pa7E4RBX4UbpFBvKpz2nxk --execute CREATE TABLE IF NOT EXISTS `marketing_budgets` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `month` varchar(7) NOT NULL,\n  `totalBudget` int NOT NULL,\n  `status` enum('draft','active','paused','completed') NOT NULL DEFAULT 'draft',\n  `allocations` json,\n  `actualSpend` int NOT NULL DEFAULT 0,\n  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 6926
+}

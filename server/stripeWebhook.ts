@@ -4,10 +4,10 @@
  * for signature verification.
  */
 import { Router } from "express";
-import { constructWebhookEvent, CREDIT_PACKS, type PackId } from "./stripe";
-import { addCredits, setStripeCustomerId, getOrCreateCredits } from "./credits.db";
+import { constructWebhookEvent } from "./stripe";
+import { setStripeCustomerId, getOrCreateCredits } from "./credits.db";
 import { getDb } from "./db";
-import { users, artists, bookings, credits } from "../drizzle/schema";
+import { users, artists, bookings, credits, promoCodes } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 
 const stripeWebhookRouter = Router();
@@ -62,31 +62,29 @@ stripeWebhookRouter.post(
         const meta = session.metadata || {};
         const eventType = meta.type;
 
-        // ── Credit pack purchase ──────────────────────────────────────────────
-        if (!eventType || eventType === "credit_purchase") {
+        // ── User Membership ──────────────────────────────────────────────────
+        if (eventType === "membership") {
           const userId = meta.userId ? parseInt(meta.userId) : null;
-          const packId = meta.packId as PackId | undefined;
-          const creditsAmount = meta.credits ? parseInt(meta.credits) : 0;
-          if (!userId || !packId) {
-            console.warn("[Webhook] Missing userId or packId in metadata");
+          const interval = meta.interval || "monthly";
+          if (!userId) {
+            console.warn("[Webhook] Missing userId in membership metadata");
             return res.json({ received: true });
           }
-          const pack = CREDIT_PACKS.find((p) => p.id === packId);
-          if (!pack) {
-            console.warn("[Webhook] Unknown packId:", packId);
-            return res.json({ received: true });
+          const db = await getDb();
+          if (db) {
+            if (session.customer && typeof session.customer === "string") {
+              await setStripeCustomerId(userId, session.customer);
+            }
+            await db.update(credits)
+              .set({
+                plan: "member" as any,
+                subscriptionStatus: "active",
+                stripeSubscriptionId: (session as any).subscription ?? null,
+                stripeCustomerId: session.customer ?? null,
+              })
+              .where(eq(credits.userId, userId));
+            console.log(`[Webhook] User ${userId} activated as member (${interval})`);
           }
-          if (session.customer && typeof session.customer === "string") {
-            await setStripeCustomerId(userId, session.customer);
-          }
-          await addCredits(
-            userId,
-            creditsAmount,
-            packId as "starter" | "pro" | "unlimited",
-            event.id,
-            `Purchased ${pack.name}: ${pack.description}`
-          );
-          console.log(`[Webhook] Granted ${creditsAmount} credits to user ${userId} (${packId})`);
         }
 
         // ── Artist registration ───────────────────────────────────────────────
@@ -117,7 +115,9 @@ stripeWebhookRouter.post(
           }
         }
 
-        // ── Booking deposit ───────────────────────────────────────────────────
+
+
+        // ── Booking deposit ───────────────────────────────────────────────
         if (eventType === "booking_deposit") {
           const bookingId = meta.bookingId ? parseInt(meta.bookingId) : null;
           const userId = meta.userId ? parseInt(meta.userId) : null;
@@ -158,19 +158,34 @@ stripeWebhookRouter.post(
         }
       }
 
+      // ── Membership renewal ────────────────────────────────────────────────────
+      if (event.type === "invoice.paid") {
+        const invoice = event.data.object as {
+          subscription?: string;
+          customer?: string;
+          billing_reason?: string;
+        };
+        if (invoice.billing_reason === "subscription_cycle" && invoice.customer) {
+          const db = await getDb();
+          if (db) {
+            await db.update(credits)
+              .set({ subscriptionStatus: "active" })
+              .where(eq(credits.stripeCustomerId, invoice.customer));
+            console.log(`[Webhook] Membership renewed for customer ${invoice.customer}`);
+          }
+        }
+      }
+
       if (event.type === "customer.subscription.deleted") {
-        // Downgrade to free plan when subscription is cancelled
-        const subscription = event.data.object as { metadata?: { userId?: string } };
+        const subscription = event.data.object as { customer: string; metadata?: { userId?: string } };
         const userId = subscription.metadata?.userId ? parseInt(subscription.metadata.userId) : null;
         if (userId) {
           const db = await getDb();
           if (db) {
-            // Keep remaining balance, just downgrade plan
-            const userCredits = await getOrCreateCredits(userId);
-            if (userCredits.plan === "unlimited") {
-              const { credits } = await import("../drizzle/schema");
-              await db.update(credits).set({ plan: "free", stripeSubscriptionId: null, subscriptionStatus: "cancelled" }).where(eq(credits.userId, userId));
-            }
+            await db.update(credits)
+              .set({ plan: "free" as any, stripeSubscriptionId: null, subscriptionStatus: "cancelled" })
+              .where(eq(credits.userId, userId));
+            console.log(`[Webhook] User ${userId} downgraded to free (subscription cancelled)`);
           }
         }
       }

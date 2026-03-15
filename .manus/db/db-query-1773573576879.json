@@ -1,0 +1,50 @@
+{
+  "query": "SELECT language, COUNT(*) as count FROM studio_mailing_list GROUP BY language ORDER BY count DESC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 25vRfUBwvHKUCo5.root --database Pa7E4RBX4UbpFBvKpz2nxk --execute SELECT language, COUNT(*) as count FROM studio_mailing_list GROUP BY language ORDER BY count DESC;",
+  "rows": [
+    {
+      "language": "en",
+      "count": "38"
+    },
+    {
+      "language": "he",
+      "count": "10"
+    },
+    {
+      "language": "de",
+      "count": "8"
+    },
+    {
+      "language": "es",
+      "count": "8"
+    },
+    {
+      "language": "it",
+      "count": "7"
+    },
+    {
+      "language": "fr",
+      "count": "7"
+    },
+    {
+      "language": "ja",
+      "count": "6"
+    },
+    {
+      "language": "pt",
+      "count": "6"
+    },
+    {
+      "language": "ko",
+      "count": "5"
+    },
+    {
+      "language": "nl",
+      "count": "5"
+    }
+  ],
+  "messages": [],
+  "stdout": "language\tcount\nen\t38\nhe\t10\nde\t8\nes\t8\nit\t7\nfr\t7\nja\t6\npt\t6\nko\t5\nnl\t5\n",
+  "stderr": "",
+  "execution_time_ms": 1773
+}

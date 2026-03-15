@@ -198,4 +198,287 @@
 - [x] Code pushed to GitHub
 
 ## Tests
-- [x] 24 tests passing (auth, credits, tattoo, outreach, features)
+- [x] 29 tests passing (auth, credits, tattoo, outreach, features, promo, referral)
+
+## Enhanced Promo Code & Referral System
+- [x] DB: Added appliedPromoCode/promoDiscountUsed to users table
+- [x] DB: Added successfulReferrals/bonusCreditsEarned to referral_codes table
+- [x] DB: New referral_tracking table for per-referral audit trail
+- [x] DB: New promo_codes table with discount/bonus/usage fields
+- [x] Backend: promoRouter — validate (public) and applyCode (protected) procedures
+- [x] Backend: Seeded 3 built-in promo codes (TATTOO50, WELCOME25, INKED2025)
+- [x] Backend: Register flow upgraded to use referral_codes + referral_tracking + milestone bonuses
+- [x] Backend: Checkout procedure reads user's applied promo and passes discount to Stripe
+- [x] Backend: createCheckoutSession accepts optional discountPercent
+- [x] Frontend: Referral page rebuilt with milestone progress bar, stats, promo code input, share tools
+- [x] Tests: promo.validate, referral.validate, referral.getMyCode, referral.getStats coverage added
+
+## Admin Promo Code Manager + One-Time Enforcement
+- [x] Backend: admin.promo.list — list all promo codes with usage stats
+- [x] Backend: admin.promo.create — create new promo code
+- [x] Backend: admin.promo.update — toggle active, change discount/bonus/limits
+- [x] Backend: admin.promo.delete — deactivate/remove a promo code
+- [x] Frontend: /admin/promos page — table with create/edit/deactivate actions
+- [x] Backend: Stripe webhook clears appliedPromoCode after checkout.session.completed
+
+## Auth Gating — No Features Without Signup
+- [x] Create ProtectedRoute wrapper component that redirects to /login if not authenticated
+- [x] Gate: Studio (/studio)
+- [x] Gate: My Tatts (/my-tatts)
+- [x] Gate: Drawing Board (/draw)
+- [x] Gate: History (/history)
+- [x] Gate: Gallery (/gallery)
+- [x] Gate: Artists (/artists)
+- [x] Gate: Referral (/referral)
+- [x] Gate: Pricing (/pricing)
+- [x] Gate: Bookings (/bookings)
+- [x] Gate: Subscription (/subscription)
+- [x] Navbar: only show Login, Sign Up, Join as Artist when logged out (hide all other nav items)
+- [x] Leego logo: black background panel, enlarged but tasteful, better visibility in sidebar
+
+## Landing Page CTA + Promo Expiry + Promo Email
+- [x] Landing page: logged-out hero shows Sign Up Free (primary) + Sign In (secondary) CTAs
+- [x] Landing page: logged-in hero keeps Start Designing CTA unchanged
+- [x] Backend: promo.validate checks expiresAt and rejects expired codes
+- [x] Backend: promo.applyCode sends confirmation email via Resend with discount + bonus summary
+- [x] Backend: subscription-router fixed to read from credits table (not users)
+- [x] Backend: subscription checkout uses correct Stripe API (no 'as any' cast)
+- [x] Backend: webhook handles subscription_upgrade event — grants credits + updates plan
+- [x] Backend: sendPromoConfirmationEmail added to emailService
+
+## Full Stripe Setup (Live Keys)
+- [ ] Create Stripe products: Starter Credits, Pro Credits, Unlimited Credits, Pro Subscription, Studio Subscription, Artist Directory Fee
+- [ ] Create Stripe prices: one-time for credit packs, recurring monthly for subscriptions, one-time for artist fee
+- [ ] Store price IDs in products.ts / env
+- [ ] Fix credit pack checkout to use Stripe price IDs (not manual amount)
+- [ ] Fix subscription checkout to use recurring price IDs
+- [ ] Fix artist signup checkout to use price ID
+- [ ] Fix booking deposit checkout (dynamic amount stays as-is)
+- [ ] Fix webhook: handle customer.subscription.updated for plan changes
+- [ ] Fix payment success page: show plan-specific message based on ?type= param
+- [ ] End-to-end test all payment flows with live keys
+
+## Credit & Membership Sync
+- [ ] Create Stripe products and prices via API script
+- [ ] Store price IDs in server/products.ts
+- [ ] Credit packs use Stripe price IDs (not price_data)
+- [ ] Subscription plans use recurring price IDs
+- [ ] Artist fee uses price ID
+- [ ] Webhook handles all event types correctly
+- [ ] Plan field stays in sync with subscription status
+- [ ] Monthly credit refresh on subscription renewal
+- [ ] Payment success page shows plan-specific message
+- [ ] UI: credits badge shows balance + plan tier
+
+## Credit & Membership Sync Audit
+- [ ] Audit: signup free credits (amount correct?)
+- [ ] Audit: credit pack purchase webhook awards correct amount
+- [ ] Audit: subscription upgrade awards correct monthly credits
+- [ ] Audit: generation deducts exactly 1 credit (or correct amount per action)
+- [ ] Audit: video generation deducts 5 credits
+- [ ] Audit: referral bonus credits awarded correctly
+- [ ] Audit: promo bonus credits awarded correctly
+- [ ] Audit: subscription cancellation does NOT wipe remaining balance
+- [ ] Audit: plan field on credits table stays in sync with subscription status
+- [ ] Fix: subscription monthly credit refresh (cron or webhook trigger)
+- [ ] Fix: plan limits enforced in generation gate (free=5/mo, pro=50/mo, studio=200/mo vs balance)
+- [ ] UI: credits badge shows balance + plan tier
+- [ ] UI: pricing page shows correct credit amounts per tier
+
+## Credit & Membership Sync (Full Audit Pass)
+- [x] DB: credits table was missing plan/stripeCustomerId/stripeSubscriptionId/subscriptionStatus — migrated
+- [x] DB: credits schema updated to include studio plan enum value
+- [x] DB: subscription data synced from subscriptions table to credits table
+- [x] Backend: signup grants 500 free credits (getOrCreateCredits)
+- [x] Backend: credit pack webhook awards correct amount from metadata
+- [x] Backend: subscription upgrade grants pro=50 / studio=200 credits + sets plan
+- [x] Backend: generation deducts 1 credit; unlimited plan bypasses gate
+- [x] Backend: subscription cancellation keeps remaining balance, downgrades plan to free
+- [x] Backend: all checkout success_urls pass ?type= and ?plan= or ?pack= params
+- [x] Backend: booking and artist success_url points to /payment-success with correct type
+- [x] Frontend: PaymentSuccess page shows plan-specific messages (subscription/artist/booking/credits)
+- [x] Frontend: subscription page uses monthlyCredits from products.ts
+
+## Monthly Credit Refresh + Credit Usage Page
+- [x] Backend: invoice.paid webhook handler — top up credits on subscription renewal (pro=50, studio=200)
+- [x] Backend: invoice.paid handler sets plan and subscriptionStatus in credits table
+- [x] Frontend: /credits page — transaction history table (date, action, amount, running balance)
+- [x] Frontend: /credits page — summary card (current balance, plan, lifetime total)
+- [x] Frontend: /credits page — link from sidebar credits badge (badge now links to /credits)
+- [x] Navigation: Credits badge links to /credits; plan tier shown in badge
+
+## Low-Credit Alert + Admin Gift Credits + Stripe Portal
+- [ ] Backend: sendLowCreditAlert email in emailService.ts
+- [ ] Backend: deductCredit triggers low-credit email when balance drops below 5
+- [ ] Backend: admin.giftCredits procedure (userId, amount, reason)
+- [ ] Frontend: Admin Panel — Gift Credits dialog (user search by email, amount, reason)
+- [ ] Backend: credits.createPortalSession procedure — creates Stripe billing portal session
+- [ ] Frontend: Credits page — "Manage Subscription" button opens Stripe portal
+- [ ] Frontend: Subscription page — "Manage Subscription" button opens Stripe portal
+
+## Low-Credit Alert + Admin Gift Credits + Stripe Portal
+- [x] Backend: sendLowCreditAlert email function added to emailService.ts
+- [x] Backend: deductCredit fires low-credit alert when balance drops below 5
+- [x] Backend: admin.giftCredits procedure — gift credits to user by email
+- [x] Admin UI: Gift Credits tab with email input, amount, reason, and 6 quick presets
+- [x] Frontend: Credits page — Manage Subscription button opens Stripe portal for paid users
+- [x] Frontend: Subscription page already had portal button (confirmed working)
+- [x] Fix: emailService.ts box-drawing UTF-8 chars replaced with plain ASCII (esbuild error resolved)
+
+## Auth Gate Bug Fix
+- [ ] Bug: All features accessible without login — ProtectedRoute not blocking unauthenticated users
+- [ ] Fix: Diagnose ProtectedRoute component and App.tsx routing
+- [ ] Fix: Ensure redirect to /login for all protected routes when not authenticated
+
+## Auth Gate + Logo Fix (Round 2)
+- [x] Bug: ProtectedRoute allows access when auth.me returns null (loading=false, user=null)
+- [x] Fix: ProtectedRoute now uses <Redirect> (synchronous) instead of useEffect — no content flash
+- [x] Fix: Home / route is now protected — unauthenticated users redirected to /login immediately
+- [x] Fix: Navbar shows ONLY Login, Sign Up, Join as Artist when logged out (no other nav items)
+- [x] Fix: Leego logo enlarged to w-36 h-36 with solid black rounded panel in both logged-in and logged-out sidebar
+
+## Artist Profile System + Team Tier
+- [x] DB: Extend artists table with photo, address, phone, businessHours, bio, specialties, instagram, website, isVerified, teamId
+- [x] DB: New artist_teams table (id, ownerId, name, studioName, plan, memberCount, stripeCustomerId, stripeSubscriptionId)
+- [x] DB: New artist_team_members table (teamId, artistId, role: owner/member, joinedAt)
+- [ ] DB: Stripe: add Team plan to products.ts (monthly recurring, up to 10 artists)
+- [x] Backend: artist.getById — public, returns full profile with team members
+- [x] Backend: artist.list — public, returns all verified artists with name/country/location/specialty filters
+- [x] Backend: team.create — protected, creates team + sets owner
+- [x] Backend: team.getMembers — protected owner
+- [x] Frontend: /artist-signup — 5-step form (profile, location, portfolio, hours/pricing, payment)
+- [x] Frontend: /artists/:id — full public profile page (photo, bio, specialties, hours, location, portfolio, team, booking CTA)
+- [x] Frontend: /artists — listing with profile photos, specialties, location, link to profile
+
+## Artist Profile + Search System
+- [x] Backend: artists.list supports name search (partial match on name field)
+- [x] Backend: artists.list supports country filter
+- [x] Frontend: Artists page — name search bar
+- [x] Frontend: Artists page — country dropdown filter
+- [x] Frontend: Artists page — artist cards link to /artists/:id
+- [x] Frontend: ArtistProfile page (/artists/:id) — full public profile with photo, bio, hours, portfolio, team info, book button
+- [x] Frontend: ArtistSignup — 5-step form with photo, address, phone, hours, team option
+- [x] Frontend: App.tsx — add /artists/:id route
+
+## Studio Mailing List System
+- [x] DB: studio_mailing_list table (100 studios seeded with researched emails)
+- [x] DB: weekly_ad_sends table (tracks per-studio weekly send history)
+- [x] DB: info_pack_attachments table (stores uploaded PDF info packs per language)
+- [x] Email research: 76/100 emails found, 2 studios closed, 22 no email found
+- [x] Backend: mailingList.list — admin, filter by country/email status/info pack status/search
+- [x] Backend: mailingList.stats — summary counts
+- [x] Backend: mailingList.updateEmail — update email + status
+- [x] Backend: mailingList.delete — remove studio from list
+- [x] Backend: mailingList.add — add studio manually
+- [x] Backend: mailingList.sendInfoPack — send AI-generated multilingual info pack to single studio
+- [x] Backend: mailingList.sendInfoPackBatch — send to all eligible studios at once
+- [x] Backend: mailingList.sendWeeklyAd — AI-generated picture ad to all opted-in studios
+- [x] Backend: mailingList.previewInfoPack — preview without sending
+- [x] Backend: mailingList.previewWeeklyAd — preview with AI image without sending
+- [x] Backend: GET /api/unsubscribe/:token — one-click unsubscribe endpoint (GDPR/CAN-SPAM)
+- [x] Frontend: /mailing-list — admin page with Contacts, Send Campaigns, Preview tabs
+- [x] Frontend: Navbar — Mailing List link in admin section
+- [x] Email: unsubscribe footer on all outreach emails
+
+## Send Design to Artist Feature
+- [x] Backend: tattoo.sendDesignToArtist procedure — sends print-ready design email to artist/studio
+- [x] Backend: Professional HTML email template with design image, print specs table, body placement, style, booking details
+- [x] Frontend: "Send to Artist" button on My Tatts cards and design complete screen
+- [x] Frontend: Artist picker dialog (search by name/country from directory)
+- [x] Frontend: Booking details form (preferred date, contact info, notes)
+- [x] Frontend: Success confirmation toast after send
+
+## Booking Notification & Appointment Scheduler
+- [x] DB: artist_availability table (date, timeSlot, isBooked)
+- [x] DB: in_app_notifications table (userId, title, body, type, isRead, link)
+- [x] DB: bookings table extended with declineReason, nextAvailableDate, alternativeArtistIds
+- [x] Backend: booking.request — user sends booking request to artist
+- [x] Backend: booking.confirm — artist confirms booking, marks slot as booked
+- [x] Backend: booking.decline — artist declines with reason + next available date
+- [x] Backend: booking.artistInbox — artist sees all pending/confirmed bookings
+- [x] Backend: booking.myBookings — user sees all their bookings
+- [x] Backend: availability.setSlots — artist sets available dates
+- [x] Backend: availability.removeSlot — artist removes a slot
+- [x] Backend: availability.mySlots — artist views own slots
+- [x] Backend: availability.getSlots — public, get artist open slots
+- [x] Backend: notifications.list / unreadCount / markRead / markAllRead
+- [x] Frontend: /artist-dashboard — booking inbox (Accept/Decline), availability calendar, notification bell
+- [x] Frontend: /my-bookings — user booking status, declined reason + next date + rebook + alternative artists
+- [x] Frontend: Navbar — My Bookings + Artist Dashboard links
+- [x] Email: booking request email to artist, confirmation/decline email to user
+- [x] Theme: tattoo studio aesthetic (crimson red, aged gold, Bebas Neue, noise texture)
+
+## Mailing List Expansion — AU/NZ Studios
+- [x] Add 14 Australian studios to studio_mailing_list
+- [x] Add 10 New Zealand studios to studio_mailing_list
+- [ ] Send English info pack to all 24 new studios (pending — use Mailing List admin page)
+
+## Auth Persistence Audit & Fix
+- [ ] Audit: signup saves name, email, password hash to users table
+- [ ] Audit: session cookie is persistent (maxAge set, not session-only)
+- [ ] Audit: auth.me returns correct user after page refresh
+- [ ] Fix: any gaps in session persistence or user data storage
+
+## New Business Model — Freemium + Booking Fee
+- [ ] Remove credit system from products.ts, UI, and generation gate
+- [ ] Add user membership: $10/mo or $99/yr Stripe recurring price IDs
+- [ ] Auth gate: free users can browse/design limited; members get full access + booking
+- [ ] Stripe webhook: handle membership subscription events (grant/revoke access)
+- [ ] Booking flow: user sends request (details + tattoo image + preferred date + body area)
+- [ ] Booking flow: artist receives request, sends back quote + available time slots
+- [ ] Booking flow: user reviews quote, selects slot, pays 13% booking fee via Stripe
+- [ ] Booking flow: on payment success, confirm booking to artist with locked slot
+- [ ] Booking flow: if artist unavailable, user gets next date + alternative artist option
+- [ ] Email notifications for all booking events (request, quote, payment, confirmation, decline)
+- [ ] PWA manifest + service worker for iOS/Android home screen install
+- [ ] Mobile-responsive polish across all pages
+- [ ] Update Pricing page to reflect new model (remove credits, show membership)
+- [ ] Update Subscription page to reflect new model
+- [ ] Keep $29/yr artist directory listing fee (unchanged)
+- [ ] AU/NZ studios: insert 24 studios into DB and send English info pack
+
+## Terms & Conditions Page
+- [ ] Frontend: /terms page with full T&C covering platform liability, AI art disclaimers, tattoo outcome responsibility
+- [ ] T&C: AI-generated designs are for reference only — quality of final tattoo is solely the responsibility of artist and client
+- [ ] T&C: Platform not liable for misuse of designs, copyright claims, or health outcomes
+- [ ] T&C: Booking fee is non-refundable once artist confirms slot
+- [ ] T&C: Artist membership and user membership terms
+- [ ] Footer: Link to /terms on all pages
+- [ ] Signup: Checkbox "I agree to Terms & Conditions" required before account creation
+
+## Business Model Restructuring
+- [ ] Rebuild products.ts: single user membership
+- [ ] Rebuild stripe.ts: membership checkout
+- [ ] Rebuild subscription-router: monthly/yearly intervals
+- [ ] Update Pricing page: single tier
+- [ ] Landing Page Overhaul: hero, how-it-works, value props, pricing preview
+- [ ] Quote/Booking Fee System: artist quote, user accepts, 13% Stripe fee
+- [ ] Terms and Conditions page
+- [ ] PWA manifest for iOS/Android
+
+## Business Model Restructure + Landing Page Overhaul (Mar 2026)
+- [x] Business model: remove credit packs, replace with $10/mo or $99/yr membership
+- [x] stripe.ts: rewritten — USER_MEMBERSHIP (monthly/yearly), ARTIST_LISTING, createBookingFeeSession
+- [x] stripeWebhook.ts: rewritten — membership + booking_fee handlers, no credit packs
+- [x] subscription-router.ts: rewritten — single membership tier, getPlans, createCheckout, portal
+- [x] Pricing.tsx: rewritten — single membership tier, monthly/yearly toggle, no credit pack UI
+- [x] Landing page (Home.tsx): global positioning, realistic 2026 social proof stats, how-it-works, country flags, artist CTA
+- [x] index.html: full SEO meta tags (OG, Twitter Card, keywords, description), PWA manifest link
+- [x] manifest.json: PWA manifest for iOS/Android home screen install
+- [x] Blog seed data: replaced Archibald Titan cybersecurity content with 10 tattoo SEO articles
+- [x] Blog seed: wired into server startup, 10 posts inserted into database
+- [x] Blog/SEO/content server files retargeted from Archibald Titan to tattooo.shop
+- [x] marketingBudgets table: added to schema.ts and database
+- [x] quote_sent status: added to bookings enum in schema and database
+- [x] Booking flow: sendQuote procedure (artist sends total quote + multi-session flag + 13% fee calc)
+- [x] Booking flow: acceptQuote procedure (client accepts → Stripe checkout for 13% platform fee)
+- [x] ArtistDashboard.tsx: Send Quote button + dialog with multi-session checkbox
+- [x] MyBookings.tsx: Quote review card with Accept Quote button and Stripe redirect
+- [x] Bookings.tsx: quote_sent status badge added to STATUS_CONFIG
+- [x] TermsPage.tsx: rewritten for tattooo.shop with AI art and tattoo outcome disclaimers
+- [x] AccountSettings.tsx: removed AT-specific identityProviders/userSecrets/TwoFactorSetup sections
+- [x] BlogPage.tsx: retargeted from Archibald Titan to tattooo.shop
+- [x] App.tsx: blog, SEO, content creator, terms, account-settings routes wired
+- [x] Ad creatives: 8 images generated (Instagram ads, artist recruitment, styles showcase, affiliate referral)
+- [x] features.test.ts: updated credits.packs tests → subscription.getPlans tests
+- [x] Tests: 29/29 passing

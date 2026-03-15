@@ -1,0 +1,58 @@
+{
+  "query": "SELECT COUNT(*) as total FROM blog_posts;\nSELECT id, slug, blog_title, blog_status FROM blog_posts ORDER BY id DESC LIMIT 25;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 25vRfUBwvHKUCo5.root --database Pa7E4RBX4UbpFBvKpz2nxk --execute SELECT COUNT(*) as total FROM blog_posts;\nSELECT id, slug, blog_title, blog_status FROM blog_posts ORDER BY id DESC LIMIT 25;",
+  "rows": [
+    {
+      "total": "14"
+    },
+    {
+      "total": "id\tslug\tblog_title\tblog_status"
+    },
+    {
+      "total": "14\thow-to-choose-tattoo-artist-for-your-style\tHow to Choose the Right Tattoo Artist for Your Style: A Comprehensive Guide\tpublished"
+    },
+    {
+      "total": "13\ttattoo-cover-up-ideas-fix-regret\tTattoo Cover-Up Ideas: Transform Regret into a Masterpiece\tpublished"
+    },
+    {
+      "total": "12\tai-tattoo-design-revolution-2026\tBeyond the Sketchbook: How AI is Revolutionizing Tattoo Design in 2026\tpublished"
+    },
+    {
+      "total": "11\tjapanese-tattoo-meaning-symbolism-history-design-guide\tUnveiling the Depths: Japanese Tattoo Meaning, Symbolism, History & Design Guide\tpublished"
+    },
+    {
+      "total": "10\ttattoo-pricing-explained\tTattoo Pricing Explained: What You're Actually Paying For\tpublished"
+    },
+    {
+      "total": "9\ttattoo-appointment-preparation\tHow to Prepare for Your Tattoo Appointment: The Night-Before Checklist\tpublished"
+    },
+    {
+      "total": "8\tjapanese-tattoo-irezumi-guide\tJapanese Tattoo (Irezumi): A Complete Style Guide\tpublished"
+    },
+    {
+      "total": "7\ttattoo-removal-guide-2026\tThe Complete Guide to Tattoo Removal: What Actually Works in 2026\tpublished"
+    },
+    {
+      "total": "6\ttattoo-artists-global-platforms\tWhy Tattoo Artists Are Joining Global Platforms (And What It Means for You)\tpublished"
+    },
+    {
+      "total": "5\ttattoo-placement-guide\tTattoo Placement Guide: Where to Get Your First, Second, and Third Tattoo\tpublished"
+    },
+    {
+      "total": "4\ttattoo-aftercare-complete-guide\tTattoo Aftercare: The Complete Guide to Healing Your New Ink\tpublished"
+    },
+    {
+      "total": "3\thow-to-find-tattoo-artist-worldwide\tHow to Find a Tattoo Artist Anywhere in the World (Without Getting Burned)\tpublished"
+    },
+    {
+      "total": "2\tpopular-tattoo-styles-2026\tThe 10 Most Popular Tattoo Styles in 2026 (And How to Choose Yours)\tpublished"
+    },
+    {
+      "total": "1\tai-tattoo-design-2026\tHow AI Tattoo Design Is Changing the Way People Get Inked in 2026\tpublished"
+    }
+  ],
+  "messages": [],
+  "stdout": "total\n14\nid\tslug\tblog_title\tblog_status\n14\thow-to-choose-tattoo-artist-for-your-style\tHow to Choose the Right Tattoo Artist for Your Style: A Comprehensive Guide\tpublished\n13\ttattoo-cover-up-ideas-fix-regret\tTattoo Cover-Up Ideas: Transform Regret into a Masterpiece\tpublished\n12\tai-tattoo-design-revolution-2026\tBeyond the Sketchbook: How AI is Revolutionizing Tattoo Design in 2026\tpublished\n11\tjapanese-tattoo-meaning-symbolism-history-design-guide\tUnveiling the Depths: Japanese Tattoo Meaning, Symbolism, History & Design Guide\tpublished\n10\ttattoo-pricing-explained\tTattoo Pricing Explained: What You're Actually Paying For\tpublished\n9\ttattoo-appointment-preparation\tHow to Prepare for Your Tattoo Appointment: The Night-Before Checklist\tpublished\n8\tjapanese-tattoo-irezumi-guide\tJapanese Tattoo (Irezumi): A Complete Style Guide\tpublished\n7\ttattoo-removal-guide-2026\tThe Complete Guide to Tattoo Removal: What Actually Works in 2026\tpublished\n6\ttattoo-artists-global-platforms\tWhy Tattoo Artists Are Joining Global Platforms (And What It Means for You)\tpublished\n5\ttattoo-placement-guide\tTattoo Placement Guide: Where to Get Your First, Second, and Third Tattoo\tpublished\n4\ttattoo-aftercare-complete-guide\tTattoo Aftercare: The Complete Guide to Healing Your New Ink\tpublished\n3\thow-to-find-tattoo-artist-worldwide\tHow to Find a Tattoo Artist Anywhere in the World (Without Getting Burned)\tpublished\n2\tpopular-tattoo-styles-2026\tThe 10 Most Popular Tattoo Styles in 2026 (And How to Choose Yours)\tpublished\n1\tai-tattoo-design-2026\tHow AI Tattoo Design Is Changing the Way People Get Inked in 2026\tpublished\n",
+  "stderr": "",
+  "execution_time_ms": 1931
+}

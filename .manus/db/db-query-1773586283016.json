@@ -1,0 +1,9 @@
+{
+  "query": "\nALTER TABLE bookings\n  ADD COLUMN quotedAmountCents INT NULL COMMENT 'Artist quote in cents (e.g. 150000 = $1500)',\n  ADD COLUMN platformFeeCents INT NULL COMMENT '13% platform fee in cents',\n  ADD COLUMN quoteMessage TEXT NULL COMMENT 'Artist message with the quote',\n  ADD COLUMN isMultiSession TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'True if piece requires multiple sessions',\n  ADD COLUMN quoteStripeSessionId VARCHAR(256) NULL COMMENT 'Stripe checkout session for the platform fee',\n  ADD COLUMN quoteAcceptedAt TIMESTAMP NULL COMMENT 'When client accepted the quote and paid';\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 25vRfUBwvHKUCo5.root --database Pa7E4RBX4UbpFBvKpz2nxk --execute \nALTER TABLE bookings\n  ADD COLUMN quotedAmountCents INT NULL COMMENT 'Artist quote in cents (e.g. 150000 = $1500)',\n  ADD COLUMN platformFeeCents INT NULL COMMENT '13% platform fee in cents',\n  ADD COLUMN quoteMessage TEXT NULL COMMENT 'Artist message with the quote',\n  ADD COLUMN isMultiSession TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'True if piece requires multiple sessions',\n  ADD COLUMN quoteStripeSessionId VARCHAR(256) NULL COMMENT 'Stripe checkout session for the platform fee',\n  ADD COLUMN quoteAcceptedAt TIMESTAMP NULL COMMENT 'When client accepted the quote and paid';\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 5233
+}

@@ -68,31 +68,26 @@ describe("auth.logout", () => {
 
 // ─── Credits Router Tests ─────────────────────────────────────────────────────
 
-describe("credits.packs", () => {
-  it("returns the available credit packs", async () => {
+describe("subscription.getPlans", () => {
+  it("returns the membership plan object with monthly and yearly options", async () => {
     const ctx = makeCtx();
     const caller = appRouter.createCaller(ctx);
-    const packs = await caller.credits.packs();
+    const plans = await caller.subscription.getPlans();
 
-    expect(Array.isArray(packs)).toBe(true);
-    expect(packs.length).toBeGreaterThan(0);
-
-    const pack = packs[0];
-    expect(pack).toHaveProperty("id");
-    expect(pack).toHaveProperty("name");
-    expect(pack).toHaveProperty("credits");
-    expect(pack).toHaveProperty("price");
+    expect(plans).toHaveProperty("monthly");
+    expect(plans).toHaveProperty("yearly");
+    expect(plans).toHaveProperty("features");
   });
 
-  it("includes starter, pro, and unlimited packs", async () => {
+  it("monthly and yearly plans have name and price", async () => {
     const ctx = makeCtx();
     const caller = appRouter.createCaller(ctx);
-    const packs = await caller.credits.packs();
-    const ids = packs.map((p) => p.id);
+    const plans = await caller.subscription.getPlans();
 
-    expect(ids).toContain("starter");
-    expect(ids).toContain("pro");
-    expect(ids).toContain("unlimited");
+    expect(plans.monthly).toHaveProperty("name");
+    expect(plans.monthly).toHaveProperty("price");
+    expect(plans.yearly).toHaveProperty("name");
+    expect(plans.yearly).toHaveProperty("price");
   });
 });
 
@@ -137,6 +132,55 @@ describe("myTatts.delete", () => {
     const caller = appRouter.createCaller(ctx);
 
     await expect(caller.myTatts.delete({ id: 1 })).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+  });
+});
+
+// ─── Promo Code Tests ─────────────────────────────────────────────────────────
+
+describe("promo.validate", () => {
+  it("returns valid=false for unknown promo code", async () => {
+    const ctx = makeCtx();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.promo.validate({ code: "NOTACODE" });
+    expect(result.valid).toBe(false);
+  });
+
+  it("returns a boolean valid field for any code", async () => {
+    const ctx = makeCtx();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.promo.validate({ code: "TATTOO50" });
+    expect(typeof result.valid).toBe("boolean");
+  });
+});
+
+// ─── Referral Tests ───────────────────────────────────────────────────────────
+
+describe("referral.validate", () => {
+  it("returns valid=false for unknown referral code", async () => {
+    const ctx = makeCtx();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.referral.validate({ code: "NOTACODE" });
+    expect(result.valid).toBe(false);
+  });
+});
+
+describe("referral.getMyCode", () => {
+  it("throws UNAUTHORIZED when called without auth", async () => {
+    const ctx = makeCtx();
+    const caller = appRouter.createCaller(ctx);
+    await expect(caller.referral.getMyCode()).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+  });
+});
+
+describe("referral.getStats", () => {
+  it("throws UNAUTHORIZED when called without auth", async () => {
+    const ctx = makeCtx();
+    const caller = appRouter.createCaller(ctx);
+    await expect(caller.referral.getStats()).rejects.toMatchObject({
       code: "UNAUTHORIZED",
     });
   });

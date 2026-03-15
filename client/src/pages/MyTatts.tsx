@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -16,13 +16,26 @@ import {
   LogIn,
   ImageOff,
   Share2,
-  Copy,
   Film,
   Loader2,
   Play,
+  Send,
+  Search,
+  MapPin,
+  User,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 type Design = {
   id: number;
@@ -39,12 +52,32 @@ type Design = {
   createdAt: Date;
 };
 
+type Artist = {
+  id: number;
+  name: string;
+  location?: string | null;
+  city?: string | null;
+  country?: string | null;
+  contactEmail?: string | null;
+  specialties?: string | null;
+  profilePhotoUrl?: string | null;
+};
+
 export default function MyTatts() {
   const { user, isAuthenticated, loading } = useAuth();
   const [, navigate] = useLocation();
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
+
+  // Send to Artist state
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [sendDesign, setSendDesign] = useState<Design | null>(null);
+  const [artistSearch, setArtistSearch] = useState("");
+  const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [preferredDate, setPreferredDate] = useState("");
+  const [notes, setNotes] = useState("");
 
   const { data: designs, isLoading, refetch } = trpc.myTatts.list.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -87,6 +120,25 @@ export default function MyTatts() {
       void refetch();
     },
     onError: () => toast.error("Failed to rename design"),
+  });
+
+  const sendDesignMutation = trpc.sendDesign.send.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Design sent to ${data.artistName}! They'll receive it at ${data.artistEmail}.`);
+      setSendDialogOpen(false);
+      setSendDesign(null);
+      setSelectedArtist(null);
+      setCustomerPhone("");
+      setPreferredDate("");
+      setNotes("");
+    },
+    onError: (err) => toast.error(err.message || "Failed to send design."),
+  });
+
+  // Artist search query
+  const artistSearchInput = useMemo(() => ({ name: artistSearch || undefined, limit: 20 }), [artistSearch]);
+  const { data: artistResults } = trpc.artists.list.useQuery(artistSearchInput, {
+    enabled: sendDialogOpen,
   });
 
   const handleDownload = async (design: Design) => {
@@ -150,6 +202,27 @@ export default function MyTatts() {
     navigate(`/draw?image=${url}&id=${design.id}`);
   };
 
+  const openSendDialog = useCallback((design: Design) => {
+    setSendDesign(design);
+    setSelectedArtist(null);
+    setArtistSearch("");
+    setCustomerPhone("");
+    setPreferredDate("");
+    setNotes("");
+    setSendDialogOpen(true);
+  }, []);
+
+  const handleSendToArtist = () => {
+    if (!sendDesign || !selectedArtist) return;
+    sendDesignMutation.mutate({
+      generationId: sendDesign.id,
+      artistId: selectedArtist.id,
+      customerPhone: customerPhone || undefined,
+      preferredDate: preferredDate || undefined,
+      notes: notes || undefined,
+    });
+  };
+
   // ── Auth gate ──────────────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -164,98 +237,74 @@ export default function MyTatts() {
       <div className="flex-1 flex flex-col items-center justify-center min-h-screen gap-6 px-4">
         <BookMarked size={48} className="text-primary/40" />
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-foreground mb-2">Your Personal Collection</h2>
-          <p className="text-muted-foreground max-w-sm">
-            Sign in to save and manage all your AI-generated tattoo designs in one place.
+          <h2 className="text-xl font-bold mb-2">Your Saved Designs</h2>
+          <p className="text-muted-foreground text-sm max-w-xs">
+            Sign in to view and manage all your AI-generated tattoo designs.
           </p>
         </div>
-        <Button
-          onClick={() => navigate("/login")}
-          className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
-        >
-          <LogIn size={16} />
-          Sign In to View My Tatts
-        </Button>
+        <Link href="/login">
+          <Button className="gap-2">
+            <LogIn size={16} /> Sign In
+          </Button>
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 overflow-y-auto">
-      {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border/30 px-4 sm:px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-              <BookMarked size={18} className="text-primary" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-foreground">My Tatts</h1>
-              <p className="text-xs text-muted-foreground">
-                {user?.name ? `${user.name}'s collection` : "Your saved designs"}
-                {designs ? ` · ${designs.length} design${designs.length !== 1 ? "s" : ""}` : ""}
-              </p>
-            </div>
+    <div className="flex-1 flex flex-col min-h-screen">
+      <div className="container py-8 max-w-6xl">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <BookMarked size={22} className="text-primary" />
+              My Designs
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              {designs?.length ?? 0} saved design{designs?.length !== 1 ? "s" : ""}
+            </p>
           </div>
           <Link href="/studio">
-            <Button size="sm" className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
-              <Sparkles size={14} />
-              <span className="hidden sm:inline">New Design</span>
-              <span className="sm:hidden">New</span>
+            <Button className="gap-2">
+              <Sparkles size={16} /> New Design
             </Button>
           </Link>
         </div>
-      </div>
 
-      {/* ── Content ─────────────────────────────────────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+        {/* Content */}
         {isLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {Array.from({ length: 10 }).map((_, i) => (
-              <div key={i} className="rounded-2xl bg-card/50 border border-border/20 overflow-hidden animate-pulse">
-                <div className="aspect-square bg-muted/30" />
-                <div className="p-3 space-y-2">
-                  <div className="h-3 bg-muted/30 rounded w-3/4" />
-                  <div className="h-3 bg-muted/20 rounded w-1/2" />
-                </div>
-              </div>
+              <div key={i} className="aspect-square rounded-xl bg-muted/30 animate-pulse" />
             ))}
           </div>
-        ) : !designs || designs.length === 0 ? (
-          // ── Empty state ────────────────────────────────────────────────────
-          <div className="flex flex-col items-center justify-center py-24 gap-6">
-            <div className="w-20 h-20 rounded-full bg-card/50 border border-border/20 flex items-center justify-center">
-              <ImageOff size={32} className="text-muted-foreground/40" />
-            </div>
-            <div className="text-center">
-              <h3 className="text-xl font-semibold text-foreground mb-2">No designs yet</h3>
-              <p className="text-muted-foreground max-w-sm">
-                Head to the Studio, describe your tattoo idea, and your designs will appear here automatically.
-              </p>
-            </div>
+        ) : !designs?.length ? (
+          <div className="flex flex-col items-center justify-center py-24 gap-4">
+            <ImageOff size={48} className="text-muted-foreground/30" />
+            <p className="text-muted-foreground text-sm">No designs yet</p>
             <Link href="/studio">
-              <Button className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
-                <Sparkles size={16} />
-                Start Designing
+              <Button variant="outline" className="gap-2">
+                <Sparkles size={14} /> Create your first design
               </Button>
             </Link>
           </div>
         ) : (
-          // ── Gallery grid ───────────────────────────────────────────────────
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {(designs as Design[]).map((design) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {designs.map((design) => (
               <div
                 key={design.id}
-                className="group rounded-2xl bg-card/50 border border-border/20 overflow-hidden hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200"
+                className="group relative rounded-xl overflow-hidden border border-border/20 bg-card hover:border-primary/30 transition-all duration-200 hover:shadow-lg hover:shadow-primary/5"
               >
-                {/* ── Image ─────────────────────────────────────────────── */}
+                {/* Image */}
                 <div className="relative aspect-square overflow-hidden bg-muted/20">
                   <img
-                    src={design.imageUrl}
+                    src={design.printImageUrl || design.imageUrl}
                     alt={design.nickname || design.userPrompt}
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                     loading="lazy"
                   />
+
                   {/* Hover overlay with action buttons */}
                   <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center gap-2 p-2">
                     <Button
@@ -278,6 +327,14 @@ export default function MyTatts() {
                       className="w-full gap-1.5 bg-primary/80 hover:bg-primary text-white text-xs h-8"
                     >
                       <PenTool size={12} /> Edit in Board
+                    </Button>
+                    {/* Send to Artist */}
+                    <Button
+                      size="sm"
+                      onClick={() => openSendDialog(design)}
+                      className="w-full gap-1.5 bg-cyan-500/80 hover:bg-cyan-500 text-white text-xs h-8"
+                    >
+                      <Send size={12} /> Send to Artist
                     </Button>
                     <Button
                       size="sm"
@@ -426,6 +483,186 @@ export default function MyTatts() {
           </div>
         )}
       </div>
+
+      {/* ── Send to Artist Dialog ─────────────────────────────────────────────── */}
+      <Dialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send size={18} className="text-cyan-400" />
+              Send Design to Artist
+            </DialogTitle>
+            <DialogDescription>
+              Your design will be emailed directly to the artist with print-ready specs, placement, and your booking details so they can prepare for your appointment.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-5 pt-2">
+            {/* Design preview */}
+            {sendDesign && (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/20 border border-border/20">
+                <img
+                  src={sendDesign.printImageUrl || sendDesign.imageUrl}
+                  alt="Design"
+                  className="w-14 h-14 rounded-lg object-cover border border-border/30 shrink-0"
+                />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{sendDesign.nickname || sendDesign.userPrompt.slice(0, 50)}</p>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {sendDesign.style && <span className="text-[10px] text-primary">{sendDesign.style}</span>}
+                    {sendDesign.bodyPlacement && <span className="text-[10px] text-muted-foreground">· {sendDesign.bodyPlacement}</span>}
+                    {sendDesign.sizeLabel && <span className="text-[10px] text-muted-foreground">· {sendDesign.sizeLabel}</span>}
+                    {sendDesign.sizeInCm && <span className="text-[10px] text-muted-foreground">({sendDesign.sizeInCm})</span>}
+                  </div>
+                  {sendDesign.printSpec && (
+                    <p className="text-[10px] text-primary/60 font-mono mt-0.5">{sendDesign.printSpec}</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Artist search */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Choose Artist or Studio</Label>
+              {selectedArtist ? (
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-cyan-500/10 border border-cyan-500/30">
+                  {selectedArtist.profilePhotoUrl ? (
+                    <img src={selectedArtist.profilePhotoUrl} alt={selectedArtist.name} className="w-10 h-10 rounded-full object-cover shrink-0" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0">
+                      <User size={16} className="text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold">{selectedArtist.name}</p>
+                    {(selectedArtist.city || selectedArtist.country) && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <MapPin size={10} />
+                        {[selectedArtist.city, selectedArtist.country].filter(Boolean).join(", ")}
+                      </p>
+                    )}
+                    {selectedArtist.contactEmail && (
+                      <p className="text-[10px] text-cyan-400/70">{selectedArtist.contactEmail}</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setSelectedArtist(null)}
+                    className="shrink-0 p-1 text-muted-foreground hover:text-foreground"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by artist or studio name…"
+                      value={artistSearch}
+                      onChange={(e) => setArtistSearch(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  {artistResults && artistResults.length > 0 && (
+                    <div className="max-h-48 overflow-y-auto rounded-lg border border-border/30 divide-y divide-border/20">
+                      {artistResults.map((a) => (
+                        <button
+                          key={a.id}
+                          onClick={() => setSelectedArtist(a)}
+                          className="w-full flex items-center gap-3 p-3 hover:bg-muted/30 transition-colors text-left"
+                        >
+                          {a.profilePhotoUrl ? (
+                            <img src={a.profilePhotoUrl} alt={a.name} className="w-8 h-8 rounded-full object-cover shrink-0" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+                              <User size={12} className="text-muted-foreground" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium">{a.name}</p>
+                            {(a.city || a.country) && (
+                              <p className="text-xs text-muted-foreground">
+                                {[a.city, a.country].filter(Boolean).join(", ")}
+                              </p>
+                            )}
+                            {!a.contactEmail && (
+                              <p className="text-[10px] text-amber-400/70">No email on file</p>
+                            )}
+                          </div>
+                          {a.contactEmail && <Check size={12} className="text-cyan-400 shrink-0" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {artistSearch && artistResults?.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-4">
+                      No artists found. Try a different name or{" "}
+                      <Link href="/artists" className="text-primary underline">browse the directory</Link>.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Booking details */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Your Booking Details</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="phone" className="text-xs text-muted-foreground">Phone (optional)</Label>
+                  <Input
+                    id="phone"
+                    placeholder="+1 555 000 0000"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="date" className="text-xs text-muted-foreground">Preferred Date (optional)</Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    value={preferredDate}
+                    onChange={(e) => setPreferredDate(e.target.value)}
+                    className="h-9 text-sm"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="notes" className="text-xs text-muted-foreground">Notes for the artist (optional)</Label>
+                <Textarea
+                  id="notes"
+                  placeholder="Any additional details, references, or questions for the artist…"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={3}
+                  maxLength={1000}
+                  className="text-sm resize-none"
+                />
+              </div>
+            </div>
+
+            {/* Send button */}
+            <Button
+              onClick={handleSendToArtist}
+              disabled={!selectedArtist || !selectedArtist.contactEmail || sendDesignMutation.isPending}
+              className="w-full gap-2 bg-cyan-500 hover:bg-cyan-600 text-white"
+            >
+              {sendDesignMutation.isPending ? (
+                <><Loader2 size={16} className="animate-spin" /> Sending…</>
+              ) : (
+                <><Send size={16} /> Send Design to {selectedArtist?.name || "Artist"}</>
+              )}
+            </Button>
+            {selectedArtist && !selectedArtist.contactEmail && (
+              <p className="text-xs text-amber-400 text-center -mt-2">
+                This artist has no email address on file. Please choose a different artist.
+              </p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

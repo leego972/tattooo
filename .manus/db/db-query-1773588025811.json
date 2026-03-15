@@ -1,0 +1,46 @@
+{
+  "query": "SELECT COUNT(*) as total FROM blog_posts;\nSELECT slug, blog_title, blog_status FROM blog_posts ORDER BY id DESC LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 25vRfUBwvHKUCo5.root --database Pa7E4RBX4UbpFBvKpz2nxk --execute SELECT COUNT(*) as total FROM blog_posts;\nSELECT slug, blog_title, blog_status FROM blog_posts ORDER BY id DESC LIMIT 20;",
+  "rows": [
+    {
+      "total": "10"
+    },
+    {
+      "total": "slug\tblog_title\tblog_status"
+    },
+    {
+      "total": "tattoo-pricing-explained\tTattoo Pricing Explained: What You're Actually Paying For\tpublished"
+    },
+    {
+      "total": "tattoo-appointment-preparation\tHow to Prepare for Your Tattoo Appointment: The Night-Before Checklist\tpublished"
+    },
+    {
+      "total": "japanese-tattoo-irezumi-guide\tJapanese Tattoo (Irezumi): A Complete Style Guide\tpublished"
+    },
+    {
+      "total": "tattoo-removal-guide-2026\tThe Complete Guide to Tattoo Removal: What Actually Works in 2026\tpublished"
+    },
+    {
+      "total": "tattoo-artists-global-platforms\tWhy Tattoo Artists Are Joining Global Platforms (And What It Means for You)\tpublished"
+    },
+    {
+      "total": "tattoo-placement-guide\tTattoo Placement Guide: Where to Get Your First, Second, and Third Tattoo\tpublished"
+    },
+    {
+      "total": "tattoo-aftercare-complete-guide\tTattoo Aftercare: The Complete Guide to Healing Your New Ink\tpublished"
+    },
+    {
+      "total": "how-to-find-tattoo-artist-worldwide\tHow to Find a Tattoo Artist Anywhere in the World (Without Getting Burned)\tpublished"
+    },
+    {
+      "total": "popular-tattoo-styles-2026\tThe 10 Most Popular Tattoo Styles in 2026 (And How to Choose Yours)\tpublished"
+    },
+    {
+      "total": "ai-tattoo-design-2026\tHow AI Tattoo Design Is Changing the Way People Get Inked in 2026\tpublished"
+    }
+  ],
+  "messages": [],
+  "stdout": "total\n10\nslug\tblog_title\tblog_status\ntattoo-pricing-explained\tTattoo Pricing Explained: What You're Actually Paying For\tpublished\ntattoo-appointment-preparation\tHow to Prepare for Your Tattoo Appointment: The Night-Before Checklist\tpublished\njapanese-tattoo-irezumi-guide\tJapanese Tattoo (Irezumi): A Complete Style Guide\tpublished\ntattoo-removal-guide-2026\tThe Complete Guide to Tattoo Removal: What Actually Works in 2026\tpublished\ntattoo-artists-global-platforms\tWhy Tattoo Artists Are Joining Global Platforms (And What It Means for You)\tpublished\ntattoo-placement-guide\tTattoo Placement Guide: Where to Get Your First, Second, and Third Tattoo\tpublished\ntattoo-aftercare-complete-guide\tTattoo Aftercare: The Complete Guide to Healing Your New Ink\tpublished\nhow-to-find-tattoo-artist-worldwide\tHow to Find a Tattoo Artist Anywhere in the World (Without Getting Burned)\tpublished\npopular-tattoo-styles-2026\tThe 10 Most Popular Tattoo Styles in 2026 (And How to Choose Yours)\tpublished\nai-tattoo-design-2026\tHow AI Tattoo Design Is Changing the Way People Get Inked in 2026\tpublished\n",
+  "stderr": "",
+  "execution_time_ms": 1888
+}

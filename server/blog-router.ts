@@ -240,13 +240,13 @@ export const blogRouter = router({
         messages: [
           {
             role: "system",
-            content: `You are an expert SEO content writer for Archibald Titan, the world's most advanced local AI agent for credential management, cybersecurity, and developer tools. Write blog posts that are:
+            content: `You are an expert SEO content writer for tattooo.shop, the world's leading AI-powered tattoo design and artist booking platform. Write blog posts that are:
 - SEO-optimized with the focus keyword naturally integrated
 - 1500-2500 words long
 - Written in markdown format with proper headings (H2, H3)
-- Include practical examples and actionable advice
+- Include practical examples, tattoo inspiration, and actionable advice
 - Include a compelling introduction and conclusion
-- Target developers, security professionals, and IT teams
+- Target tattoo enthusiasts, people planning their first or next tattoo, and tattoo artists worldwide
 
 Return a JSON object with these fields:
 {
@@ -321,7 +321,7 @@ Tone: ${input.tone}`
             messages: [
               {
                 role: "system",
-                content: `You are an expert SEO content writer for Archibald Titan, the world's most advanced local AI agent. Write a comprehensive, SEO-optimized blog post in markdown. Return JSON with: title, slug, excerpt, content, metaTitle, metaDescription, tags (array), secondaryKeywords (array).`
+                content: `You are an expert SEO content writer for tattooo.shop, the world's leading AI-powered tattoo design and artist booking platform. Write a comprehensive, SEO-optimized blog post in markdown. Return JSON with: title, slug, excerpt, content, metaTitle, metaDescription, tags (array), secondaryKeywords (array).`
               },
               {
                 role: "user",

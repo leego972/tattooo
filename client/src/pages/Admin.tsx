@@ -81,6 +81,18 @@ function AdminDashboardContent() {
 
   const [creditAdjust, setCreditAdjust] = useState<{ userId: number; amount: string; reason: string } | null>(null);
 
+  // Gift Credits by email
+  const [giftForm, setGiftForm] = useState({ email: "", amount: "50", reason: "Admin gift" });
+  const [giftResult, setGiftResult] = useState<{ name: string | null; credited: number } | null>(null);
+  const giftCreditsMut = trpc.admin.giftCredits.useMutation({
+    onSuccess: (data) => {
+      setGiftResult({ name: data.name, credited: data.credited });
+      setGiftForm({ email: "", amount: "50", reason: "Admin gift" });
+      toast.success(`Gifted ${data.credited} credits to ${data.name ?? data.userId}`);
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
   const statCards = [
     {
       title: "Total Users",
@@ -166,6 +178,9 @@ function AdminDashboardContent() {
             </TabsTrigger>
             <TabsTrigger value="analytics" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-400">
               <BarChart3 className="w-3.5 h-3.5 mr-1.5" /> Analytics
+            </TabsTrigger>
+            <TabsTrigger value="gift" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-400">
+              <Zap className="w-3.5 h-3.5 mr-1.5" /> Gift Credits
             </TabsTrigger>
           </TabsList>
 
@@ -523,6 +538,104 @@ function AdminDashboardContent() {
                           <p className="text-xs text-white/40">total credits</p>
                         </div>
                       </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* ── Gift Credits Tab ── */}
+          <TabsContent value="gift">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Gift by Email */}
+              <Card className="bg-[#111] border-white/10">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold text-white flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-cyan-400" /> Gift Credits by Email
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <label className="text-xs text-white/40 mb-1 block">User Email</label>
+                    <Input
+                      type="email"
+                      placeholder="user@example.com"
+                      value={giftForm.email}
+                      onChange={(e) => setGiftForm({ ...giftForm, email: e.target.value })}
+                      className="bg-[#0d0d0d] border-white/10 text-white"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-white/40 mb-1 block">Amount</label>
+                      <Input
+                        type="number"
+                        min="1" max="10000"
+                        value={giftForm.amount}
+                        onChange={(e) => setGiftForm({ ...giftForm, amount: e.target.value })}
+                        className="bg-[#0d0d0d] border-white/10 text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-white/40 mb-1 block">Reason</label>
+                      <Input
+                        value={giftForm.reason}
+                        onChange={(e) => setGiftForm({ ...giftForm, reason: e.target.value })}
+                        className="bg-[#0d0d0d] border-white/10 text-white"
+                        placeholder="Admin gift"
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    className="w-full bg-cyan-500 hover:bg-cyan-600 text-black font-semibold"
+                    disabled={!giftForm.email || !giftForm.amount || giftCreditsMut.isPending}
+                    onClick={() => giftCreditsMut.mutate({
+                      email: giftForm.email,
+                      amount: parseInt(giftForm.amount),
+                      reason: giftForm.reason,
+                    })}
+                  >
+                    {giftCreditsMut.isPending ? <RefreshCw className="w-4 h-4 animate-spin mr-2" /> : <Zap className="w-4 h-4 mr-2" />}
+                    Gift Credits
+                  </Button>
+                  {giftResult && (
+                    <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                      <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
+                      <p className="text-sm text-green-300">
+                        Gifted <strong>{giftResult.credited} credits</strong> to {giftResult.name ?? "user"}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Quick Gift Presets */}
+              <Card className="bg-[#111] border-white/10">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold text-white">Quick Gift Presets</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-white/40 mb-4">Enter an email above, then click a preset to fill the amount.</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { label: "Support Fix", amount: 10, reason: "Support credit fix" },
+                      { label: "Welcome Bonus", amount: 25, reason: "Welcome bonus" },
+                      { label: "Loyalty Reward", amount: 50, reason: "Loyalty reward" },
+                      { label: "Competition Prize", amount: 100, reason: "Competition prize" },
+                      { label: "Influencer Gift", amount: 200, reason: "Influencer partnership" },
+                      { label: "VIP Package", amount: 500, reason: "VIP gift package" },
+                    ].map((preset) => (
+                      <Button
+                        key={preset.label}
+                        variant="outline"
+                        size="sm"
+                        className="border-white/10 text-white/60 hover:text-white hover:border-cyan-500/50 bg-transparent text-xs justify-start"
+                        onClick={() => setGiftForm({ ...giftForm, amount: String(preset.amount), reason: preset.reason })}
+                      >
+                        <Zap className="w-3 h-3 mr-1.5 text-cyan-400" />
+                        {preset.label} ({preset.amount})
+                      </Button>
                     ))}
                   </div>
                 </CardContent>

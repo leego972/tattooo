@@ -11,6 +11,8 @@ export const users = mysqlTable("users", {
   passwordHash: varchar("passwordHash", { length: 255 }),
   emailVerified: boolean("emailVerified").default(false).notNull(),
   refCode: varchar("refCode", { length: 32 }),
+  appliedPromoCode: varchar("appliedPromoCode", { length: 32 }),
+  promoDiscountUsed: boolean("promoDiscountUsed").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -49,7 +51,7 @@ export const credits = mysqlTable("credits", {
   userId: int("userId").notNull().unique(),
   balance: int("balance").notNull().default(0),
   lifetimeTotal: int("lifetimeTotal").notNull().default(0),
-  plan: mysqlEnum("plan", ["free", "starter", "pro", "unlimited"]).notNull().default("free"),
+  plan: mysqlEnum("plan", ["free", "starter", "pro", "studio", "unlimited", "member"]).notNull().default("free"),
   stripeCustomerId: varchar("stripeCustomerId", { length: 255 }),
   stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 255 }),
   subscriptionStatus: varchar("subscriptionStatus", { length: 64 }),
@@ -85,22 +87,47 @@ export const passwordResetTokens = mysqlTable("password_reset_tokens", {
 
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 
-// ── Artists ───────────────────────────────────────────────────────────────────
+// ── Artists ─────────────────────────────────────────────────────────────────────────
 export const artists = mysqlTable("artists", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId"),
   name: varchar("name", { length: 128 }).notNull(),
   bio: text("bio"),
+  // Location
   location: varchar("location", { length: 128 }),
+  address: varchar("address", { length: 255 }),
+  city: varchar("city", { length: 128 }),
+  state: varchar("state", { length: 128 }),
   country: varchar("country", { length: 64 }),
-  specialties: varchar("specialties", { length: 512 }),
-  instagram: varchar("instagram", { length: 128 }),
-  website: varchar("website", { length: 255 }),
+  postcode: varchar("postcode", { length: 20 }),
+  // Contact
+  phone: varchar("phone", { length: 32 }),
   contactEmail: varchar("contactEmail", { length: 320 }),
+  // Social
+  instagram: varchar("instagram", { length: 128 }),
+  tiktok: varchar("tiktok", { length: 128 }),
+  facebook: varchar("facebook", { length: 128 }),
+  website: varchar("website", { length: 255 }),
+  // Media
   avatarUrl: text("avatarUrl"),
+  profilePhotoUrl: text("profilePhotoUrl"),
+  portfolioImages: json("portfolioImages").$type<string[]>(),
+  // Professional
+  specialties: varchar("specialties", { length: 512 }),
+  yearsExperience: int("yearsExperience"),
+  priceRange: varchar("priceRange", { length: 64 }),
+  languages: varchar("languages", { length: 256 }),
+  businessHours: json("businessHours").$type<Record<string, { open: string; close: string; closed?: boolean }>>()
+    .default({ mon: { open: "09:00", close: "17:00" }, tue: { open: "09:00", close: "17:00" }, wed: { open: "09:00", close: "17:00" }, thu: { open: "09:00", close: "17:00" }, fri: { open: "09:00", close: "17:00" }, sat: { closed: true, open: "", close: "" }, sun: { closed: true, open: "", close: "" } }),
+  // Pricing
   hourlyRate: int("hourlyRate"),
   depositAmount: int("depositAmount"),
+  // Team
+  teamId: int("teamId"),
+  isTeamOwner: boolean("isTeamOwner").default(false).notNull(),
+  // Stripe
   stripeAccountId: varchar("stripeAccountId", { length: 128 }),
+  // Status
   verified: boolean("verified").default(false).notNull(),
   featured: boolean("featured").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -109,6 +136,47 @@ export const artists = mysqlTable("artists", {
 
 export type Artist = typeof artists.$inferSelect;
 export type InsertArtist = typeof artists.$inferInsert;
+
+// ── Artist Teams ──────────────────────────────────────────────────────────────
+export const artistTeams = mysqlTable("artist_teams", {
+  id: int("id").autoincrement().primaryKey(),
+  ownerId: int("ownerId").notNull(),
+  studioName: varchar("studioName", { length: 255 }).notNull(),
+  studioDescription: text("studioDescription"),
+  studioLogoUrl: text("studioLogoUrl"),
+  studioAddress: varchar("studioAddress", { length: 255 }),
+  studioCity: varchar("studioCity", { length: 128 }),
+  studioState: varchar("studioState", { length: 128 }),
+  studioCountry: varchar("studioCountry", { length: 64 }),
+  studioPostcode: varchar("studioPostcode", { length: 20 }),
+  studioPhone: varchar("studioPhone", { length: 32 }),
+  studioEmail: varchar("studioEmail", { length: 320 }),
+  studioWebsite: varchar("studioWebsite", { length: 255 }),
+  studioInstagram: varchar("studioInstagram", { length: 128 }),
+  maxMembers: int("maxMembers").default(10).notNull(),
+  plan: mysqlEnum("plan", ["team", "enterprise"]).default("team").notNull(),
+  stripeCustomerId: varchar("stripeCustomerId", { length: 128 }),
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 128 }),
+  subscriptionStatus: mysqlEnum("subscriptionStatus", ["active", "inactive", "trialing", "past_due", "canceled"]).default("inactive").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type ArtistTeam = typeof artistTeams.$inferSelect;
+export type InsertArtistTeam = typeof artistTeams.$inferInsert;
+
+// ── Artist Team Members ───────────────────────────────────────────────────────
+export const artistTeamMembers = mysqlTable("artist_team_members", {
+  id: int("id").autoincrement().primaryKey(),
+  teamId: int("teamId").notNull(),
+  artistId: int("artistId").notNull(),
+  role: mysqlEnum("role", ["owner", "member"]).default("member").notNull(),
+  inviteToken: varchar("inviteToken", { length: 64 }),
+  inviteEmail: varchar("inviteEmail", { length: 320 }),
+  status: mysqlEnum("status", ["pending", "active", "removed"]).default("pending").notNull(),
+  joinedAt: timestamp("joinedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ArtistTeamMember = typeof artistTeamMembers.$inferSelect;
 
 // ── Design Shares ─────────────────────────────────────────────────────────────
 export const designShares = mysqlTable("design_shares", {
@@ -128,15 +196,26 @@ export const bookings = mysqlTable("bookings", {
   customerId: int("customerId").notNull(),
   artistId: int("artistId").notNull(),
   tattooGenerationId: int("tattooGenerationId"),
-  status: mysqlEnum("status", ["pending", "deposit_paid", "confirmed", "completed", "cancelled"]).notNull().default("pending"),
+  status: mysqlEnum("status", ["pending", "quote_sent", "deposit_paid", "confirmed", "completed", "cancelled"]).notNull().default("pending"),
   message: text("message"),
   stripeSessionId: varchar("stripeSessionId", { length: 256 }),
   depositAmountCents: int("depositAmountCents"),
   scheduledAt: timestamp("scheduledAt"),
+  preferredDate: varchar("preferredDate", { length: 10 }),
+  customerPhone: varchar("customerPhone", { length: 64 }),
+  customerNotes: text("customerNotes"),
+  declineReason: text("declineReason"),
+  nextAvailableDate: varchar("nextAvailableDate", { length: 10 }),
+  // Quote & platform fee fields
+  quotedAmountCents: int("quotedAmountCents"),
+  platformFeeCents: int("platformFeeCents"),
+  quoteMessage: text("quoteMessage"),
+  isMultiSession: boolean("isMultiSession").default(false).notNull(),
+  quoteStripeSessionId: varchar("quoteStripeSessionId", { length: 256 }),
+  quoteAcceptedAt: timestamp("quoteAcceptedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
-
 export type Booking = typeof bookings.$inferSelect;
 export type InsertBooking = typeof bookings.$inferInsert;
 
@@ -619,13 +698,50 @@ export const creditBalances = mysqlTable("credit_balances", {
 export const referralCodes = mysqlTable("referral_codes", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(), // the referrer
-  code: varchar("code", { length: 16 }).notNull().unique(),
+  code: varchar("code", { length: 32 }).notNull().unique(),
   totalReferrals: int("totalReferrals").default(0).notNull(),
+  successfulReferrals: int("successfulReferrals").default(0).notNull(),
+  bonusCreditsEarned: int("bonusCreditsEarned").default(0).notNull(),
   totalRewardsEarned: int("totalRewardsEarned").default(0).notNull(),
   totalCommissionCents: int("totalCommissionCents").default(0).notNull(),
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
+
+export type ReferralCode = typeof referralCodes.$inferSelect;
+export type InsertReferralCode = typeof referralCodes.$inferInsert;
+
+export const referralTracking = mysqlTable("referral_tracking", {
+  id: int("id").autoincrement().primaryKey(),
+  referralCodeId: int("referralCodeId").notNull(),
+  referrerId: int("referrerId").notNull(),
+  referredUserId: int("referredUserId"),
+  referredEmail: varchar("referredEmail", { length: 320 }),
+  status: mysqlEnum("referralTrackStatus", ["clicked", "registered", "rewarded"]).default("clicked").notNull(),
+  rewardType: varchar("rewardType", { length: 64 }),
+  rewardAmount: int("rewardAmount"),
+  rewardedAt: timestamp("rewardedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ReferralTracking = typeof referralTracking.$inferSelect;
+export type InsertReferralTracking = typeof referralTracking.$inferInsert;
+
+export const promoCodes = mysqlTable("promo_codes", {
+  id: int("id").autoincrement().primaryKey(),
+  code: varchar("code", { length: 32 }).notNull().unique(),
+  discountPercent: int("discountPercent").notNull().default(50),
+  bonusCredits: int("bonusCredits").notNull().default(0),
+  maxUses: int("maxUses").notNull().default(100),
+  usedCount: int("usedCount").notNull().default(0),
+  isActive: boolean("isActive").notNull().default(true),
+  description: varchar("description", { length: 255 }),
+  expiresAt: timestamp("expiresAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PromoCode = typeof promoCodes.$inferSelect;
+export type InsertPromoCode = typeof promoCodes.$inferInsert;
 
 
 export const referralConversions = mysqlTable("referral_conversions", {
@@ -640,3 +756,111 @@ export const referralConversions = mysqlTable("referral_conversions", {
   subscriptionId: varchar("subscriptionId", { length: 256 }), // Stripe subscription ID if they paid
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
+
+// ── Studio Mailing List ───────────────────────────────────────────────────────
+// Master list of tattoo studios for outreach (info packs + weekly ads)
+export const studioMailingList = mysqlTable("studio_mailing_list", {
+  id: int("id").autoincrement().primaryKey(),
+  studioName: varchar("studioName", { length: 256 }).notNull(),
+  city: varchar("city", { length: 128 }),
+  country: varchar("country", { length: 128 }).notNull(),
+  language: varchar("language", { length: 8 }).notNull().default("en"),
+  email: varchar("email", { length: 320 }),
+  emailStatus: mysqlEnum("emailStatus", ["found", "not_found", "bounced", "unsubscribed"]).notNull().default("not_found"),
+  emailSource: varchar("emailSource", { length: 128 }),
+  infoPackSentAt: timestamp("infoPackSentAt"),
+  infoPackStatus: mysqlEnum("infoPackStatus", ["not_sent", "sent", "opened", "bounced"]).notNull().default("not_sent"),
+  weeklyAdOptOut: boolean("weeklyAdOptOut").notNull().default(false),
+  lastWeeklyAdSentAt: timestamp("lastWeeklyAdSentAt"),
+  weeklyAdSentCount: int("weeklyAdSentCount").notNull().default(0),
+  unsubscribeToken: varchar("unsubscribeToken", { length: 64 }).unique(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type StudioMailingList = typeof studioMailingList.$inferSelect;
+export type InsertStudioMailingList = typeof studioMailingList.$inferInsert;
+
+// ── Weekly Ad Sends ───────────────────────────────────────────────────────────
+// Log of each weekly ad send to each studio
+export const weeklyAdSends = mysqlTable("weekly_ad_sends", {
+  id: int("id").autoincrement().primaryKey(),
+  studioId: int("studioId").notNull(),
+  weekNumber: int("weekNumber").notNull(), // ISO week number
+  year: int("year").notNull(),
+  subject: varchar("subject", { length: 512 }),
+  imageUrl: text("imageUrl"),
+  emailBodyHtml: text("emailBodyHtml"),
+  status: mysqlEnum("status", ["sent", "bounced", "failed"]).notNull().default("sent"),
+  sentAt: timestamp("sentAt").defaultNow().notNull(),
+});
+export type WeeklyAdSend = typeof weeklyAdSends.$inferSelect;
+export type InsertWeeklyAdSend = typeof weeklyAdSends.$inferInsert;
+
+// ── Info Pack Attachments ─────────────────────────────────────────────────────
+// PDF info packs uploaded per language
+export const infoPackAttachments = mysqlTable("info_pack_attachments", {
+  id: int("id").autoincrement().primaryKey(),
+  language: varchar("language", { length: 8 }).notNull().unique(),
+  fileUrl: text("fileUrl").notNull(),
+  fileName: varchar("fileName", { length: 256 }).notNull(),
+  uploadedAt: timestamp("uploadedAt").defaultNow().notNull(),
+});
+export type InfoPackAttachment = typeof infoPackAttachments.$inferSelect;
+export type InsertInfoPackAttachment = typeof infoPackAttachments.$inferInsert;
+
+// ── Artist Availability ───────────────────────────────────────────────────────
+// Artists mark their open time slots for bookings
+export const artistAvailability = mysqlTable("artist_availability", {
+  id: int("id").autoincrement().primaryKey(),
+  artistId: int("artistId").notNull(),
+  date: varchar("date", { length: 10 }).notNull(), // YYYY-MM-DD
+  timeSlot: varchar("timeSlot", { length: 10 }).notNull().default("all-day"), // e.g. "10:00", "14:00", "all-day"
+  isBooked: boolean("isBooked").notNull().default(false),
+  bookingId: int("bookingId"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ArtistAvailability = typeof artistAvailability.$inferSelect;
+export type InsertArtistAvailability = typeof artistAvailability.$inferInsert;
+
+// ── In-App Notifications ──────────────────────────────────────────────────────
+// Real-time notifications for both users and artists
+export const inAppNotifications = mysqlTable("in_app_notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  type: mysqlEnum("type", [
+    "booking_request",     // artist receives: new booking request
+    "booking_confirmed",   // user receives: artist confirmed
+    "booking_declined",    // user receives: artist declined + alternatives
+    "booking_cancelled",   // both: booking cancelled
+    "new_message",         // general message
+    "system",              // system announcement
+  ]).notNull(),
+  title: varchar("title", { length: 256 }).notNull(),
+  message: text("message").notNull(),
+  data: text("data"), // JSON string with extra context (bookingId, artistId, nextAvailableDate, etc.)
+  isRead: boolean("isRead").notNull().default(false),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type InAppNotification = typeof inAppNotifications.$inferSelect;
+export type InsertInAppNotification = typeof inAppNotifications.$inferInsert;
+
+// ── Extend bookings table: add declined reason + next available date ──────────
+// (handled via ALTER TABLE migration below — existing table already has core fields)
+
+// ── Marketing Budgets ─────────────────────────────────────────────────────────
+export const marketingBudgets = mysqlTable("marketing_budgets", {
+  id: int("id").autoincrement().primaryKey(),
+  month: varchar("month", { length: 7 }).notNull(), // "2026-02" format
+  totalBudget: int("totalBudget").notNull(), // cents
+  status: mysqlEnum("status", ["draft", "active", "paused", "completed"]).default("draft").notNull(),
+  allocations: json("allocations").$type<Array<{
+    channel: string;
+    amount: number; // cents
+    reasoning: string;
+  }>>(),
+  actualSpend: int("actualSpend").default(0).notNull(), // cents
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type MarketingBudget = typeof marketingBudgets.$inferSelect;

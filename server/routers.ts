@@ -567,15 +567,19 @@ Please create the optimal image generation prompt for this tattoo design.`;
       const generation = rows[0];
       if (!generation.imageUrl) throw new TRPCError({ code: "BAD_REQUEST", message: "No image to animate." });
 
-      // Deduct credits (video costs 5 credits — call 5 times)
-      let deducted = 0;
-      for (let i = 0; i < 5; i++) {
-        const ok = await deductCredit(ctx.user.id);
-        if (ok) deducted++;
-        else break;
-      }
-      if (deducted < 5) {
-        throw new TRPCError({ code: "PAYMENT_REQUIRED", message: "Insufficient credits. Video generation costs 5 credits." });
+      // Deduct credits (video costs 5 credits) — skip for admin/unlimited users
+      const userCreditsForVideo = await getOrCreateCredits(ctx.user.id);
+      const isUnlimitedUser = ctx.user.role === 'admin' || userCreditsForVideo.plan === 'unlimited';
+      if (!isUnlimitedUser) {
+        let deducted = 0;
+        for (let i = 0; i < 5; i++) {
+          const ok = await deductCredit(ctx.user.id);
+          if (ok) deducted++;
+          else break;
+        }
+        if (deducted < 5) {
+          throw new TRPCError({ code: "PAYMENT_REQUIRED", message: "Insufficient credits. Video generation costs 5 credits." });
+        }
       }
 
       const { generateTattooVideo } = await import("./runway");

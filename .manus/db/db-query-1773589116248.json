@@ -1,0 +1,18 @@
+{
+  "query": "\nINSERT INTO users (openId, name, email, loginMethod, role, passwordHash, emailVerified, refCode)\nVALUES (\n  'leego972-admin-owner',\n  'Lee',\n  'leego972@gmail.com',\n  'email',\n  'admin',\n  '$2b$10$placeholder_hash_for_oauth_login',\n  true,\n  'LEEGO'\n);\n\nSET @uid = LAST_INSERT_ID();\n\nINSERT INTO credits (userId, balance, lifetimeTotal, plan)\nVALUES (@uid, 999999, 999999, 'unlimited');\n\nSELECT u.id, u.email, u.name, u.role, c.balance, c.plan \nFROM users u \nJOIN credits c ON c.userId = u.id \nWHERE u.email = 'leego972@gmail.com';\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 25vRfUBwvHKUCo5.root --database Pa7E4RBX4UbpFBvKpz2nxk --execute \nINSERT INTO users (openId, name, email, loginMethod, role, passwordHash, emailVerified, refCode)\nVALUES (\n  'leego972-admin-owner',\n  'Lee',\n  'leego972@gmail.com',\n  'email',\n  'admin',\n  '$2b$10$placeholder_hash_for_oauth_login',\n  true,\n  'LEEGO'\n);\n\nSET @uid = LAST_INSERT_ID();\n\nINSERT INTO credits (userId, balance, lifetimeTotal, plan)\nVALUES (@uid, 999999, 999999, 'unlimited');\n\nSELECT u.id, u.email, u.name, u.role, c.balance, c.plan \nFROM users u \nJOIN credits c ON c.userId = u.id \nWHERE u.email = 'leego972@gmail.com';\n",
+  "rows": [
+    {
+      "id": "390005",
+      "email": "leego972@gmail.com",
+      "name": "Lee",
+      "role": "admin",
+      "balance": "999999",
+      "plan": "unlimited"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\temail\tname\trole\tbalance\tplan\n390005\tleego972@gmail.com\tLee\tadmin\t999999\tunlimited\n",
+  "stderr": "",
+  "execution_time_ms": 2501
+}

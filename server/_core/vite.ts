@@ -6,6 +6,12 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import viteConfig from "../../vite.config";
 
+// Polyfill import.meta.dirname for Node < 21.2
+const _dirname: string =
+  typeof import.meta.dirname !== "undefined" && import.meta.dirname
+    ? import.meta.dirname
+    : path.dirname(new URL(import.meta.url).pathname);
+
 export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
     middlewareMode: true,
@@ -26,7 +32,7 @@ export async function setupVite(app: Express, server: Server) {
 
     try {
       const clientTemplate = path.resolve(
-        import.meta.dirname,
+        _dirname,
         "../..",
         "client",
         "index.html"
@@ -48,10 +54,13 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
+  // In production, the built server (dist/index.js) is at /app/dist/index.js
+  // and the static files are at /app/dist/public/
   const distPath =
     process.env.NODE_ENV === "development"
-      ? path.resolve(import.meta.dirname, "../..", "dist", "public")
-      : path.resolve(import.meta.dirname, "public");
+      ? path.resolve(_dirname, "../..", "dist", "public")
+      : path.resolve(_dirname, "public");
+
   if (!fs.existsSync(distPath)) {
     console.error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`

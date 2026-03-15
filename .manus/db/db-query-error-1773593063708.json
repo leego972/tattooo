@@ -1,0 +1,8 @@
+{
+  "query": "SELECT id, studio_name, email, country, language FROM studio_mailing_list WHERE country IN ('Australia', 'New Zealand', 'AU', 'NZ') AND email IS NOT NULL AND email != '' AND info_pack_status = 'not_sent' LIMIT 50;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 25vRfUBwvHKUCo5.root --database Pa7E4RBX4UbpFBvKpz2nxk --execute SELECT id, studio_name, email, country, language FROM studio_mailing_list WHERE country IN ('Australia', 'New Zealand', 'AU', 'NZ') AND email IS NOT NULL AND email != '' AND info_pack_status = 'not_sent' LIMIT 50;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'info_pack_status' in 'where clause'"
+  ]
+}

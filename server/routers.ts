@@ -49,7 +49,7 @@ import {
   buildPrintSpec,
   PRINT_DPI,
 } from "./printUtils";
-import { sendPasswordResetEmail, sendArtistContactEmail, sendWelcomeEmail } from "./emailService";
+import { sendPasswordResetEmail, sendArtistContactEmail, sendWelcomeEmail, sendPromoConfirmationEmail } from "./emailService";
 import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "./db";
@@ -1029,6 +1029,14 @@ const promoRouter = router({
       // Award bonus credits if any
       if (promo.bonusCredits > 0) {
         await addCredits(ctx.user.id, promo.bonusCredits, "referral", undefined, `Promo code ${promo.code}: ${promo.bonusCredits} bonus credits`);
+      }
+
+      // Send confirmation email (non-blocking)
+      const userEmail = ctx.user.email;
+      if (userEmail) {
+        sendPromoConfirmationEmail(userEmail, ctx.user.name, promo.code, promo.discountPercent, promo.bonusCredits).catch((e) =>
+          console.warn("[Promo] Failed to send confirmation email:", e)
+        );
       }
 
       return {

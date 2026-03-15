@@ -136,7 +136,30 @@ stripeWebhookRouter.post(
           }
         }
 
-        // ── Booking deposit ───────────────────────────────────────────────────
+           // ── Subscription upgrade (one-time payment for Pro/Studio) ─────────
+        if (eventType === "subscription_upgrade") {
+          const userId = meta.user_id ? parseInt(meta.user_id) : null;
+          const plan = meta.plan as "pro" | "studio" | undefined;
+          if (userId && plan) {
+            const db = await getDb();
+            if (db) {
+              const { credits: creditsTable } = await import("../drizzle/schema");
+              const creditsToAdd = plan === "studio" ? 200 : 50;
+              // Update plan in credits table
+              await db.update(creditsTable)
+                .set({ plan: plan as any, subscriptionStatus: "active" })
+                .where(eq(creditsTable.userId, userId));
+              // Grant monthly credits
+              await addCredits(userId, creditsToAdd, "purchase", event.id, `${plan} plan upgrade: ${creditsToAdd} credits`);
+              if (session.customer && typeof session.customer === "string") {
+                await setStripeCustomerId(userId, session.customer);
+              }
+              console.log(`[Webhook] Upgraded user ${userId} to ${plan} plan, granted ${creditsToAdd} credits`);
+            }
+          }
+        }
+
+        // ── Booking deposit ───────────────────────────────────────────────
         if (eventType === "booking_deposit") {
           const bookingId = meta.bookingId ? parseInt(meta.bookingId) : null;
           const userId = meta.userId ? parseInt(meta.userId) : null;

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { router, protectedProcedure, publicProcedure } from "./_core/trpc";
 import { getDb } from "./db";
-import { users } from "../drizzle/schema";
+import { credits } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { getStripe } from "./stripe";
 
@@ -48,18 +48,18 @@ export const SUBSCRIPTION_PLANS = {
 } as const;
 
 export const subscriptionRouter = router({
-  // Get current subscription status
+  // Get current subscription status — reads from credits table
   getStatus: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new Error("DB unavailable");
-    const user = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
-    const u = user[0];
-    if (!u) throw new Error("User not found");
+    const rows = await db.select().from(credits).where(eq(credits.userId, ctx.user.id)).limit(1);
+    const c = rows[0];
+    if (!c) return { plan: "free", status: "active", currentPeriodEnd: null, stripeCustomerId: null };
     return {
-      plan: (u as any).subscriptionPlan || "free",
-      status: (u as any).subscriptionStatus || "active",
-      currentPeriodEnd: (u as any).subscriptionPeriodEnd || null,
-      stripeCustomerId: (u as any).stripeCustomerId || null,
+      plan: c.plan || "free",
+      status: c.subscriptionStatus || "active",
+      currentPeriodEnd: null,
+      stripeCustomerId: c.stripeCustomerId || null,
     };
   }),
 
@@ -75,21 +75,22 @@ export const subscriptionRouter = router({
       const plan = SUBSCRIPTION_PLANS[input.plan];
       if (!plan.stripePriceId) {
         // Create a one-time price if no recurring price ID is configured
-        const session = await (getStripe().checkout.sessions as any).create({
+        const session = await getStripe().checkout.sessions.create({
           mode: "payment",
-          customer_email: ctx.user.email,
+          customer_email: ctx.user.email ?? undefined,
           client_reference_id: ctx.user.id.toString(),
           metadata: {
+            type: "subscription_upgrade",
             user_id: ctx.user.id.toString(),
             plan: input.plan,
-            customer_email: ctx.user.email,
+            customer_email: ctx.user.email ?? "",
           },
           line_items: [
             {
               price_data: {
                 currency: "usd",
                 product_data: {
-                  name: `tatooo.shop ${plan.name} Plan`,
+                  name: `tatt-ooo ${plan.name} Plan`,
                   description: plan.features.join(", "),
                 },
                 unit_amount: plan.price * 100,
@@ -98,24 +99,25 @@ export const subscriptionRouter = router({
             },
           ],
           allow_promotion_codes: true,
-          success_url: `${input.origin}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
+          success_url: `${input.origin}/payment-success?type=subscription&plan=${input.plan}`,
           cancel_url: `${input.origin}/subscription`,
         });
         return { url: session.url };
       }
 
-      const session = await (getStripe().checkout.sessions as any).create({
+      const session = await getStripe().checkout.sessions.create({
         mode: "subscription",
-        customer_email: ctx.user.email,
+        customer_email: ctx.user.email ?? undefined,
         client_reference_id: ctx.user.id.toString(),
         metadata: {
+          type: "subscription_upgrade",
           user_id: ctx.user.id.toString(),
           plan: input.plan,
-          customer_email: ctx.user.email,
+          customer_email: ctx.user.email ?? "",
         },
         line_items: [{ price: plan.stripePriceId, quantity: 1 }],
         allow_promotion_codes: true,
-        success_url: `${input.origin}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
+        success_url: `${input.origin}/payment-success?type=subscription&plan=${input.plan}`,
         cancel_url: `${input.origin}/subscription`,
       });
       return { url: session.url };
@@ -127,8 +129,8 @@ export const subscriptionRouter = router({
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new Error("DB unavailable");
-      const user = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
-      const stripeCustomerId = (user[0] as any)?.stripeCustomerId;
+      const rows = await db.select().from(credits).where(eq(credits.userId, ctx.user.id)).limit(1);
+      const stripeCustomerId = rows[0]?.stripeCustomerId;
       if (!stripeCustomerId) {
         throw new Error("No Stripe customer found. Please subscribe first.");
       }

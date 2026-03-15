@@ -235,3 +235,13 @@
 - [x] Gate: Subscription (/subscription)
 - [x] Navbar: only show Login, Sign Up, Join as Artist when logged out (hide all other nav items)
 - [x] Leego logo: black background panel, enlarged but tasteful, better visibility in sidebar
+
+## Landing Page CTA + Promo Expiry + Promo Email
+- [x] Landing page: logged-out hero shows Sign Up Free (primary) + Sign In (secondary) CTAs
+- [x] Landing page: logged-in hero keeps Start Designing CTA unchanged
+- [x] Backend: promo.validate checks expiresAt and rejects expired codes
+- [x] Backend: promo.applyCode sends confirmation email via Resend with discount + bonus summary
+- [x] Backend: subscription-router fixed to read from credits table (not users)
+- [x] Backend: subscription checkout uses correct Stripe API (no 'as any' cast)
+- [x] Backend: webhook handles subscription_upgrade event — grants credits + updates plan
+- [x] Backend: sendPromoConfirmationEmail added to emailService

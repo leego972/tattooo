@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Sparkles, ChevronRight, Zap, Palette, Download } from "lucide-react";
+import { Sparkles, ChevronRight, Zap, Palette, Download, UserPlus, LogIn } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const LOGO_URL =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/tatt-ooo-logo_244a108c.png";
@@ -43,6 +44,7 @@ const styles = [
 ];
 
 export default function Home() {
+  const { isAuthenticated } = useAuth();
   return (
     <div className="flex flex-col">
       {/* Hero */}
@@ -108,25 +110,52 @@ export default function Home() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 items-start">
-            <Link href="/studio">
-              <Button
-                size="lg"
-                className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90 glow-ink text-base px-8 py-6"
-              >
-                <Sparkles size={18} />
-                Start Designing
-                <ChevronRight size={16} />
-              </Button>
-            </Link>
-            <Link href="/gallery">
-              <Button
-                variant="outline"
-                size="lg"
-                className="gap-2 border-white/30 bg-black/30 text-white hover:text-white hover:border-primary/60 hover:bg-black/50 text-base px-8 py-6"
-              >
-                View Gallery
-              </Button>
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <Link href="/studio">
+                  <Button
+                    size="lg"
+                    className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90 glow-ink text-base px-8 py-6"
+                  >
+                    <Sparkles size={18} />
+                    Start Designing
+                    <ChevronRight size={16} />
+                  </Button>
+                </Link>
+                <Link href="/gallery">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="gap-2 border-white/30 bg-black/30 text-white hover:text-white hover:border-primary/60 hover:bg-black/50 text-base px-8 py-6"
+                  >
+                    View Gallery
+                  </Button>
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link href="/signup">
+                  <Button
+                    size="lg"
+                    className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90 glow-ink text-base px-8 py-6"
+                  >
+                    <UserPlus size={18} />
+                    Sign Up Free
+                    <ChevronRight size={16} />
+                  </Button>
+                </Link>
+                <Link href="/login">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="gap-2 border-white/30 bg-black/30 text-white hover:text-white hover:border-primary/60 hover:bg-black/50 text-base px-8 py-6"
+                  >
+                    <LogIn size={16} />
+                    Sign In
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
 
           <div className="flex flex-wrap justify-start gap-2 max-w-2xl">
@@ -214,15 +243,39 @@ export default function Home() {
           <p className="text-muted-foreground max-w-md">
             Join thousands of tattoo enthusiasts who use tatt-ooo to bring their ink ideas to life.
           </p>
-          <Link href="/studio">
-            <Button
-              size="lg"
-              className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90 glow-ink text-base px-10 py-6"
-            >
-              <Sparkles size={18} />
-              Open the Studio
-            </Button>
-          </Link>
+          {isAuthenticated ? (
+            <Link href="/studio">
+              <Button
+                size="lg"
+                className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90 glow-ink text-base px-10 py-6"
+              >
+                <Sparkles size={18} />
+                Open the Studio
+              </Button>
+            </Link>
+          ) : (
+            <div className="flex flex-col sm:flex-row gap-4 items-center">
+              <Link href="/signup">
+                <Button
+                  size="lg"
+                  className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90 glow-ink text-base px-10 py-6"
+                >
+                  <UserPlus size={18} />
+                  Get Started Free — 5 Credits
+                </Button>
+              </Link>
+              <Link href="/login">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="gap-2 border-white/20 bg-transparent text-white/80 hover:text-white hover:border-white/40 text-base px-8 py-6"
+                >
+                  <LogIn size={16} />
+                  Already have an account?
+                </Button>
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 

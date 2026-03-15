@@ -356,3 +356,51 @@ export async function sendArtistRegistrationConfirmation(
     `.trim(),
   });
 }
+
+// ─── Promo Code Confirmation Email ─────────────────────────────────────────────
+export async function sendPromoConfirmationEmail(
+  toEmail: string,
+  toName: string | null,
+  promoCode: string,
+  discountPercent: number,
+  bonusCredits: number
+): Promise<void> {
+  const firstName = toName?.split(" ")[0] ?? "there";
+  const discountLine = discountPercent > 0 ? `<strong style="color:#06b6d4;">${discountPercent}% off</strong> your next credit purchase` : "";
+  const bonusLine = bonusCredits > 0 ? `<strong style="color:#a78bfa;">+${bonusCredits} bonus credits</strong> added to your account` : "";
+  const benefitLines = [discountLine, bonusLine].filter(Boolean).join(" and ");
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: toEmail,
+    subject: `Promo code ${promoCode} applied to your tatt-ooo account`,
+    html: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;background-color:#0a0a0a;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0a0a0a;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background-color:#111111;border-radius:12px;border:1px solid #222222;overflow:hidden;max-width:560px;width:100%;">
+        <tr><td style="background:linear-gradient(135deg,#0a0a0a 0%,#111827 100%);padding:32px 40px;text-align:center;border-bottom:1px solid #1e3a5f;">
+          <div style="font-size:28px;font-weight:900;letter-spacing:0.05em;color:#ffffff;">tatt<span style="color:#06b6d4;">-ooo</span></div>
+          <div style="font-size:11px;letter-spacing:0.2em;color:#64748b;margin-top:4px;text-transform:uppercase;">Promo Code Applied</div>
+        </td></tr>
+        <tr><td style="padding:40px;">
+          <div style="text-align:center;margin-bottom:24px;">
+            <div style="display:inline-block;background:linear-gradient(135deg,#0891b2,#7c3aed);border-radius:12px;padding:16px 28px;">
+              <span style="font-size:22px;font-weight:900;letter-spacing:0.15em;color:#ffffff;font-family:monospace;">${promoCode}</span>
+            </div>
+          </div>
+          <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#f1f5f9;text-align:center;">Promo Code Applied!</h1>
+          <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#94a3b8;text-align:center;">Hey ${firstName}, your promo code is locked in. You'll receive ${benefitLines}.</p>
+          ${discountPercent > 0 ? `<div style="background:#0c1a2e;border:1px solid #1e3a5f;border-radius:8px;padding:16px 20px;margin-bottom:16px;"><div style="font-size:13px;color:#64748b;margin-bottom:4px;">Discount on next purchase</div><div style="font-size:20px;font-weight:700;color:#06b6d4;">${discountPercent}% off</div></div>` : ""}
+          ${bonusCredits > 0 ? `<div style="background:#130c2e;border:1px solid #3b1f6e;border-radius:8px;padding:16px 20px;margin-bottom:24px;"><div style="font-size:13px;color:#64748b;margin-bottom:4px;">Bonus credits added now</div><div style="font-size:20px;font-weight:700;color:#a78bfa;">+${bonusCredits} credits</div></div>` : ""}
+          <table cellpadding="0" cellspacing="0" style="margin:0 auto 24px;"><tr><td style="border-radius:8px;background:linear-gradient(135deg,#0891b2,#0e7490);"><a href="https://tatt-ooo.manus.space/pricing" style="display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;">Buy Credits Now</a></td></tr></table>
+          <p style="margin:0;font-size:12px;color:#475569;text-align:center;">Discount applied automatically at checkout. Bonus credits are already in your account.</p>
+        </td></tr>
+        <tr><td style="padding:20px 40px;border-top:1px solid #1e293b;text-align:center;">
+          <p style="margin:0;font-size:12px;color:#475569;">&copy; ${new Date().getFullYear()} tatt-ooo &middot; AI Tattoo Designer &middot; Created by LEEGO</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`.trim(),
+  });
+}

@@ -298,3 +298,11 @@
 - [x] Backend: booking and artist success_url points to /payment-success with correct type
 - [x] Frontend: PaymentSuccess page shows plan-specific messages (subscription/artist/booking/credits)
 - [x] Frontend: subscription page uses monthlyCredits from products.ts
+
+## Monthly Credit Refresh + Credit Usage Page
+- [x] Backend: invoice.paid webhook handler — top up credits on subscription renewal (pro=50, studio=200)
+- [x] Backend: invoice.paid handler sets plan and subscriptionStatus in credits table
+- [x] Frontend: /credits page — transaction history table (date, action, amount, running balance)
+- [x] Frontend: /credits page — summary card (current balance, plan, lifetime total)
+- [x] Frontend: /credits page — link from sidebar credits badge (badge now links to /credits)
+- [x] Navigation: Credits badge links to /credits; plan tier shown in badge

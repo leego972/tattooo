@@ -5,6 +5,7 @@
  */
 import { Router } from "express";
 import { constructWebhookEvent, CREDIT_PACKS, type PackId } from "./stripe";
+import { SUBSCRIPTION_PLANS } from "./products";
 import { addCredits, setStripeCustomerId, getOrCreateCredits } from "./credits.db";
 import { getDb } from "./db";
 import { users, artists, bookings, credits, promoCodes } from "../drizzle/schema";
@@ -196,6 +197,43 @@ stripeWebhookRouter.post(
               }
             }
             console.log(`[Webhook] Booking ${bookingId} confirmed`);
+          }
+        }
+      }
+
+      // ── Monthly subscription renewal — top up credits ──────────────────────
+      if (event.type === "invoice.paid") {
+        const invoice = event.data.object as {
+          subscription?: string;
+          customer?: string;
+          billing_reason?: string;
+          lines?: { data: Array<{ price?: { id?: string }; metadata?: Record<string, string> }> };
+          metadata?: Record<string, string>;
+        };
+        // Only process subscription renewals (not the initial invoice)
+        if (invoice.billing_reason === "subscription_cycle" && invoice.subscription) {
+          const db = await getDb();
+          if (db) {
+            // Find user by stripeCustomerId
+            const creditRows = await db.select().from(credits)
+              .where(eq(credits.stripeCustomerId, invoice.customer as string))
+              .limit(1);
+            const userCredits = creditRows[0];
+            if (userCredits && (userCredits.plan === "pro" || userCredits.plan === "studio")) {
+              const plan = SUBSCRIPTION_PLANS[userCredits.plan];
+              await addCredits(
+                userCredits.userId,
+                plan.monthlyCredits,
+                "purchase",
+                event.id,
+                `Monthly renewal: ${plan.name} — ${plan.monthlyCredits} credits`
+              );
+              // Keep subscriptionStatus active
+              await db.update(credits)
+                .set({ subscriptionStatus: "active" })
+                .where(eq(credits.userId, userCredits.userId));
+              console.log(`[Webhook] Monthly refresh: granted ${plan.monthlyCredits} credits to user ${userCredits.userId} (${userCredits.plan})`);
+            }
           }
         }
       }

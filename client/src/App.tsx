@@ -31,6 +31,7 @@ import AdvertisingDashboard from "./pages/AdvertisingDashboard";
 import AffiliateDashboard from "./pages/AffiliateDashboard";
 import Subscription from "./pages/Subscription";
 import AdminPromos from "./pages/AdminPromos";
+import Credits from "./pages/Credits";
 
 import Navbar from "./components/Navbar";
 
@@ -83,6 +84,9 @@ function Router() {
           </Route>
           <Route path="/subscription">
             {() => <ProtectedRoute component={Subscription} />}
+          </Route>
+          <Route path="/credits">
+            {() => <ProtectedRoute component={Credits} />}
           </Route>
           <Route path="/admin/promos">
             {() => <ProtectedRoute component={AdminPromos} />}

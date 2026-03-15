@@ -73,7 +73,7 @@ function CreditsBadge() {
   const displayBalance = balance.balance === 99999 ? "∞" : balance.balance;
 
   return (
-    <Link href="/pricing">
+    <Link href="/credits">
       <div
         className={cn(
           "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all",
@@ -84,6 +84,9 @@ function CreditsBadge() {
       >
         <Zap className="w-3 h-3" />
         <span>{displayBalance} credits</span>
+        {balance.plan && balance.plan !== "free" && (
+          <span className="ml-0.5 text-[9px] uppercase tracking-wide opacity-60">{balance.plan}</span>
+        )}
       </div>
     </Link>
   );

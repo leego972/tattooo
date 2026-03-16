@@ -88,8 +88,8 @@ export default function Pricing() {
     artistCheckoutMutation.mutate({ interval: "yearly", origin: window.location.origin });
   };
 
-  const monthlyPrice = billingCycle === "yearly" ? "$8.25" : "$10";
-  const yearlyTotal = billingCycle === "yearly" ? "$99/yr" : null;
+  const monthlyPrice = billingCycle === "yearly" ? "$5.83" : "$6.99";
+  const yearlyTotal = billingCycle === "yearly" ? "$69.99/yr" : null;
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">

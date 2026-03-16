@@ -472,13 +472,13 @@ export default function Home() {
             <span className="text-amber-400"> Unlimited designs.</span>
           </h2>
           <p className="text-gray-400 mb-8 text-lg">
-            $10/month or $99/year. Unlimited AI generations, full artist directory access, 
+            $6.99/month or $69.99/year. Unlimited AI generations, full artist directory access, 
             and secure booking — all included. No hidden fees, no credit packs.
           </p>
 
           <div className="inline-block p-8 rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/5 border border-amber-500/20 mb-8">
-            <div className="text-5xl font-black text-white mb-1">$10<span className="text-2xl text-gray-400 font-normal">/mo</span></div>
-            <div className="text-gray-400 text-sm mb-6">or $99/year — save $21</div>
+            <div className="text-5xl font-black text-white mb-1">$6.99<span className="text-2xl text-gray-400 font-normal">/mo</span></div>
+            <div className="text-gray-400 text-sm mb-6">or $69.99/year — save $14</div>
             <ul className="text-left space-y-2 mb-6">
               {[
                 "Unlimited AI tattoo designs",

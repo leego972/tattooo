@@ -64,7 +64,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-semibold text-white mb-3">4. Membership &amp; Payments</h2>
             <p className="mb-3">
-              Membership fees are charged monthly ($10/month) or annually ($99/year) via Stripe. Memberships
+              Membership fees are charged monthly ($6.99/month) or annually ($69.99/year) via Stripe. Memberships
               auto-renew unless cancelled before the renewal date. Refunds are not provided for partial billing periods.
             </p>
             <p>

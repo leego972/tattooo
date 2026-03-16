@@ -2,7 +2,7 @@
  * tatt-ooo Stripe Products & Prices
  *
  * Business model:
- *   - Users: $10/month OR $99/year (saves ~17%)
+ *   - Users: $6.99/month OR $69.99/year (saves ~17%)
  *   - Artists/Studios: $29/year directory listing fee
  *   - Studio Teams: $100/month OR $999/year (up to 10 artists)
  *   - Booking fee: 13% of artist's quoted price, charged at booking confirmation
@@ -16,8 +16,8 @@ export const USER_MEMBERSHIP = {
   monthly: {
     id: "member_monthly" as const,
     name: "Tattooo Member — Monthly",
-    price: 1000,          // cents = $10.00/month
-    priceDisplay: "$10/month",
+    price: 699,           // cents = $6.99/month
+    priceDisplay: "$6.99/month",
     interval: "month" as const,
     description: "Full access to AI tattoo designer, artist directory, and booking system",
     stripePriceId: process.env.STRIPE_MEMBER_MONTHLY_PRICE_ID || "price_1TBaRM8YRB7s7dJHqvTnvjnR",
@@ -25,8 +25,8 @@ export const USER_MEMBERSHIP = {
   yearly: {
     id: "member_yearly" as const,
     name: "Tattooo Member — Yearly",
-    price: 9900,          // cents = $99.00/year (~$8.25/month, saves ~17%)
-    priceDisplay: "$99/year",
+    price: 6999,          // cents = $69.99/year (~$5.83/month, saves ~17%)
+    priceDisplay: "$69.99/year",
     interval: "year" as const,
     description: "Full access — save 17% vs monthly",
     stripePriceId: process.env.STRIPE_MEMBER_YEARLY_PRICE_ID || "price_1TBaRO8YRB7s7dJHdPEjuFJZ",

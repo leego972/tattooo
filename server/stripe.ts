@@ -1,7 +1,7 @@
 /**
  * Stripe integration for tatt-ooo.
  * Business model:
- *   - Users: $10/month OR $99/year membership (unlimited designs + booking access)
+ *   - Users: $6.99/month OR $69.99/year membership (unlimited designs + booking access)
  *   - Artists: $29/year directory listing fee
  *   - Booking fee: 13% of artist's quoted price, charged at booking confirmation
  */
@@ -16,7 +16,7 @@ export function getStripe(): Stripe {
 
 /**
  * Create a Stripe Checkout Session for user membership.
- * Supports monthly ($10/mo) and yearly ($99/yr) intervals.
+ * Supports monthly ($6.99/mo) and yearly ($69.99/yr) intervals.
  * If no Stripe price ID is configured yet, falls back to price_data.
  */
 export async function createMembershipCheckoutSession(

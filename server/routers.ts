@@ -300,7 +300,7 @@ const creditsRouter = router({
     };
   }),
 
-  // Membership checkout — $10/month or $99/year
+  // Membership checkout — $6.99/month or $69.99/year
   membershipCheckout: protectedProcedure
     .input(z.object({ interval: z.enum(["monthly", "yearly"]), origin: z.string().url() }))
     .mutation(async ({ input, ctx }) => {

@@ -113,11 +113,11 @@ export default function Subscription() {
             </CardDescription>
             <div className="mt-4">
               <span className="text-5xl font-black text-amber-400">
-                {interval === "monthly" ? "$10" : "$99"}
+                {interval === "monthly" ? "$6.99" : "$69.99"}
               </span>
               <span className="text-gray-400 ml-1">/{interval === "monthly" ? "month" : "year"}</span>
               {interval === "yearly" && (
-                <p className="text-sm text-green-400 mt-1">That's just $8.25/month — save $21</p>
+                <p className="text-sm text-green-400 mt-1">That's just $5.83/month — save $14</p>
               )}
             </div>
           </CardHeader>
@@ -166,7 +166,7 @@ export default function Subscription() {
                 onClick={handleUpgrade}
                 disabled={loading}
               >
-                {loading ? "Redirecting..." : `Get Full Access — ${interval === "monthly" ? "$10/mo" : "$99/yr"}`}
+                {loading ? "Redirecting..." : `Get Full Access — ${interval === "monthly" ? "$6.99/mo" : "$69.99/yr"}`}
               </Button>
             )}
 

@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 import { getStripe } from "./stripe";
 
 // Subscription Plans
-// Customer:  $10/mo  — generate AI artwork & book artists
+// Customer:  $6.99/mo  — generate AI artwork & book artists
 // Artist:    $33/mo  — artist profile, bookings, portfolio
 // Studio:    $99/mo  — up to 5 users, studio dashboard
 // Industry:  $199/mo — enterprise, unlimited users
@@ -29,8 +29,8 @@ export const SUBSCRIPTION_PLANS = {
     id: "customer",
     name: "Customer",
     userType: "customer",
-    monthlyPrice: 10,
-    annualPrice: 102,
+    monthlyPrice: 6.99,
+    annualPrice: 69.99,
     credits: 30,
     features: [
       "30 AI tattoo designs/month",

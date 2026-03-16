@@ -445,6 +445,75 @@ export const mailingListRouter = router({
       const { subject, htmlBody, imageUrl } = await generateWeeklyAdEmail(input.language, input.studioName, input.origin);
       return { subject, htmlBody, imageUrl };
     }),
+
+  // Upload an ad image and get back a public CDN URL
+  uploadAdImage: adminProcedure
+    .input(z.object({
+      base64: z.string(),
+      mimeType: z.string(),
+      fileName: z.string(),
+    }))
+    .mutation(async ({ input }) => {
+      const buffer = Buffer.from(input.base64, "base64");
+      const ext = input.fileName.split(".").pop() ?? "jpg";
+      const key = `ad-blasts/${Date.now()}-${nanoid(8)}.${ext}`;
+      const { url } = await storagePut(key, buffer, input.mimeType);
+      return { url };
+    }),
+
+  // Send a custom ad blast to all opted-in studios with emails
+  sendCustomAd: adminProcedure
+    .input(z.object({
+      subject: z.string().min(1),
+      bodyHtml: z.string().min(1),
+      imageUrl: z.string().url().optional(),
+      origin: z.string().url(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+
+      const studios = await db.select().from(studioMailingList)
+        .where(and(
+          isNotNull(studioMailingList.email),
+          eq(studioMailingList.emailStatus, "found"),
+          eq(studioMailingList.weeklyAdOptOut, false),
+        ));
+
+      let sent = 0;
+      let failed = 0;
+      const errors: string[] = [];
+
+      for (const studio of studios) {
+        if (!studio.email) continue;
+        try {
+          const unsubscribeUrl = `${input.origin}/api/unsubscribe/${studio.unsubscribeToken}`;
+          const personalizedBody = input.bodyHtml.replace(/\{\{STUDIO_NAME\}\}/g, studio.studioName);
+          const imageBlock = input.imageUrl
+            ? `<div style="text-align:center;margin:24px 0;"><img src="${input.imageUrl}" alt="" style="max-width:100%;border-radius:8px;" /></div>`
+            : "";
+          const fullHtml = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0a0a0a;color:#e2e8f0;padding:32px;border-radius:12px;">${imageBlock}${personalizedBody}<p style="margin-top:32px;font-size:12px;color:#64748b;">To unsubscribe, <a href="${unsubscribeUrl}" style="color:#06b6d4;">click here</a>.</p></div>`;
+          await sendOutreachEmail({
+            to: studio.email,
+            toName: studio.studioName,
+            subject: input.subject,
+            htmlBody: fullHtml,
+            unsubscribeToken: studio.unsubscribeToken ?? undefined,
+            adImageUrl: input.imageUrl,
+          });
+          await db.update(studioMailingList)
+            .set({ lastWeeklyAdSentAt: new Date(), weeklyAdSentCount: (studio.weeklyAdSentCount || 0) + 1 })
+            .where(eq(studioMailingList.id, studio.id));
+          sent++;
+          await new Promise((r) => setTimeout(r, 1000));
+        } catch (err: unknown) {
+          failed++;
+          errors.push(`${studio.studioName}: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+
+      return { sent, failed, errors, total: studios.length };
+    }),
 });
 
 // ── Public unsubscribe handler (used by Express route) ───────────────────────

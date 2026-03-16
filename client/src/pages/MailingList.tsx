@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import {
   Mail, Send, Users, Globe, Trash2, Plus, Eye, RefreshCw,
   CheckCircle, AlertCircle, Clock, Ban, Loader2, Search,
-  ChevronDown, ChevronUp, BarChart3, Megaphone, Package,
+  ChevronDown, ChevronUp, BarChart3, Megaphone, Package, Zap, Upload, ImageIcon, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -48,7 +48,7 @@ function MailingListContent() {
   const [filterCountry, setFilterCountry] = useState("");
   const [filterEmailStatus, setFilterEmailStatus] = useState<string>("");
   const [filterInfoPack, setFilterInfoPack] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<"contacts" | "send" | "preview">("contacts");
+  const [activeTab, setActiveTab] = useState<"contacts" | "send" | "adblast" | "preview">("contacts");
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [editEmail, setEditEmail] = useState<{ id: number; email: string } | null>(null);
   const [previewResult, setPreviewResult] = useState<{ subject: string; htmlBody: string; imageUrl?: string } | null>(null);
@@ -58,6 +58,16 @@ function MailingListContent() {
   const [isSendingBatch, setIsSendingBatch] = useState(false);
   const [isSendingWeekly, setIsSendingWeekly] = useState(false);
   const [batchResult, setBatchResult] = useState<{ sent: number; failed: number; errors: string[] } | null>(null);
+
+  // Ad Blast state
+  const [adSubject, setAdSubject] = useState("");
+  const [adBodyHtml, setAdBodyHtml] = useState("");
+  const [adImageUrl, setAdImageUrl] = useState("");
+  const [adImagePreview, setAdImagePreview] = useState("");
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isSendingCustomAd, setIsSendingCustomAd] = useState(false);
+  const [customAdResult, setCustomAdResult] = useState<{ sent: number; failed: number; errors: string[]; total: number } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: contacts = [], refetch: refetchContacts, isLoading } = trpc.mailingList.list.useQuery({
     search: search || undefined,
@@ -102,6 +112,34 @@ function MailingListContent() {
     },
     onError: (e) => { toast.error(e.message); setIsSendingWeekly(false); },
   });
+
+  const uploadAdImage = trpc.mailingList.uploadAdImage.useMutation({
+    onSuccess: (d) => { setAdImageUrl(d.url); setIsUploadingImage(false); toast.success("Image uploaded!"); },
+    onError: (e) => { toast.error(e.message); setIsUploadingImage(false); },
+  });
+
+  const sendCustomAd = trpc.mailingList.sendCustomAd.useMutation({
+    onSuccess: (d) => {
+      setCustomAdResult(d);
+      toast.success(`Ad blast complete: ${d.sent} sent, ${d.failed} failed`);
+      refetchContacts();
+      setIsSendingCustomAd(false);
+    },
+    onError: (e) => { toast.error(e.message); setIsSendingCustomAd(false); },
+  });
+
+  const handleImageFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      setAdImagePreview(dataUrl);
+      // Extract base64 and upload
+      const base64 = dataUrl.split(",")[1];
+      setIsUploadingImage(true);
+      uploadAdImage.mutate({ base64, mimeType: file.type, fileName: file.name });
+    };
+    reader.readAsDataURL(file);
+  };
 
   const previewInfoPack = trpc.mailingList.previewInfoPack.useMutation({
     onSuccess: (d) => setPreviewResult(d),
@@ -157,6 +195,7 @@ function MailingListContent() {
           {[
             { id: "contacts", label: "Contacts", icon: Users },
             { id: "send", label: "Send Campaigns", icon: Send },
+            { id: "adblast", label: "Ad Blast", icon: Zap },
             { id: "preview", label: "Preview Email", icon: Eye },
           ].map((tab) => (
             <button
@@ -443,6 +482,150 @@ function MailingListContent() {
                     <div className="text-xs text-red-400 font-medium mb-2">Errors:</div>
                     <div className="space-y-1 max-h-40 overflow-y-auto">
                       {batchResult.errors.map((e, i) => (
+                        <div key={i} className="text-xs text-gray-400 bg-red-500/5 border border-red-500/10 rounded px-2 py-1">{e}</div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Ad Blast Tab */}
+        {activeTab === "adblast" && (
+          <div className="space-y-6">
+            <div className="bg-[#111] border border-[#222] rounded-xl p-6">
+              <h3 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+                <Zap className="w-5 h-5 text-yellow-400" />
+                Custom Ad Blast
+              </h3>
+              <p className="text-sm text-gray-400 mb-6">
+                Upload your ad image, write your message, and send it to all <strong className="text-white">{stats?.emailFound ?? 0}</strong> opted-in studios with emails.
+                Use <code className="text-cyan-400 bg-[#0a0a0a] px-1 rounded">{'{{STUDIO_NAME}}'}</code> in the body to personalise each email.
+              </p>
+
+              {/* Image Upload */}
+              <div className="mb-5">
+                <Label className="text-sm text-gray-300 mb-2 block">Ad Image (optional)</Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageFile(f); }}
+                />
+                {adImagePreview ? (
+                  <div className="relative inline-block">
+                    <img src={adImagePreview} alt="Ad preview" className="max-h-48 rounded-lg border border-[#333] object-contain" />
+                    {isUploadingImage && (
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-lg">
+                        <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+                      </div>
+                    )}
+                    {!isUploadingImage && adImageUrl && (
+                      <div className="absolute top-2 right-2 bg-green-500/90 text-white text-xs px-2 py-0.5 rounded-full">Uploaded</div>
+                    )}
+                    <button
+                      onClick={() => { setAdImagePreview(""); setAdImageUrl(""); }}
+                      className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-400 text-white rounded-full w-5 h-5 flex items-center justify-center"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-[#333] rounded-xl hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-colors cursor-pointer"
+                  >
+                    <ImageIcon className="w-8 h-8 text-gray-500 mb-2" />
+                    <span className="text-sm text-gray-400">Click to upload ad image</span>
+                    <span className="text-xs text-gray-600 mt-1">PNG, JPG, GIF up to 10MB</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Subject */}
+              <div className="mb-4">
+                <Label className="text-sm text-gray-300 mb-2 block">Subject Line</Label>
+                <Input
+                  value={adSubject}
+                  onChange={(e) => setAdSubject(e.target.value)}
+                  placeholder="e.g. New AI tattoo designs your clients will love"
+                  className="bg-[#0a0a0a] border-[#333] text-white placeholder:text-gray-600"
+                />
+              </div>
+
+              {/* Body HTML */}
+              <div className="mb-6">
+                <Label className="text-sm text-gray-300 mb-2 block">Email Body (HTML supported)</Label>
+                <textarea
+                  value={adBodyHtml}
+                  onChange={(e) => setAdBodyHtml(e.target.value)}
+                  placeholder={`<p>Hey {{STUDIO_NAME}},</p>\n<p>We wanted to share something exciting with you...</p>`}
+                  rows={8}
+                  className="w-full bg-[#0a0a0a] border border-[#333] text-white rounded-md px-3 py-2 text-sm font-mono placeholder:text-gray-600 focus:outline-none focus:border-cyan-500/50 resize-y"
+                />
+                <p className="text-xs text-gray-500 mt-1">Tip: Use HTML tags like &lt;p&gt;, &lt;strong&gt;, &lt;a href="..."&gt; for formatting.</p>
+              </div>
+
+              {/* Live Preview */}
+              {(adBodyHtml || adImagePreview) && (
+                <div className="mb-6 bg-[#0a0a0a] border border-[#333] rounded-xl p-4">
+                  <div className="text-xs text-gray-500 mb-3 flex items-center gap-1"><Eye className="w-3 h-3" /> Live Preview</div>
+                  {adSubject && <div className="text-xs text-gray-400 mb-3"><span className="text-gray-600">Subject: </span>{adSubject}</div>}
+                  {(adImagePreview || adImageUrl) && (
+                    <div className="text-center mb-4">
+                      <img src={adImagePreview || adImageUrl} alt="" className="max-w-full max-h-48 rounded-lg object-contain mx-auto" />
+                    </div>
+                  )}
+                  <div
+                    className="prose prose-invert max-w-none text-gray-300 text-sm leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: adBodyHtml.replace(/\{\{STUDIO_NAME\}\}/g, "Demo Studio") }}
+                  />
+                </div>
+              )}
+
+              {/* Send Button */}
+              <Button
+                className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold"
+                disabled={isSendingCustomAd || isUploadingImage || !adSubject.trim() || !adBodyHtml.trim()}
+                onClick={() => {
+                  if (confirm(`Send this ad to all ${stats?.emailFound ?? 0} opted-in studios? This will send real emails.`)) {
+                    setIsSendingCustomAd(true);
+                    setCustomAdResult(null);
+                    sendCustomAd.mutate({
+                      subject: adSubject,
+                      bodyHtml: adBodyHtml,
+                      imageUrl: adImageUrl || undefined,
+                      origin,
+                    });
+                  }
+                }}
+              >
+                {isSendingCustomAd
+                  ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending to all studios...</>
+                  : <><Zap className="w-4 h-4 mr-2" /> Blast to {stats?.emailFound ?? 0} Studios</>}
+              </Button>
+            </div>
+
+            {/* Result */}
+            {customAdResult && (
+              <div className="bg-[#111] border border-[#222] rounded-xl p-6">
+                <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-green-400" />
+                  Blast Results
+                </h3>
+                <div className="flex gap-6 mb-4">
+                  <div><span className="text-2xl font-bold text-green-400">{customAdResult.sent}</span><div className="text-xs text-gray-400">Sent</div></div>
+                  <div><span className="text-2xl font-bold text-red-400">{customAdResult.failed}</span><div className="text-xs text-gray-400">Failed</div></div>
+                  <div><span className="text-2xl font-bold text-gray-400">{customAdResult.total}</span><div className="text-xs text-gray-400">Total</div></div>
+                </div>
+                {customAdResult.errors.length > 0 && (
+                  <div className="mt-3">
+                    <div className="text-xs text-red-400 font-medium mb-2">Errors:</div>
+                    <div className="space-y-1 max-h-40 overflow-y-auto">
+                      {customAdResult.errors.map((e, i) => (
                         <div key={i} className="text-xs text-gray-400 bg-red-500/5 border border-red-500/10 rounded px-2 py-1">{e}</div>
                       ))}
                     </div>

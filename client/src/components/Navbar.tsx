@@ -25,6 +25,7 @@ import {
   LayoutDashboard,
   Bell,
   CheckCheck,
+  Smartphone,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -60,6 +61,47 @@ function LeegoLogo({ size = 36 }: { size?: number }) {
         opacity: enlarged ? 1 : 0.9,
       }}
     />
+  );
+}
+
+// Download App buttons (shown after login in sidebar)
+function DownloadAppButtons() {
+  return (
+    <div className="px-3 py-3 border-t border-zinc-800/40">
+      <p className="text-[9px] text-zinc-500 uppercase tracking-widest mb-2 px-1">Get the App</p>
+      <a
+        href="https://expo.dev/accounts/leego972/projects/tattooo/builds"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 transition-all mb-1.5 group"
+      >
+        <div className="w-6 h-6 rounded-md bg-green-500/10 flex items-center justify-center flex-shrink-0">
+          <Smartphone size={13} className="text-green-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[11px] font-semibold text-white leading-tight">Android</p>
+          <p className="text-[9px] text-zinc-500 leading-tight">Download APK</p>
+        </div>
+        <span className="text-[9px] text-zinc-600 group-hover:text-zinc-400">↓</span>
+      </a>
+      <a
+        href="https://testflight.apple.com/join/tattooo"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 transition-all group"
+      >
+        <div className="w-6 h-6 rounded-md bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" className="text-blue-400">
+            <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" fill="currentColor"/>
+          </svg>
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[11px] font-semibold text-white leading-tight">iOS</p>
+          <p className="text-[9px] text-zinc-500 leading-tight">TestFlight Beta</p>
+        </div>
+        <span className="text-[9px] text-zinc-600 group-hover:text-zinc-400">↓</span>
+      </a>
+    </div>
   );
 }
 
@@ -385,6 +427,9 @@ export default function Navbar() {
           )}
         </div>
 
+        {/* Download App buttons — shown when authenticated */}
+        {isAuthenticated && <DownloadAppButtons />}
+
         {/* LEEGO creator logo — click to enlarge 2× for 3 seconds */}
         <div className="flex flex-col items-center pb-4 pt-3 border-t border-zinc-800/40">
           <p className="text-[9px] text-zinc-600 uppercase tracking-widest mb-2">Created by</p>
@@ -474,6 +519,9 @@ export default function Navbar() {
                 </Button>
               ) : null}
             </div>
+            {/* Download App buttons on mobile — shown when authenticated */}
+            {isAuthenticated && <DownloadAppButtons />}
+
             {/* Leego logo on mobile — click to enlarge 2× for 3 seconds */}
             <div className="flex flex-col items-center pt-2 border-t border-zinc-800/40">
               <p className="text-[9px] text-zinc-600 uppercase tracking-widest mb-2">Created by</p>

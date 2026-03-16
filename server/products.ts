@@ -4,7 +4,7 @@
  * Business model:
  *   - Users: $10/month OR $99/year (saves ~17%)
  *   - Artists/Studios: $29/year directory listing fee
- *   - Studio Teams: $49/month OR $479/year (up to 10 artists)
+ *   - Studio Teams: $100/month OR $999/year (up to 10 artists)
  *   - Booking fee: 13% of artist's quoted price, charged at booking confirmation
  *
  * Price IDs are created in Stripe (live mode) and stored here.
@@ -50,22 +50,22 @@ export const TEAM_PLAN = {
   monthly: {
     id: "team_monthly" as const,
     name: "Tattooo Studio Team — Monthly",
-    price: 4900,          // cents = $49.00/month (up to 10 artists)
-    priceDisplay: "$49/month",
+    price: 10000,         // cents = $100.00/month (up to 10 artists)
+    priceDisplay: "$100/month",
     interval: "month" as const,
     description: "Up to 10 artists — shared studio profile, team inbox, booking management",
     maxMembers: 10,
-    stripePriceId: process.env.STRIPE_TEAM_MONTHLY_PRICE_ID || "price_1TBaRS8YRB7s7dJHW7AMZZdF",
+    stripePriceId: process.env.STRIPE_TEAM_MONTHLY_PRICE_ID || "price_1TBeJh8YRB7s7dJHVoY63TOQ",
   },
   yearly: {
     id: "team_yearly" as const,
     name: "Tattooo Studio Team — Yearly",
-    price: 47900,         // cents = $479.00/year (~$39.92/month, saves ~18%)
-    priceDisplay: "$479/year",
+    price: 99900,         // cents = $999.00/year (~$83.25/month, saves ~17%)
+    priceDisplay: "$999/year",
     interval: "year" as const,
-    description: "Up to 10 artists — save 18% vs monthly",
+    description: "Up to 10 artists — save 17% vs monthly",
     maxMembers: 10,
-    stripePriceId: process.env.STRIPE_TEAM_YEARLY_PRICE_ID || "price_1TBaRU8YRB7s7dJHXBX1qEAO",
+    stripePriceId: process.env.STRIPE_TEAM_YEARLY_PRICE_ID || "price_1TBeJi8YRB7s7dJHZaNmnW9C",
   },
 } as const;
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,7 @@ import {
   FileText,
   ChevronDown,
   ChevronUp,
+  Upload,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -82,6 +83,7 @@ interface FormData {
   website: string;
   profilePhotoUrl: string;
   portfolioImages: string;
+  studioLogoUrl: string;
   hourlyRate: string;
   depositAmount: string;
   businessHours: BusinessHours;
@@ -171,7 +173,7 @@ function HowItWorksSection() {
           <div className="mt-4 p-4 bg-amber-500/5 border border-amber-500/20 rounded-xl">
             <p className="text-xs font-semibold text-amber-400 mb-1">Commission Summary</p>
             <p className="text-xs text-muted-foreground">
-              Your studio pays a <strong className="text-foreground">membership fee</strong> at signup (Solo Artist: $29/year · Studio Team: $49/month or $479/year).
+              Your studio pays a <strong className="text-foreground">membership fee</strong> at signup (Solo Artist: $29/year · Studio Team: $100/month or $999/year).
               When a client confirms a booking, they pay tatt-ooo a <strong className="text-foreground">13% booking fee</strong> online to secure the appointment — this is charged to the client, not your studio.
               On the day, the client pays you directly for the full quoted job. You keep 100% of your rate.
               You must respond to booking requests within 24 hours or the request is automatically cancelled.
@@ -193,13 +195,40 @@ export default function ArtistSignup() {
     specialties: "", yearsExperience: "", priceRange: "", languages: "",
     address: "", city: "", state: "", country: "", postcode: "",
     instagram: "", tiktok: "", facebook: "", website: "",
-    profilePhotoUrl: "", portfolioImages: "",
+    profilePhotoUrl: "", portfolioImages: "", studioLogoUrl: "",
     hourlyRate: "", depositAmount: "50",
     businessHours: DEFAULT_HOURS,
     isTeamSignup: false, studioName: "", studioDescription: "",
   });
 
   const isSuccess = window.location.pathname.includes("/artist-signup/success");
+  const [logoUploading, setLogoUploading] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  const uploadReferenceMutation = trpc.tattoo.uploadReference.useMutation({
+    onSuccess: (data) => {
+      setForm((f) => ({ ...f, studioLogoUrl: data.url }));
+      setLogoUploading(false);
+      toast.success("Logo uploaded successfully!");
+    },
+    onError: () => {
+      setLogoUploading(false);
+      toast.error("Failed to upload logo. Please try again.");
+    },
+  });
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error("Logo must be under 5MB."); return; }
+    setLogoUploading(true);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const base64 = (ev.target?.result as string).split(",")[1];
+      uploadReferenceMutation.mutate({ imageBase64: base64, mimeType: file.type as "image/png" | "image/jpeg" | "image/webp" });
+    };
+    reader.readAsDataURL(file);
+  };
 
   const applyMutation = trpc.artists.applyWithPaymentFull.useMutation({
     onSuccess: (data) => {
@@ -266,6 +295,7 @@ export default function ArtistSignup() {
       businessHours: form.businessHours,
       profilePhotoUrl: form.profilePhotoUrl || undefined,
       portfolioImages: portfolioImages.length > 0 ? portfolioImages : undefined,
+      studioLogoUrl: form.studioLogoUrl || undefined,
       isTeamSignup: form.isTeamSignup,
       studioName: form.isTeamSignup ? form.studioName : undefined,
       studioDescription: form.isTeamSignup ? form.studioDescription : undefined,
@@ -593,6 +623,39 @@ export default function ArtistSignup() {
                       <Camera className="w-3.5 h-3.5 text-cyan-400" /> Profile photo URL
                     </Label>
                     <Input placeholder="https://..." value={form.profilePhotoUrl} onChange={set("profilePhotoUrl")} className="bg-card border-border" />
+                  </div>
+                  {/* Studio Logo Upload */}
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label className="text-sm text-foreground flex items-center gap-1.5">
+                      <Upload className="w-3.5 h-3.5 text-cyan-400" /> Studio / Artist Logo <span className="text-cyan-400 text-[10px] ml-1">(shown to clients in directory)</span>
+                    </Label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        ref={logoInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/gif"
+                        className="hidden"
+                        onChange={handleLogoUpload}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10"
+                        onClick={() => logoInputRef.current?.click()}
+                        disabled={logoUploading}
+                      >
+                        {logoUploading ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1.5" />}
+                        {logoUploading ? "Uploading..." : "Upload Logo"}
+                      </Button>
+                      {form.studioLogoUrl && (
+                        <div className="flex items-center gap-2">
+                          <img src={form.studioLogoUrl} alt="Logo preview" className="w-10 h-10 rounded-lg object-contain border border-border bg-card" />
+                          <span className="text-[10px] text-green-400 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Uploaded</span>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground/60">PNG, JPG or WebP. Max 5MB. This logo will be displayed on your public directory listing.</p>
                   </div>
                   <div className="space-y-1.5 sm:col-span-2">
                     <Label className="text-sm text-foreground">Portfolio image URLs</Label>

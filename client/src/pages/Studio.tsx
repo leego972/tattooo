@@ -12,8 +12,17 @@ import {
   Send, Paperclip, X, Sparkles, Download, Printer, RotateCcw,
   ChevronDown, ChevronUp, User, Loader2, ImageIcon, Wand2,
   Palette, MapPin, Ruler, RefreshCw, ZoomIn, Settings2,
-  Layers, Droplets, SlidersHorizontal, Check,
+  Layers, Droplets, SlidersHorizontal, Check, Calendar, Globe,
+  Building2, Shield, CreditCard,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { TATTOO_STYLES, TATTOO_CATEGORIES, type TattooStyle, type TattooCategory } from "../../../shared/tattooStyles";
 import { BODY_PLACEMENTS, SIZE_OPTIONS } from "../../../shared/tattoo";
 import { cn } from "@/lib/utils";
@@ -94,6 +103,44 @@ export default function Studio() {
   const [skinPhotoUrl, setSkinPhotoUrl] = useState<string | undefined>();
   const [showSkinOverlay, setShowSkinOverlay] = useState(false);
   const skinInputRef = useRef<HTMLInputElement>(null);
+
+  // Book an Artist modal state
+  const [showBookModal, setShowBookModal] = useState(false);
+  const [bookCountry, setBookCountry] = useState("All Countries");
+  const [bookArtistId, setBookArtistId] = useState<number | null>(null);
+  const [bookMsg, setBookMsg] = useState("");
+
+  const { data: artistList = [] } = trpc.artists.list.useQuery(
+    { limit: 200 },
+    { enabled: showBookModal }
+  );
+
+  const filteredBookArtists = useMemo(() => {
+    if (!artistList) return [];
+    return artistList.filter((a) =>
+      bookCountry === "All Countries" || a.country?.toLowerCase() === bookCountry.toLowerCase()
+    );
+  }, [artistList, bookCountry]);
+
+  const availableCountries = useMemo(() => {
+    const countries = [...new Set(artistList.map((a) => a.country).filter(Boolean))] as string[];
+    return ["All Countries", ...countries.sort()];
+  }, [artistList]);
+
+  const bookingMutation = trpc.artists.requestBooking.useMutation({
+    onSuccess: (data: { bookingId: number; checkoutUrl: string }) => {
+      if (data.checkoutUrl) {
+        toast.success("Redirecting to secure payment...");
+        window.open(data.checkoutUrl, "_blank");
+      } else {
+        toast.success("Booking request sent! The studio will confirm shortly.");
+      }
+      setShowBookModal(false);
+      setBookArtistId(null);
+      setBookMsg("");
+    },
+    onError: (err: { message?: string }) => toast.error(err.message || "Failed to create booking."),
+  });
 
   const generateMutation = trpc.tattoo.generate.useMutation({
     onSuccess: (data) => {
@@ -1092,7 +1139,7 @@ export default function Studio() {
           {lastGeneratedUrl && (
             <div className="rounded-xl overflow-hidden border border-primary/20">
               <img src={lastGeneratedUrl} alt="Latest design" className="w-full object-cover" />
-              <div className="flex gap-2 p-2">
+              <div className="flex gap-2 p-2 flex-wrap">
                 <Button
                   size="sm"
                   variant="ghost"
@@ -1109,11 +1156,138 @@ export default function Studio() {
                 >
                   <Printer size={12} /> Print
                 </Button>
+                <Button
+                  size="sm"
+                  className="w-full mt-1 bg-cyan-500 hover:bg-cyan-600 text-black font-bold text-xs gap-1"
+                  onClick={() => setShowBookModal(true)}
+                >
+                  <Calendar size={12} /> Book an Artist
+                </Button>
               </div>
             </div>
           )}
         </div>
       </aside>
+
+      {/* ── Book an Artist Modal ── */}
+      <Dialog open={showBookModal} onOpenChange={(open) => { if (!open) { setShowBookModal(false); setBookArtistId(null); setBookMsg(""); } }}>
+        <DialogContent className="bg-card border-border max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-foreground flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-cyan-400" /> Book an Artist
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Select a country to find available studios, then send your booking request with your AI-generated design.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-2">
+            {/* Country filter */}
+            <div className="space-y-1.5">
+              <Label className="text-sm text-foreground flex items-center gap-1.5">
+                <Globe className="w-3.5 h-3.5 text-cyan-400" /> Select Country
+              </Label>
+              <select
+                value={bookCountry}
+                onChange={(e) => { setBookCountry(e.target.value); setBookArtistId(null); }}
+                className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-foreground"
+              >
+                {availableCountries.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Studio list */}
+            {bookCountry !== "All Countries" && (
+              <div className="space-y-1.5">
+                <Label className="text-sm text-foreground flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-cyan-400" /> Choose a Studio
+                </Label>
+                {filteredBookArtists.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-4 text-center">No verified studios in {bookCountry} yet.</p>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {filteredBookArtists.map((a) => (
+                      <button
+                        key={a.id}
+                        type="button"
+                        onClick={() => setBookArtistId(a.id)}
+                        className={cn(
+                          "w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors",
+                          bookArtistId === a.id
+                            ? "border-cyan-500 bg-cyan-500/10"
+                            : "border-border bg-background hover:border-cyan-500/40"
+                        )}
+                      >
+                        {a.studioLogoUrl || a.avatarUrl ? (
+                          <img
+                            src={a.studioLogoUrl || a.avatarUrl || ""}
+                            alt={a.name || "Studio"}
+                            className="w-10 h-10 rounded-lg object-contain border border-border bg-card flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                            <Building2 className="w-5 h-5 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-foreground truncate">{a.name}</p>
+                          {a.specialties && <p className="text-[10px] text-cyan-400 truncate">{a.specialties}</p>}
+                          {a.businessHours && (
+                            <p className="text-[10px] text-muted-foreground">
+                              {Object.entries(a.businessHours as Record<string, { open: string; close: string; closed?: boolean }>)
+                                .filter(([, h]) => !h.closed)
+                                .slice(0, 1)
+                                .map(([day, h]) => `${day}: ${h.open}–${h.close}`)
+                                .join(", ")}
+                            </p>
+                          )}
+                        </div>
+                        {bookArtistId === a.id && <Check className="w-4 h-4 text-cyan-400 flex-shrink-0" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Booking message */}
+            {bookArtistId && (
+              <div className="space-y-1.5">
+                <Label className="text-sm text-foreground">Message to studio</Label>
+                <textarea
+                  placeholder="Describe your tattoo idea, preferred dates, size, placement... Your AI design will be attached automatically."
+                  value={bookMsg}
+                  onChange={(e) => setBookMsg(e.target.value)}
+                  className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-foreground min-h-[90px] resize-none"
+                  minLength={10}
+                />
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Shield className="w-3.5 h-3.5 text-green-400" />
+                  The studio will review your request and send a quote. You pay the 13% booking fee online to confirm — the rest is paid directly to the artist on the day.
+                </div>
+                <Button
+                  className="w-full bg-cyan-500 hover:bg-cyan-600 text-black font-bold"
+                  disabled={bookMsg.trim().length < 10 || bookingMutation.isPending}
+                  onClick={() => {
+                    if (!bookArtistId) return;
+                    bookingMutation.mutate({
+                      artistId: bookArtistId,
+                      message: bookMsg,
+                      designUrl: lastGeneratedUrl,
+                      origin: window.location.origin,
+                    });
+                  }}
+                >
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  {bookingMutation.isPending ? "Sending…" : "Send Booking Request"}
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

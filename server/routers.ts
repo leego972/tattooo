@@ -681,7 +681,35 @@ const artistsRouter = router({
       const db = await getDb();
       if (!db) return [];
       const rows = await db
-        .select()
+        .select({
+          // Public-safe fields only — contact info (email/phone/address) never exposed to customers
+          id: artists.id,
+          name: artists.name,
+          bio: artists.bio,
+          location: artists.location,
+          city: artists.city,
+          state: artists.state,
+          country: artists.country,
+          specialties: artists.specialties,
+          yearsExperience: artists.yearsExperience,
+          priceRange: artists.priceRange,
+          languages: artists.languages,
+          instagram: artists.instagram,
+          tiktok: artists.tiktok,
+          facebook: artists.facebook,
+          website: artists.website,
+          avatarUrl: artists.avatarUrl,
+          profilePhotoUrl: artists.profilePhotoUrl,
+          portfolioImages: artists.portfolioImages,
+          studioLogoUrl: artists.studioLogoUrl,
+          businessHours: artists.businessHours,
+          hourlyRate: artists.hourlyRate,
+          depositAmount: artists.depositAmount,
+          verified: artists.verified,
+          featured: artists.featured,
+          teamId: artists.teamId,
+          createdAt: artists.createdAt,
+        })
         .from(artists)
         .where(eq(artists.verified, true))
         .orderBy(desc(artists.featured), desc(artists.createdAt))
@@ -746,6 +774,7 @@ const artistsRouter = router({
         artistId: z.number().int().positive(),
         tattooGenerationId: z.number().int().positive().optional(),
         message: z.string().min(10).max(1000),
+        designUrl: z.string().url().optional(),
         origin: z.string().url(),
       })
     )
@@ -764,7 +793,9 @@ const artistsRouter = router({
         customerId: ctx.user.id,
         artistId: input.artistId,
         tattooGenerationId: input.tattooGenerationId ?? null,
-        message: input.message,
+        message: input.designUrl
+          ? `${input.message}\n\n[AI Design attached: ${input.designUrl}]`
+          : input.message,
         depositAmountCents: depositCents,
         status: "pending",
       });
@@ -936,6 +967,7 @@ const artistsRouter = router({
         businessHours: z.record(z.string(), z.object({ open: z.string(), close: z.string(), closed: z.boolean().optional() })).optional(),
         profilePhotoUrl: z.string().url().optional(),
         portfolioImages: z.array(z.string().url()).max(20).optional(),
+        studioLogoUrl: z.string().url().optional(),
         // Team signup
         isTeamSignup: z.boolean().default(false),
         studioName: z.string().max(255).optional(),
@@ -971,6 +1003,7 @@ const artistsRouter = router({
         businessHours: (input.businessHours ?? null) as Record<string, { open: string; close: string; closed?: boolean }> | null,
         profilePhotoUrl: input.profilePhotoUrl ?? null,
         portfolioImages: (input.portfolioImages ?? null) as string[] | null,
+        studioLogoUrl: input.studioLogoUrl ?? null,
         isTeamOwner: input.isTeamSignup,
         verified: false,
       });

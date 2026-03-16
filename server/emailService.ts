@@ -1,6 +1,14 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let _resend: Resend | null = null;
+function getResend(): Resend {
+  if (!_resend) {
+    const key = process.env.RESEND_API_KEY;
+    if (!key) throw new Error("RESEND_API_KEY is not configured");
+    _resend = new Resend(key);
+  }
+  return _resend;
+}
 
 const FROM_EMAIL = "tatt-ooo <noreply@tatt-ooo.com>";
 const LOGO_URL = "https://cdn.manus.im/webdev-static-assets/tatt-ooo-logo.png";
@@ -14,7 +22,7 @@ export async function sendPasswordResetEmail(
 ): Promise<void> {
   const firstName = toName?.split(" ")[0] ?? "there";
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM_EMAIL,
     to: toEmail,
     subject: "Reset your tatt-ooo password",
@@ -96,7 +104,7 @@ export async function sendArtistContactEmail(opts: {
   message: string;
   designUrl?: string;
 }): Promise<void> {
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM_EMAIL,
     to: opts.artistEmail,
     replyTo: opts.customerEmail,
@@ -172,7 +180,7 @@ export async function sendArtistContactEmail(opts: {
 export async function sendWelcomeEmail(toEmail: string, toName: string | null): Promise<void> {
   const firstName = toName?.split(" ")[0] ?? "there";
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM_EMAIL,
     to: toEmail,
     subject: "Welcome to tatt-ooo — Your AI Tattoo Designer 🎨",
@@ -271,7 +279,7 @@ export async function sendOutreachEmail(opts: {
   const adImageHtml = opts.adImageUrl
     ? `<tr><td style="padding:0 40px 32px;"><img src="${opts.adImageUrl}" alt="tatt-ooo weekly" style="width:100%;border-radius:8px;display:block;" /></td></tr>`
     : "";
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM_EMAIL,
     to: opts.to,
     subject: opts.subject,
@@ -328,7 +336,7 @@ export async function sendArtistRegistrationConfirmation(
   toEmail: string,
   artistName: string
 ): Promise<void> {
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM_EMAIL,
     to: toEmail,
     subject: "Application Received — tatooo.shop",
@@ -390,7 +398,7 @@ export async function sendPromoConfirmationEmail(
   const discountLine = discountPercent > 0 ? `<strong style="color:#06b6d4;">${discountPercent}% off</strong> your next credit purchase` : "";
   const bonusLine = bonusCredits > 0 ? `<strong style="color:#a78bfa;">+${bonusCredits} bonus credits</strong> added to your account` : "";
   const benefitLines = [discountLine, bonusLine].filter(Boolean).join(" and ");
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM_EMAIL,
     to: toEmail,
     subject: `Promo code ${promoCode} applied to your tatt-ooo account`,
@@ -461,7 +469,7 @@ export async function sendLowCreditAlert(
     "</table></td></tr></table></body></html>",
   ].join("\n");
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM_EMAIL,
     to: toEmail,
     subject,
@@ -474,7 +482,7 @@ export async function sendArtistTeamInviteEmail(
   studioName: string,
   inviteUrl: string
 ): Promise<void> {
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM_EMAIL,
     to: toEmail,
     subject: `You've been invited to join ${studioName} on tatt-ooo`,
@@ -531,7 +539,7 @@ export async function sendDesignToArtistEmail(opts: {
 
   const imageToShow = opts.printImageUrl || opts.designImageUrl;
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM_EMAIL,
     to: opts.artistEmail,
     replyTo: opts.customerEmail,
@@ -665,7 +673,7 @@ export async function sendBookingNotificationEmail(opts: {
     ].join("");
   }
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: "Tattooo <noreply@tattooo.shop>",
     to: opts.to,
     subject,

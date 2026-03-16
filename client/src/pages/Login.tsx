@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2, Sparkles, Eye, EyeOff } from "lucide-react";
 
-const LOGO_URL = "https://cdn-biz.manus.space/biz-assets/tatt-ooo/logo.png";
+const LOGO_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/tatt-ooo-logo_244a108c.png";
 
 export default function Login() {
   const [, navigate] = useLocation();

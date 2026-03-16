@@ -709,6 +709,8 @@ const artistsRouter = router({
           featured: artists.featured,
           teamId: artists.teamId,
           createdAt: artists.createdAt,
+          // Privacy-safe indicator: does this artist have a contact email?
+          hasEmail: sql<number>`CASE WHEN ${artists.contactEmail} IS NOT NULL AND ${artists.contactEmail} != '' THEN 1 ELSE 0 END`,
         })
         .from(artists)
         .where(eq(artists.verified, true))

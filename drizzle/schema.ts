@@ -111,6 +111,7 @@ export const artists = mysqlTable("artists", {
   // Media
   avatarUrl: text("avatarUrl"),
   profilePhotoUrl: text("profilePhotoUrl"),
+  studioLogoUrl: text("studioLogoUrl"),
   portfolioImages: json("portfolioImages").$type<string[]>(),
   // Professional
   specialties: varchar("specialties", { length: 512 }),

@@ -39,8 +39,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const LOGO_URL =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/tatt-ooo-logo_244a108c.png";
+const LOGO_URL = "/assets/tattooo-logo.png";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const COUNTRIES = [
@@ -225,7 +224,7 @@ export default function ArtistSignup() {
     const reader = new FileReader();
     reader.onload = (ev) => {
       const base64 = (ev.target?.result as string).split(",")[1];
-      uploadReferenceMutation.mutate({ imageBase64: base64, mimeType: file.type as "image/png" | "image/jpeg" | "image/webp" });
+      uploadReferenceMutation.mutate({ base64: base64, mimeType: file.type as "image/png" | "image/jpeg" | "image/webp" });
     };
     reader.readAsDataURL(file);
   };

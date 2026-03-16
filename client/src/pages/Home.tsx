@@ -38,39 +38,39 @@ function LeegoLogo({ size = 48 }: { size?: number }) {
     />
   );
 }
-const WALLPAPER_URL =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/hero-wallpaper_ca0e6f21.png";
-const GLOBAL_BANNER_URL =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/ad-global-banner-Xs7FLXjLMHnPoDUL7epTa5.webp";
+// Hero wallpaper — dark gradient fallback (no external dependency)
+const WALLPAPER_URL = "";
+const GLOBAL_BANNER_URL = "";
 
+// Ad creatives — using CSS gradient placeholders until real assets are uploaded
 const AD_CREATIVES = [
   {
-    url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/ad-hero-instagram-2utpP9zmqGGonqAqypdMSJ.webp",
+    url: "",
     label: "Client Ad — Instagram",
     aspect: "4 / 5",
   },
   {
-    url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/ad-artist-recruitment-JDdieWoQc3SY6TmQYcqhxf.webp",
+    url: "",
     label: "Artist Recruitment Ad",
     aspect: "4 / 5",
   },
   {
-    url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/ad-ai-design-feature-hBL6TJTacAvk2YZh9v8PA9.webp",
+    url: "",
     label: "AI Feature Ad",
     aspect: "4 / 5",
   },
   {
-    url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/ad-membership-promo-jAR8YGtEEkAeuPmKbXbc2z.webp",
+    url: "",
     label: "Membership Promo",
     aspect: "1 / 1",
   },
   {
-    url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/ad-styles-showcase-D7rzLUaJapaUxRScTcP3Dn.webp",
+    url: "",
     label: "Styles Showcase",
     aspect: "4 / 5",
   },
   {
-    url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/ad-affiliate-referral-Yw8Bh8Ka4WRJ9GbFZjWbiV.webp",
+    url: "",
     label: "Affiliate Programme Ad",
     aspect: "4 / 5",
   },

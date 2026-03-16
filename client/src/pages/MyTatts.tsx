@@ -585,11 +585,11 @@ export default function MyTatts() {
                                 {[a.city, a.country].filter(Boolean).join(", ")}
                               </p>
                             )}
-                            {!a.contactEmail && (
+                            {!a.hasEmail && (
                               <p className="text-[10px] text-amber-400/70">No email on file</p>
                             )}
                           </div>
-                          {a.contactEmail && <Check size={12} className="text-cyan-400 shrink-0" />}
+                          {a.hasEmail ? <Check size={12} className="text-cyan-400 shrink-0" /> : null}
                         </button>
                       ))}
                     </div>

@@ -18,7 +18,7 @@ const AD_CREATIVES = [
     title: "Design Your Dream Tattoo with AI",
     format: "Portrait",
     cta: "Find Your Perfect Artist",
-    url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/ad-hero-instagram-2utpP9zmqGGonqAqypdMSJ.webp",
+    url: "",
     channel: "Instagram / TikTok",
   },
   {
@@ -26,7 +26,7 @@ const AD_CREATIVES = [
     title: "Get Inked by Top Local Artists",
     format: "Portrait",
     cta: "Join the #1 Tattoo Platform",
-    url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/ad-artist-recruitment-JDdieWoQc3SY6TmQYcqhxf.webp",
+    url: "",
     channel: "Instagram / TikTok",
   },
   {
@@ -34,7 +34,7 @@ const AD_CREATIVES = [
     title: "Create & Book Your Tattoo in One Place!",
     format: "Portrait",
     cta: "Find Your Artist",
-    url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/ad-styles-showcase-D7rzLUaJapaUxRScTcP3Dn.webp",
+    url: "",
     channel: "Instagram / TikTok",
   },
   {
@@ -42,7 +42,7 @@ const AD_CREATIVES = [
     title: "Design Your Tattoo Ideas with AI",
     format: "Landscape",
     cta: "Start Now",
-    url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/ad-global-banner-Xs7FLXjLMHnPoDUL7epTa5.webp",
+    url: "",
     channel: "Facebook / Google Display",
   },
   {
@@ -50,7 +50,7 @@ const AD_CREATIVES = [
     title: "AI Designs Your Tattoo",
     format: "Landscape",
     cta: "Get Inked Today",
-    url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/ad-ai-design-feature-hBL6TJTacAvk2YZh9v8PA9.webp",
+    url: "",
     channel: "Facebook / Google Display",
   },
   {
@@ -58,7 +58,7 @@ const AD_CREATIVES = [
     title: "Create Your Dream Tattoo with AI",
     format: "Landscape",
     cta: "Get Inked Today",
-    url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/ad-membership-promo-jAR8YGtEEkAeuPmKbXbc2z.webp",
+    url: "",
     channel: "Facebook / Google Display",
   },
   {
@@ -66,7 +66,7 @@ const AD_CREATIVES = [
     title: "Design & Book Your Tattoo in One Place!",
     format: "Landscape",
     cta: "Start Now",
-    url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/ad-affiliate-referral-Yw8Bh8Ka4WRJ9GbFZjWbiV.webp",
+    url: "",
     channel: "Facebook / Google Display",
   },
 ];

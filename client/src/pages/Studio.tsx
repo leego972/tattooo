@@ -28,8 +28,7 @@ import { BODY_PLACEMENTS, SIZE_OPTIONS } from "../../../shared/tattoo";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 
-const LOGO_URL =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/tatt-ooo-logo_244a108c.png";
+const LOGO_URL = "/assets/tattooo-logo.png";
 
 interface ChatMessage {
   id: string;
@@ -123,7 +122,7 @@ export default function Studio() {
   }, [artistList, bookCountry]);
 
   const availableCountries = useMemo(() => {
-    const countries = [...new Set(artistList.map((a) => a.country).filter(Boolean))] as string[];
+    const countries = Array.from(new Set(artistList.map((a) => a.country).filter(Boolean))) as string[];
     return ["All Countries", ...countries.sort()];
   }, [artistList]);
 

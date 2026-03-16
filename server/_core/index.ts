@@ -99,6 +99,23 @@ async function startServer() {
     }
   });
 
+  // Temporary endpoint to run raw SQL migrations for missing columns
+  app.post("/api/admin/run-sql", async (req, res) => {
+    const { secret, sql } = req.body;
+    if (!secret || secret !== process.env.JWT_SECRET) {
+      res.status(403).json({ error: "forbidden" });
+      return;
+    }
+    try {
+      const db = await getDb();
+      if (!db) { res.status(500).json({ error: "db unavailable" }); return; }
+      const result = await (db as any).execute(sql);
+      res.json({ message: "SQL executed", result });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   // Temporary admin export endpoint for studio mailing list
   app.get("/api/admin/export-studios", async (req, res) => {
     const secret = req.query.secret as string;

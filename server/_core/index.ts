@@ -13,9 +13,10 @@ import healthRouter from "../health";
 import stripeWebhookRouter from "../stripeWebhook";
 import { handleUnsubscribe, runWeeklyAdJob } from "../mailing-list-router";
 import { getDb } from "../db";
-import { studioMailingList, users } from "../../drizzle/schema";
+import { studioMailingList, users, bookings, inAppNotifications } from "../../drizzle/schema";
+import { sendBookingNotificationEmail } from "../emailService";
 import { registerUser } from "../emailAuth";
-import { eq } from "drizzle-orm";
+import { eq, and, lt, isNull } from "drizzle-orm";
 import cron from "node-cron";
 import { seedBlogPosts } from "../blog-seed";
 import { migrate } from "drizzle-orm/mysql2/migrator";
@@ -183,5 +184,64 @@ cron.schedule("0 9 * * 1", async () => {
     console.log(`[WeeklyAdCron] Done — sent: ${result.sent}, failed: ${result.failed}`);
   } catch (err) {
     console.error("[WeeklyAdCron] Error:", err);
+  }
+}, { timezone: "UTC" });
+
+// ── 24-Hour Quote Timeout Cron ────────────────────────────────────────────────
+// Runs every hour. Finds bookings in 'pending' status with no quote sent
+// that are older than 24 hours, notifies the customer to pick another studio.
+cron.schedule("0 * * * *", async () => {
+  try {
+    const db = await getDb();
+    if (!db) return;
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    // Find pending bookings older than 24 hours with no quote yet
+    const timedOut = await db.select({
+      id: bookings.id,
+      customerId: bookings.customerId,
+      artistId: bookings.artistId,
+      createdAt: bookings.createdAt,
+    }).from(bookings)
+      .where(and(
+        eq(bookings.status, "pending"),
+        isNull(bookings.quotedAmountCents),
+        lt(bookings.createdAt, cutoff),
+      ));
+    if (timedOut.length === 0) return;
+    console.log(`[QuoteTimeoutCron] Found ${timedOut.length} timed-out booking(s)`);
+    for (const booking of timedOut) {
+      try {
+        const [customer] = await db.select().from(users).where(eq(users.id, booking.customerId)).limit(1);
+        if (!customer?.email) continue;
+        const [artist] = await db.select().from(users).where(eq(users.id, booking.artistId)).limit(1);
+        // Create in-app notification for customer
+        await db.insert(inAppNotifications).values({
+          userId: booking.customerId,
+          type: "system",
+          title: "⏰ No Quote Received — Choose Another Artist",
+          message: `The studio you requested hasn't responded within 24 hours. We recommend choosing a different artist for your booking.`,
+          data: JSON.stringify({ bookingId: booking.id, artistId: booking.artistId }),
+          isRead: false,
+        });
+        // Send email notification
+        await sendBookingNotificationEmail({
+          to: customer.email,
+          toName: customer.name || customer.email,
+          type: "declined",
+          artistName: artist?.name || "the selected studio",
+          reason: "The studio did not respond within 24 hours. We recommend choosing a different artist.",
+          bookingId: booking.id,
+        });
+        // Cancel the timed-out booking so it doesn't keep triggering
+        await db.update(bookings)
+          .set({ status: "cancelled", declineReason: "Studio did not respond within 24 hours" })
+          .where(eq(bookings.id, booking.id));
+        console.log(`[QuoteTimeoutCron] Notified customer ${customer.email} for booking #${booking.id}`);
+      } catch (err) {
+        console.error(`[QuoteTimeoutCron] Error processing booking #${booking.id}:`, err);
+      }
+    }
+  } catch (err) {
+    console.error("[QuoteTimeoutCron] Fatal error:", err);
   }
 }, { timezone: "UTC" });

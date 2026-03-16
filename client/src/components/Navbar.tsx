@@ -23,8 +23,10 @@ import {
   Tag,
   CalendarDays,
   LayoutDashboard,
+  Bell,
+  CheckCheck,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 
@@ -94,6 +96,121 @@ function CreditsBadge() {
         )}
       </div>
     </Link>
+  );
+}
+
+function NotificationBell({ compact = false }: { compact?: boolean }) {
+  const { isAuthenticated } = useAuth();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const { data: unreadData, refetch: refetchCount } = trpc.notifications.unreadCount.useQuery(undefined, {
+    enabled: isAuthenticated,
+    refetchInterval: 30 * 1000, // poll every 30s
+  });
+  const { data: notifications, refetch: refetchList } = trpc.notifications.list.useQuery(undefined, {
+    enabled: isAuthenticated && open,
+  });
+  const markRead = trpc.notifications.markRead.useMutation({ onSuccess: () => { refetchCount(); refetchList(); } });
+  const markAllRead = trpc.notifications.markAllRead.useMutation({ onSuccess: () => { refetchCount(); refetchList(); } });
+
+  // Close on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  if (!isAuthenticated) return null;
+
+  const unread = unreadData?.count ?? 0;
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className={cn(
+          "relative flex items-center justify-center rounded-lg transition-all",
+          compact ? "w-8 h-8" : "w-9 h-9",
+          open ? "bg-cyan-500/15 text-cyan-400" : "text-zinc-400 hover:text-white hover:bg-zinc-800/60"
+        )}
+        aria-label="Notifications"
+      >
+        <Bell size={compact ? 15 : 17} />
+        {unread > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center leading-none">
+            {unread > 99 ? "99+" : unread}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div className={cn(
+          "absolute z-50 bg-zinc-900 border border-zinc-700/60 rounded-xl shadow-2xl shadow-black/60 overflow-hidden",
+          compact
+            ? "right-0 top-10 w-80"
+            : "left-0 bottom-12 w-80"
+        )}>
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+            <span className="text-sm font-semibold text-white">Notifications</span>
+            {unread > 0 && (
+              <button
+                onClick={() => markAllRead.mutate()}
+                className="flex items-center gap-1 text-xs text-zinc-400 hover:text-cyan-400 transition-colors"
+              >
+                <CheckCheck size={12} />
+                Mark all read
+              </button>
+            )}
+          </div>
+
+          {/* List */}
+          <div className="max-h-80 overflow-y-auto divide-y divide-zinc-800/60">
+            {!notifications || notifications.length === 0 ? (
+              <div className="px-4 py-8 text-center text-sm text-zinc-500">
+                No notifications yet
+              </div>
+            ) : (
+              notifications.map((n) => (
+                <div
+                  key={n.id}
+                  onClick={() => { if (!n.isRead) markRead.mutate({ id: n.id }); }}
+                  className={cn(
+                    "px-4 py-3 cursor-pointer transition-colors hover:bg-zinc-800/40",
+                    !n.isRead && "bg-cyan-500/5 border-l-2 border-cyan-500/50"
+                  )}
+                >
+                  <div className="flex items-start gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className={cn("text-xs font-semibold truncate", n.isRead ? "text-zinc-400" : "text-white")}>
+                        {n.title}
+                      </p>
+                      <p className="text-xs text-zinc-500 mt-0.5 line-clamp-2">{n.message}</p>
+                      <p className="text-[10px] text-zinc-600 mt-1">
+                        {new Date(n.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                    {!n.isRead && (
+                      <div className="w-2 h-2 rounded-full bg-cyan-400 mt-1 shrink-0" />
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="px-4 py-2 border-t border-zinc-800">
+            <Link href="/my-bookings" onClick={() => setOpen(false)}>
+              <span className="text-xs text-cyan-400 hover:underline cursor-pointer">View all bookings →</span>
+            </Link>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -216,9 +333,12 @@ export default function Navbar() {
           </div>
         )}
 
-        {/* Credits + Auth — only when authenticated */}
+        {/* Credits + Notifications + Auth — only when authenticated */}
         <div className="px-2 py-3 border-t border-zinc-800/60 space-y-2">
-          <CreditsBadge />
+          <div className="flex items-center gap-2">
+            <div className="flex-1"><CreditsBadge /></div>
+            <NotificationBell />
+          </div>
 
           {isAuthenticated && (
             <div className="flex flex-col gap-1">
@@ -270,6 +390,7 @@ export default function Navbar() {
 
           <div className="flex items-center gap-2">
             <CreditsBadge />
+            <NotificationBell compact />
             <button
               className="p-1.5 text-zinc-400 hover:text-white"
               onClick={() => setMobileOpen(!mobileOpen)}
@@ -301,7 +422,6 @@ export default function Navbar() {
                 </Link>
               );
             })}
-
             {/* Admin links on mobile */}
             {isAuthenticated && user?.role === "admin" && (
               <div className="pt-2 border-t border-zinc-800/60">
@@ -319,7 +439,6 @@ export default function Navbar() {
                 ))}
               </div>
             )}
-
             <div className="pt-2 border-t border-zinc-800/60">
               {isAuthenticated ? (
                 <Button
@@ -332,7 +451,6 @@ export default function Navbar() {
                 </Button>
               ) : null}
             </div>
-
             {/* Leego logo on mobile */}
             <div className="flex flex-col items-center pt-2 border-t border-zinc-800/40">
               <p className="text-[9px] text-zinc-600 uppercase tracking-widest mb-2">Created by</p>

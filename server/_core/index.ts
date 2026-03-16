@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import cookieParser from "cookie-parser";
 import { createServer } from "http";
 import net from "net";
 import path from "path";
@@ -56,7 +57,10 @@ async function runMigrations() {
 async function startServer() {
   await runMigrations();
   const app = express();
+  app.set("trust proxy", 1); // Trust Railway's proxy for secure cookies
   const server = createServer(app);
+  // Cookie parser must be before tRPC middleware
+  app.use(cookieParser());
   // Stripe webhook MUST be registered before express.json() for raw body access
   app.use(stripeWebhookRouter);
   // Configure body parser with larger size limit for file uploads

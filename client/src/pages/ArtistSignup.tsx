@@ -126,15 +126,15 @@ const HOW_IT_WORKS = [
   {
     icon: Percent,
     step: "05",
-    title: "13% service fee — only on confirmed bookings",
-    desc: "We charge a 13% service fee on the quoted job value, deducted automatically when a booking is confirmed. There is no upfront cost, no monthly subscription, and no fee if no booking is made. Every booking through tatt-ooo is pure incremental revenue for your studio.",
+    title: "13% booking fee — charged to the client, not you",
+    desc: "When a client confirms a booking through tatt-ooo, a 13% service fee is added to their total and charged directly to them at payment. Your studio receives the full quoted amount. Your only cost is your membership fee.",
   },
 ];
 
 const BENEFITS = [
   { icon: TrendingUp, title: "Pre-qualified clients only",    desc: "Clients arrive with a complete AI-generated design brief — they know what they want, at what scale, and where. No guesswork." },
   { icon: Users,      title: "Global reach",                  desc: "Get discovered by tattoo enthusiasts worldwide who have already designed their perfect tattoo using our AI tools." },
-  { icon: Zap,        title: "Zero upfront cost",             desc: "No listing fee, no subscription. You only pay a 13% commission when a booking is successfully confirmed through the platform." },
+  { icon: Zap,        title: "Simple, transparent pricing",     desc: "A straightforward annual or monthly membership fee to be listed. The 13% booking fee is charged to your clients — not to you — so your full quoted revenue stays yours." },
   { icon: Shield,     title: "Verified studio badge",         desc: "Earn a verified badge after admin review, building trust and credibility with clients browsing the directory." },
 ];
 
@@ -171,10 +171,10 @@ function HowItWorksSection() {
           <div className="mt-4 p-4 bg-amber-500/5 border border-amber-500/20 rounded-xl">
             <p className="text-xs font-semibold text-amber-400 mb-1">Commission Summary</p>
             <p className="text-xs text-muted-foreground">
-              A <strong className="text-foreground">13% service fee</strong> is charged on the total quoted job value at the time a booking is confirmed.
-              This fee is automatically deducted from the client's deposit payment. There are no hidden charges, no monthly fees,
-              and no cost if a booking is not made. By registering your studio, you agree to this commission structure as outlined
-              in the <a href="/terms" className="text-cyan-400 underline underline-offset-2">tatt-ooo Terms of Service</a>.
+              Your studio pays a <strong className="text-foreground">membership fee</strong> at signup (Solo Artist: $29/year · Studio Team: $49/month or $479/year).
+              A <strong className="text-foreground">13% service fee</strong> is added to the client's payment at the time of booking confirmation — this is charged to the client, not your studio.
+              You receive your full quoted amount. You must respond to booking requests within 24 hours.
+              By registering, you agree to these terms as outlined in the <a href="/terms" className="text-cyan-400 underline underline-offset-2">tatt-ooo Terms of Service</a>.
             </p>
           </div>
         </div>
@@ -716,10 +716,10 @@ export default function ArtistSignup() {
                       {[
                         { label: "What we provide:", value: "Client traffic generation, marketing, and AI-prepared design briefs delivered to your studio for every booking enquiry." },
                         { label: "What you provide:", value: "Your tattooing expertise. Review the client's brief, send a quote, and complete the booking." },
-                        { label: "Commission rate:", value: "13% of the total quoted job value, deducted automatically when a booking is confirmed by the client." },
-                        { label: "When you pay:", value: "Only upon a confirmed booking. No charge for unconfirmed enquiries, cancellations before confirmation, or periods of inactivity." },
-                        { label: "No upfront fees:", value: "There is no listing fee, no monthly subscription, and no hidden charges of any kind." },
-                        { label: "Booking deposits:", value: "Clients pay a deposit at booking. The 13% commission is deducted from this deposit; the remainder is transferred to your nominated account." },
+                        { label: "Membership fee:", value: "A listing fee is charged upfront at signup: Solo Artist $29/year · Studio Team $49/month or $479/year. This is your only direct cost." },
+                        { label: "13% booking fee:", value: "Charged to the client at the time of booking confirmation — not to your studio. You receive your full quoted amount." },
+                        { label: "Quote response time:", value: "You must respond to booking requests within 24 hours. Unanswered requests are automatically cancelled and the client is notified to choose another studio." },
+                        { label: "Booking flow:", value: "Client submits a request with their AI-prepared brief → you send a quote → client pays (including the 13% fee) → booking confirmed → funds transferred to you." },
                       ].map((item) => (
                         <li key={item.label} className="flex gap-2">
                           <CheckCircle className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
@@ -757,7 +757,7 @@ export default function ArtistSignup() {
                       <a href="/terms" target="_blank" className="text-cyan-400 underline underline-offset-2 hover:text-cyan-300">
                         tatt-ooo Terms of Service
                       </a>{" "}
-                      and confirm that a <strong className="text-foreground">13% service fee</strong> will be applied to the quoted value of each confirmed booking made through the tatt-ooo platform. I understand there are no upfront costs and that the fee applies only upon booking confirmation.
+                      and confirm that a <strong className="text-foreground">membership fee</strong> applies at signup, and that a <strong className="text-foreground">13% service fee</strong> is charged to clients on each confirmed booking. I understand the quote response window is 24 hours.
                     </span>
                   </label>
                 </div>

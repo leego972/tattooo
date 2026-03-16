@@ -121,20 +121,20 @@ const HOW_IT_WORKS = [
     icon: CheckCircle,
     step: "04",
     title: "You quote, they confirm",
-    desc: "You review the AI-prepared brief and send a quote through the platform. Once the client accepts and pays a deposit, the booking is confirmed. The entire process is handled within tatt-ooo.",
+    desc: "You review the AI-prepared brief and send your quote through the platform. The client selects a date and time from your available slots, then pays tatt-ooo a 13% booking fee online to lock in the appointment. The booking is now guaranteed.",
   },
   {
     icon: Percent,
     step: "05",
-    title: "13% booking fee — charged to the client, not you",
-    desc: "When a client confirms a booking through tatt-ooo, a 13% service fee is added to their total and charged directly to them at payment. Your studio receives the full quoted amount. Your only cost is your membership fee.",
+    title: "Client arrives, you get paid in full",
+    desc: "On the day, the client comes to your studio with their printable to-scale design file ready to go. They pay you directly for the full quoted job. tatt-ooo earns only the 13% booking fee paid online at confirmation — you keep every cent of your quote.",
   },
 ];
 
 const BENEFITS = [
   { icon: TrendingUp, title: "Pre-qualified clients only",    desc: "Clients arrive with a complete AI-generated design brief — they know what they want, at what scale, and where. No guesswork." },
   { icon: Users,      title: "Global reach",                  desc: "Get discovered by tattoo enthusiasts worldwide who have already designed their perfect tattoo using our AI tools." },
-  { icon: Zap,        title: "Simple, transparent pricing",     desc: "A straightforward annual or monthly membership fee to be listed. The 13% booking fee is charged to your clients — not to you — so your full quoted revenue stays yours." },
+  { icon: Zap,        title: "Keep 100% of your quoted rate",    desc: "Clients pay tatt-ooo a 13% booking fee online to secure their appointment. On the day, they pay you directly for the full job. Your only cost is your membership fee — nothing more." },
   { icon: Shield,     title: "Verified studio badge",         desc: "Earn a verified badge after admin review, building trust and credibility with clients browsing the directory." },
 ];
 
@@ -172,8 +172,9 @@ function HowItWorksSection() {
             <p className="text-xs font-semibold text-amber-400 mb-1">Commission Summary</p>
             <p className="text-xs text-muted-foreground">
               Your studio pays a <strong className="text-foreground">membership fee</strong> at signup (Solo Artist: $29/year · Studio Team: $49/month or $479/year).
-              A <strong className="text-foreground">13% service fee</strong> is added to the client's payment at the time of booking confirmation — this is charged to the client, not your studio.
-              You receive your full quoted amount. You must respond to booking requests within 24 hours.
+              When a client confirms a booking, they pay tatt-ooo a <strong className="text-foreground">13% booking fee</strong> online to secure the appointment — this is charged to the client, not your studio.
+              On the day, the client pays you directly for the full quoted job. You keep 100% of your rate.
+              You must respond to booking requests within 24 hours or the request is automatically cancelled.
               By registering, you agree to these terms as outlined in the <a href="/terms" className="text-cyan-400 underline underline-offset-2">tatt-ooo Terms of Service</a>.
             </p>
           </div>
@@ -716,10 +717,11 @@ export default function ArtistSignup() {
                       {[
                         { label: "What we provide:", value: "Client traffic generation, marketing, and AI-prepared design briefs delivered to your studio for every booking enquiry." },
                         { label: "What you provide:", value: "Your tattooing expertise. Review the client's brief, send a quote, and complete the booking." },
-                        { label: "Membership fee:", value: "A listing fee is charged upfront at signup: Solo Artist $29/year · Studio Team $49/month or $479/year. This is your only direct cost." },
-                        { label: "13% booking fee:", value: "Charged to the client at the time of booking confirmation — not to your studio. You receive your full quoted amount." },
+                        { label: "Membership fee:", value: "Charged upfront at signup: Solo Artist $29/year · Studio Team $49/month or $479/year. This is your only direct cost to tatt-ooo." },
+                        { label: "13% booking fee:", value: "Paid by the client to tatt-ooo online when they confirm a booking. You are not charged this fee. You receive 100% of your quoted rate, paid directly by the client at your studio on the day." },
+                        { label: "What you receive:", value: "A guaranteed, pre-committed client with a printable to-scale tattoo design file — everything you need to prepare and execute the work." },
                         { label: "Quote response time:", value: "You must respond to booking requests within 24 hours. Unanswered requests are automatically cancelled and the client is notified to choose another studio." },
-                        { label: "Booking flow:", value: "Client submits a request with their AI-prepared brief → you send a quote → client pays (including the 13% fee) → booking confirmed → funds transferred to you." },
+                        { label: "Booking flow:", value: "Client submits brief → you send a quote → client picks a date/time from your available slots → client pays tatt-ooo 13% online → booking confirmed → client comes to you on the day and pays your full rate." },
                       ].map((item) => (
                         <li key={item.label} className="flex gap-2">
                           <CheckCircle className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
@@ -757,7 +759,7 @@ export default function ArtistSignup() {
                       <a href="/terms" target="_blank" className="text-cyan-400 underline underline-offset-2 hover:text-cyan-300">
                         tatt-ooo Terms of Service
                       </a>{" "}
-                      and confirm that a <strong className="text-foreground">membership fee</strong> applies at signup, and that a <strong className="text-foreground">13% service fee</strong> is charged to clients on each confirmed booking. I understand the quote response window is 24 hours.
+                      and confirm that a <strong className="text-foreground">membership fee</strong> applies at signup. I understand that clients pay tatt-ooo a <strong className="text-foreground">13% booking fee</strong> online to confirm appointments, and pay me directly for the full job on the day. I agree to respond to all booking requests within 24 hours.
                     </span>
                   </label>
                 </div>

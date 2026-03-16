@@ -7,9 +7,37 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getLoginUrl } from "@/const";
+import { useState, useRef, useEffect } from "react";
 
-const LOGO_URL =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/tatt-ooo-logo_244a108c.png";
+const LOGO_URL = "/assets/tattooo-logo.png";
+const LEEGO_URL = "/assets/leego-logo.png";
+
+// Leego logo with click-to-enlarge animation (2× for 3 seconds)
+function LeegoLogo({ size = 48 }: { size?: number }) {
+  const [enlarged, setEnlarged] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleClick = () => {
+    setEnlarged(true);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setEnlarged(false), 3000);
+  };
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+  return (
+    <img
+      src={LEEGO_URL}
+      alt="Created by LEEGO"
+      onClick={handleClick}
+      style={{
+        width: enlarged ? size * 2 : size,
+        height: enlarged ? size * 2 : size,
+        transition: "width 0.3s ease, height 0.3s ease",
+        cursor: "pointer",
+        objectFit: "contain",
+        opacity: enlarged ? 1 : 0.85,
+      }}
+    />
+  );
+}
 const WALLPAPER_URL =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/hero-wallpaper_ca0e6f21.png";
 const GLOBAL_BANNER_URL =
@@ -602,6 +630,13 @@ export default function Home() {
               <span className="flex items-center gap-1"><Globe className="w-3 h-3" /> 38 countries</span>
               <span className="flex items-center gap-1"><Users className="w-3 h-3" /> 2,400+ members</span>
               <span className="flex items-center gap-1"><Shield className="w-3 h-3" /> Verified artists</span>
+            </div>
+          </div>
+          {/* Created by LEEGO */}
+          <div className="flex flex-col items-center pt-6 border-t border-white/5 mt-2">
+            <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-2">Created by</p>
+            <div className="bg-black rounded-xl p-2 shadow-lg shadow-black/60 inline-flex items-center justify-center">
+              <LeegoLogo size={56} />
             </div>
           </div>
         </div>

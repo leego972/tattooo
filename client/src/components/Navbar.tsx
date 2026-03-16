@@ -30,11 +30,38 @@ import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc";
 
-const LOGO_URL =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/tatt-ooo-logo_244a108c.png";
+const LOGO_URL = "/assets/tattooo-logo.png";
+const LEEGO_URL = "/assets/leego-logo.png";
 
-const LEEGO_URL =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663418605762/Pa7E4RBX4UbpFBvKpz2nxk/leego-logo_ad7e0c89.png";
+// Leego logo with click-to-enlarge animation (2× for 3 seconds)
+function LeegoLogo({ size = 36 }: { size?: number }) {
+  const [enlarged, setEnlarged] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleClick = () => {
+    setEnlarged(true);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setEnlarged(false), 3000);
+  };
+
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+  return (
+    <img
+      src={LEEGO_URL}
+      alt="Created by LEEGO"
+      onClick={handleClick}
+      style={{
+        width: enlarged ? size * 2 : size,
+        height: enlarged ? size * 2 : size,
+        transition: "width 0.3s ease, height 0.3s ease",
+        cursor: "pointer",
+        objectFit: "contain",
+        opacity: enlarged ? 1 : 0.9,
+      }}
+    />
+  );
+}
 
 // Links shown only when authenticated
 const authNavLinks = [
@@ -242,8 +269,8 @@ export default function Navbar() {
           </nav>
           <div className="flex flex-col items-center pb-4 pt-3 border-t border-zinc-800/40">
             <p className="text-[9px] text-zinc-600 uppercase tracking-widest mb-2">Created by</p>
-            <div className="bg-black rounded-xl p-2 shadow-lg shadow-black/60">
-              <img src={LEEGO_URL} alt="Created by LEEGO" className="w-36 h-36 object-contain opacity-90 hover:opacity-100 transition-opacity" />
+            <div className="bg-black rounded-xl p-2 shadow-lg shadow-black/60 flex items-center justify-center" style={{ minWidth: 80, minHeight: 80 }}>
+              <LeegoLogo size={72} />
             </div>
           </div>
         </aside>
@@ -358,15 +385,11 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* LEEGO creator logo — black background panel, enlarged */}
+        {/* LEEGO creator logo — click to enlarge 2× for 3 seconds */}
         <div className="flex flex-col items-center pb-4 pt-3 border-t border-zinc-800/40">
           <p className="text-[9px] text-zinc-600 uppercase tracking-widest mb-2">Created by</p>
-          <div className="bg-black rounded-xl p-2 shadow-lg shadow-black/60">
-              <img
-              src={LEEGO_URL}
-              alt="Created by LEEGO"
-              className="w-36 h-36 object-contain opacity-90 hover:opacity-100 transition-opacity"
-            />
+          <div className="bg-black rounded-xl p-2 shadow-lg shadow-black/60 flex items-center justify-center" style={{ minWidth: 80, minHeight: 80 }}>
+            <LeegoLogo size={72} />
           </div>
         </div>
       </aside>
@@ -451,15 +474,11 @@ export default function Navbar() {
                 </Button>
               ) : null}
             </div>
-            {/* Leego logo on mobile */}
+            {/* Leego logo on mobile — click to enlarge 2× for 3 seconds */}
             <div className="flex flex-col items-center pt-2 border-t border-zinc-800/40">
               <p className="text-[9px] text-zinc-600 uppercase tracking-widest mb-2">Created by</p>
-              <div className="bg-black rounded-xl p-1.5 shadow-lg shadow-black/60">
-                <img
-                  src={LEEGO_URL}
-                  alt="Created by LEEGO"
-                  className="w-20 h-20 object-contain opacity-90"
-                />
+              <div className="bg-black rounded-xl p-1.5 shadow-lg shadow-black/60 flex items-center justify-center" style={{ minWidth: 56, minHeight: 56 }}>
+                <LeegoLogo size={52} />
               </div>
             </div>
           </div>

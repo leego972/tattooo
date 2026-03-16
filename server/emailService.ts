@@ -11,7 +11,8 @@ function getResend(): Resend {
 }
 
 const FROM_EMAIL = "tatt-ooo <noreply@tatt-ooo.com>";
-const LOGO_URL = "https://cdn.manus.im/webdev-static-assets/tatt-ooo-logo.png";
+const LOGO_URL = "https://www.tattooo.shop/assets/tattooo-logo.png";
+const LEEGO_LOGO_URL = "https://www.tattooo.shop/assets/leego-logo.png";
 
 // Password Reset Email
 
@@ -80,8 +81,12 @@ export async function sendPasswordResetEmail(
           <tr>
             <td style="padding:20px 40px;border-top:1px solid #1e293b;text-align:center;">
               <p style="margin:0;font-size:12px;color:#475569;">
-                © ${new Date().getFullYear()} tatt-ooo · AI Tattoo Designer · Created by LEEGO
+                © ${new Date().getFullYear()} tatt-ooo · AI Tattoo Designer
               </p>
+              <div style="margin-top:10px;">
+                <p style="margin:0 0 4px;font-size:9px;color:#334155;text-transform:uppercase;letter-spacing:0.15em;">Created by</p>
+                <img src="${LEEGO_LOGO_URL}" alt="Created by LEEGO" width="48" height="48" style="width:48px;height:48px;object-fit:contain;display:inline-block;background:#000;border-radius:8px;padding:4px;" />
+              </div>
             </td>
           </tr>
         </table>
@@ -238,8 +243,12 @@ export async function sendWelcomeEmail(toEmail: string, toName: string | null): 
           <tr>
             <td style="padding:20px 40px;border-top:1px solid #1e293b;text-align:center;">
               <p style="margin:0;font-size:12px;color:#475569;">
-                © ${new Date().getFullYear()} tatt-ooo · AI Tattoo Designer · Created by LEEGO
+                © ${new Date().getFullYear()} tatt-ooo · AI Tattoo Designer
               </p>
+              <div style="margin-top:10px;">
+                <p style="margin:0 0 4px;font-size:9px;color:#334155;text-transform:uppercase;letter-spacing:0.15em;">Created by</p>
+                <img src="${LEEGO_LOGO_URL}" alt="Created by LEEGO" width="48" height="48" style="width:48px;height:48px;object-fit:contain;display:inline-block;background:#000;border-radius:8px;padding:4px;" />
+              </div>
             </td>
           </tr>
         </table>
@@ -298,7 +307,8 @@ export async function sendOutreachEmail(opts: {
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" style="background-color:#111111;border-radius:12px;border:1px solid #222222;overflow:hidden;max-width:600px;width:100%;">
           <tr>
-            <td style="background:linear-gradient(135deg,#0a0a0a 0%,#111827 100%);padding:32px 40px;text-align:center;border-bottom:1px solid #1e3a5f;">
+            <td style="background:linear-gradient(135deg,#0a0a0a 0%,#111827 100%);padding:24px 40px;text-align:center;border-bottom:1px solid #1e3a5f;">
+              <img src="${LOGO_URL}" alt="tatt-ooo" width="80" height="80" style="width:80px;height:80px;border-radius:50%;object-fit:cover;display:inline-block;margin-bottom:8px;" />
               <div style="font-size:28px;font-weight:900;letter-spacing:0.05em;color:#ffffff;">
                 tatt<span style="color:#06b6d4;">-ooo</span>
               </div>
@@ -314,8 +324,12 @@ export async function sendOutreachEmail(opts: {
           <tr>
             <td style="padding:20px 40px;border-top:1px solid #1e293b;text-align:center;">
               <p style="margin:0;font-size:12px;color:#475569;">
-                © ${new Date().getFullYear()} tatt-ooo · AI Tattoo Designer · Created by LEEGO
+                © ${new Date().getFullYear()} tatt-ooo · AI Tattoo Designer
               </p>
+              <div style="margin-top:10px;">
+                <p style="margin:0 0 4px;font-size:9px;color:#334155;text-transform:uppercase;letter-spacing:0.15em;">Created by</p>
+                <img src="${LEEGO_LOGO_URL}" alt="Created by LEEGO" width="48" height="48" style="width:48px;height:48px;object-fit:contain;display:inline-block;background:#000;border-radius:8px;padding:4px;" />
+              </div>
               <p style="margin:8px 0 0;font-size:11px;color:#334155;">
                 You're receiving this because you're a tattoo artist or studio. <a href="${unsubscribeUrl}" style="color:#475569;">Unsubscribe</a>
               </p>

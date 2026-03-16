@@ -41,9 +41,10 @@ The email should:
 2. Make it crystal clear: we handle the marketing, the client acquisition, and the design preparation — they just need to show up and tattoo
 3. Emphasise the AI-prepared design brief: clients arrive knowing exactly what they want, at the right scale and placement, eliminating wasted consultation time
 4. Present the 13% fee as a fair exchange for a fully managed, end-to-end client delivery — pure incremental revenue with zero effort on their part
-5. Include a clear call-to-action to list their studio at ${origin}/artist-signup
-6. Be confident, direct, and professional — speak to the studio owner as a serious business partner who understands ROI
-7. Be written entirely in ${langName}
+5. Mention that tatt-ooo is available on both Android and iOS for maximum client convenience — clients can design their tattoo anytime, anywhere, and book directly through the app
+6. Include a clear call-to-action to list their studio at ${origin}/artist-signup
+7. Be confident, direct, and professional — speak to the studio owner as a serious business partner who understands ROI
+8. Be written entirely in ${langName}
 
 Respond with JSON: { "subject": "...", "htmlBody": "..." }
 The htmlBody should be clean HTML paragraphs (no full page wrapper, just the content body).`,

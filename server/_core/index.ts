@@ -45,7 +45,7 @@ async function runMigrations() {
   try {
     const db = await getDb();
     if (!db) { console.warn("[Migrate] DB not available, skipping migrations"); return; }
-    const migrationsFolder = path.resolve(__dirname, "../../drizzle");
+    const migrationsFolder = path.resolve(__dirname, "../drizzle");
     await migrate(db as any, { migrationsFolder });
     console.log("[Migrate] Migrations applied successfully");
   } catch (err) {

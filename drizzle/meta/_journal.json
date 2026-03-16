@@ -36,6 +36,20 @@
       "when": 1773579167824,
       "tag": "0004_puzzling_star_brand",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1773600000000,
+      "tag": "0005_add_marketing_budgets",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1773700000000,
+      "tag": "0006_add_studio_logo_url_to_artists",
+      "breakpoints": true
     }
   ]
 }

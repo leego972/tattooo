@@ -7,8 +7,8 @@
  *   - Studio Teams: $49/month OR $479/year (up to 10 artists)
  *   - Booking fee: 13% of artist's quoted price, charged at booking confirmation
  *
- * Price IDs are created in Stripe (test mode) and stored here.
- * When switching to live keys, update the env vars in Settings → Payment.
+ * Price IDs are created in Stripe (live mode) and stored here.
+ * Update the env vars in Railway → Variables to override.
  */
 
 // ─── User Membership ──────────────────────────────────────────────────────────
@@ -20,7 +20,7 @@ export const USER_MEMBERSHIP = {
     priceDisplay: "$10/month",
     interval: "month" as const,
     description: "Full access to AI tattoo designer, artist directory, and booking system",
-    stripePriceId: process.env.STRIPE_MEMBER_MONTHLY_PRICE_ID || "",
+    stripePriceId: process.env.STRIPE_MEMBER_MONTHLY_PRICE_ID || "price_1TBaRM8YRB7s7dJHqvTnvjnR",
   },
   yearly: {
     id: "member_yearly" as const,
@@ -29,7 +29,7 @@ export const USER_MEMBERSHIP = {
     priceDisplay: "$99/year",
     interval: "year" as const,
     description: "Full access — save 17% vs monthly",
-    stripePriceId: process.env.STRIPE_MEMBER_YEARLY_PRICE_ID || "",
+    stripePriceId: process.env.STRIPE_MEMBER_YEARLY_PRICE_ID || "price_1TBaRO8YRB7s7dJHdPEjuFJZ",
   },
 } as const;
 
@@ -40,7 +40,7 @@ export const ARTIST_FEE = {
   amount: 2900,           // cents = $29.00/year
   display: "$29/year",
   description: "Annual directory listing — get discovered by clients, receive real bookings",
-  stripePriceId: process.env.STRIPE_ARTIST_FEE_PRICE_ID || "price_1TB7dZK1nQvj50bsRYtNu02O",
+  stripePriceId: process.env.STRIPE_ARTIST_FEE_PRICE_ID || "price_1TBaRQ8YRB7s7dJHbNV4SPRb",
 };
 
 // ─── Artist Team Plan ─────────────────────────────────────────────────────────
@@ -55,7 +55,7 @@ export const TEAM_PLAN = {
     interval: "month" as const,
     description: "Up to 10 artists — shared studio profile, team inbox, booking management",
     maxMembers: 10,
-    stripePriceId: process.env.STRIPE_TEAM_MONTHLY_PRICE_ID || "",
+    stripePriceId: process.env.STRIPE_TEAM_MONTHLY_PRICE_ID || "price_1TBaRS8YRB7s7dJHW7AMZZdF",
   },
   yearly: {
     id: "team_yearly" as const,
@@ -65,7 +65,7 @@ export const TEAM_PLAN = {
     interval: "year" as const,
     description: "Up to 10 artists — save 18% vs monthly",
     maxMembers: 10,
-    stripePriceId: process.env.STRIPE_TEAM_YEARLY_PRICE_ID || "",
+    stripePriceId: process.env.STRIPE_TEAM_YEARLY_PRICE_ID || "price_1TBaRU8YRB7s7dJHXBX1qEAO",
   },
 } as const;
 

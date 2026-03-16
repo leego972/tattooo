@@ -590,6 +590,12 @@ export default function Home() {
               </ul>
             </div>
           </div>
+          {/* How to reach our team */}
+          <div className="border-t border-white/5 pt-6 pb-4 mb-2">
+            <h4 className="font-semibold text-sm text-white mb-1">How to reach our team</h4>
+            <p className="text-xs text-gray-500 mb-1">For partnership enquiries, studio onboarding, and general questions:</p>
+            <a href="mailto:tattoooaistudio@gmail.com" className="text-amber-400 hover:underline text-sm font-medium">tattoooaistudio@gmail.com</a>
+          </div>
           <div className="border-t border-white/5 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-xs text-gray-500">© 2026 tattooo.shop. All rights reserved. Payments secured by Stripe.</p>
             <div className="flex items-center gap-4 text-xs text-gray-500">

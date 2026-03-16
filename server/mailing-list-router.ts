@@ -31,15 +31,19 @@ async function generateInfoPackEmail(language: string, studioName: string, origi
       },
       {
         role: "user",
-        content: `Write a professional info pack email to a tattoo studio called "${studioName}" in ${langName}.
+        content: `Write a professional, compelling info pack email to a tattoo studio called "${studioName}" in ${langName}.
+
+Core message to convey:
+tatt-ooo handles everything on the client side — we generate the traffic, we acquire the client, and we deliver a fully prepared, AI-generated design brief to scale before the client even walks through the door. The studio's only job is to do what they do best: the tattoo. In return, we charge a 13% service fee on the quoted job value, only when a booking is successfully confirmed. No upfront costs. No subscriptions. No risk.
 
 The email should:
-1. Introduce tatt-ooo as an AI tattoo design platform that helps clients visualise their tattoo ideas before booking
-2. Explain how it benefits their studio: clients come in with clear design briefs, reducing back-and-forth
-3. Mention that studios can list on the tatt-ooo artist directory for £29/year
-4. Include a clear call-to-action to visit ${origin}/artist-signup
-5. Be warm, professional, and respectful of their craft
-6. Be written entirely in ${langName}
+1. Open powerfully — position tatt-ooo as a growth partner that fills their chair with ready-to-go clients, not just a lead generator
+2. Make it crystal clear: we handle the marketing, the client acquisition, and the design preparation — they just need to show up and tattoo
+3. Emphasise the AI-prepared design brief: clients arrive knowing exactly what they want, at the right scale and placement, eliminating wasted consultation time
+4. Present the 13% fee as a fair exchange for a fully managed, end-to-end client delivery — pure incremental revenue with zero effort on their part
+5. Include a clear call-to-action to list their studio at ${origin}/artist-signup
+6. Be confident, direct, and professional — speak to the studio owner as a serious business partner who understands ROI
+7. Be written entirely in ${langName}
 
 Respond with JSON: { "subject": "...", "htmlBody": "..." }
 The htmlBody should be clean HTML paragraphs (no full page wrapper, just the content body).`,

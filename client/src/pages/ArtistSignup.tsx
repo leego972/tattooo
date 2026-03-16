@@ -30,6 +30,11 @@ import {
   Languages,
   Briefcase,
   Building2,
+  Percent,
+  Megaphone,
+  FileText,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -58,7 +63,6 @@ const DEFAULT_HOURS: BusinessHours = {
 };
 
 interface FormData {
-  // Step 1: Basic info
   name: string;
   contactEmail: string;
   phone: string;
@@ -67,24 +71,20 @@ interface FormData {
   yearsExperience: string;
   priceRange: string;
   languages: string;
-  // Step 2: Location
   address: string;
   city: string;
   state: string;
   country: string;
   postcode: string;
-  // Step 3: Links & media
   instagram: string;
   tiktok: string;
   facebook: string;
   website: string;
   profilePhotoUrl: string;
-  portfolioImages: string; // comma-separated URLs
-  // Step 4: Hours & pricing
+  portfolioImages: string;
   hourlyRate: string;
   depositAmount: string;
   businessHours: BusinessHours;
-  // Step 5: Team (optional)
   isTeamSignup: boolean;
   studioName: string;
   studioDescription: string;
@@ -98,16 +98,95 @@ const STEPS = [
   { id: 5, label: "Payment",    icon: CreditCard },
 ];
 
-const BENEFITS = [
-  { icon: TrendingUp, title: "Warm leads only",    desc: "Clients arrive with a design already created — they just need an artist to bring it to life." },
-  { icon: Users,      title: "Global visibility",  desc: "Get discovered by tattoo enthusiasts worldwide who've designed their perfect tattoo using AI." },
-  { icon: Zap,        title: "Instant bookings",   desc: "Clients can book and pay a deposit directly through your profile — no back-and-forth needed." },
-  { icon: Shield,     title: "Verified badge",     desc: "Earn a verified artist badge after admin review, building trust with potential clients." },
+const HOW_IT_WORKS = [
+  {
+    icon: Megaphone,
+    step: "01",
+    title: "We drive the traffic",
+    desc: "tatt-ooo runs targeted marketing campaigns across social media and search to attract tattoo enthusiasts globally. We bring the audience — you don't spend a cent on advertising.",
+  },
+  {
+    icon: FileText,
+    step: "02",
+    title: "Clients design their tattoo with AI",
+    desc: "Every client uses our AI design tools to create a detailed, to-scale brief of exactly what they want — style, size, placement, and reference imagery — before they ever contact a studio.",
+  },
+  {
+    icon: Users,
+    step: "03",
+    title: "We match them to your studio",
+    desc: "Based on location, style, and availability, we connect the client directly to your listing. They arrive informed, prepared, and ready to book — no vague consultations, no wasted time.",
+  },
+  {
+    icon: CheckCircle,
+    step: "04",
+    title: "You quote, they confirm",
+    desc: "You review the AI-prepared brief and send a quote through the platform. Once the client accepts and pays a deposit, the booking is confirmed. The entire process is handled within tatt-ooo.",
+  },
+  {
+    icon: Percent,
+    step: "05",
+    title: "13% service fee — only on confirmed bookings",
+    desc: "We charge a 13% service fee on the quoted job value, deducted automatically when a booking is confirmed. There is no upfront cost, no monthly subscription, and no fee if no booking is made. Every booking through tatt-ooo is pure incremental revenue for your studio.",
+  },
 ];
+
+const BENEFITS = [
+  { icon: TrendingUp, title: "Pre-qualified clients only",    desc: "Clients arrive with a complete AI-generated design brief — they know what they want, at what scale, and where. No guesswork." },
+  { icon: Users,      title: "Global reach",                  desc: "Get discovered by tattoo enthusiasts worldwide who have already designed their perfect tattoo using our AI tools." },
+  { icon: Zap,        title: "Zero upfront cost",             desc: "No listing fee, no subscription. You only pay a 13% commission when a booking is successfully confirmed through the platform." },
+  { icon: Shield,     title: "Verified studio badge",         desc: "Earn a verified badge after admin review, building trust and credibility with clients browsing the directory." },
+];
+
+function HowItWorksSection() {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div className="border border-cyan-500/20 rounded-2xl overflow-hidden">
+      <button
+        className="w-full flex items-center justify-between px-5 py-4 bg-cyan-500/5 hover:bg-cyan-500/10 transition-colors text-left"
+        onClick={() => setExpanded((e) => !e)}
+      >
+        <span className="text-sm font-bold text-foreground flex items-center gap-2">
+          <FileText className="w-4 h-4 text-cyan-400" />
+          How the Partnership Works — Full Breakdown
+        </span>
+        {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+      </button>
+      {expanded && (
+        <div className="px-5 py-5 space-y-5 border-t border-cyan-500/20 bg-background/50">
+          {HOW_IT_WORKS.map((item) => (
+            <div key={item.step} className="flex gap-4">
+              <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
+                <item.icon className="w-5 h-5 text-cyan-400" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] font-bold text-cyan-400/60 uppercase tracking-widest">Step {item.step}</span>
+                  <span className="text-sm font-bold text-foreground">{item.title}</span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
+              </div>
+            </div>
+          ))}
+          <div className="mt-4 p-4 bg-amber-500/5 border border-amber-500/20 rounded-xl">
+            <p className="text-xs font-semibold text-amber-400 mb-1">Commission Summary</p>
+            <p className="text-xs text-muted-foreground">
+              A <strong className="text-foreground">13% service fee</strong> is charged on the total quoted job value at the time a booking is confirmed.
+              This fee is automatically deducted from the client's deposit payment. There are no hidden charges, no monthly fees,
+              and no cost if a booking is not made. By registering your studio, you agree to this commission structure as outlined
+              in the <a href="/terms" className="text-cyan-400 underline underline-offset-2">tatt-ooo Terms of Service</a>.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function ArtistSignup() {
   const [, navigate] = useLocation();
   const [step, setStep] = useState(1);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [form, setForm] = useState<FormData>({
     name: "", contactEmail: "", phone: "", bio: "",
     specialties: "", yearsExperience: "", priceRange: "", languages: "",
@@ -153,6 +232,11 @@ export default function ArtistSignup() {
   };
 
   const handleSubmit = () => {
+    if (!agreedToTerms) {
+      toast.error("Please read and agree to the Terms of Service and commission structure before proceeding.");
+      return;
+    }
+
     const portfolioImages = form.portfolioImages
       .split(",")
       .map((u) => u.trim())
@@ -198,13 +282,19 @@ export default function ArtistSignup() {
           <img src={LOGO_URL} alt="tatt-ooo" className="h-10 mx-auto mb-4 opacity-80" />
           <h1 className="text-2xl font-bold text-foreground mb-3">Application Received!</h1>
           <p className="text-muted-foreground mb-6">
-            Thank you for joining the tatt-ooo artist directory. Your payment has been processed and
-            your application is now <strong className="text-foreground">pending admin review</strong>.
-            We'll send a confirmation to your email once approved — usually within 24–48 hours.
+            Thank you for joining the tatt-ooo partner network. Your application is now{" "}
+            <strong className="text-foreground">pending admin review</strong>. We'll send a confirmation
+            to your email once approved — usually within 24–48 hours.
           </p>
           <div className="bg-card border border-border rounded-2xl p-4 mb-6 text-left space-y-2">
             <p className="text-sm font-semibold text-foreground">What happens next?</p>
-            {["Our team reviews your profile (24–48 hrs)", "You receive a verified badge on your listing", "Clients start discovering and booking you"].map((t) => (
+            {[
+              "Our team reviews your profile (24–48 hrs)",
+              "You receive a verified badge on your listing",
+              "Clients start discovering and booking you",
+              "You receive booking enquiries with AI-prepared design briefs",
+              "Confirm bookings and earn — 13% commission applies only on confirmed jobs",
+            ].map((t) => (
               <div key={t} className="flex items-start gap-2 text-sm text-muted-foreground">
                 <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
                 <span>{t}</span>
@@ -228,20 +318,21 @@ export default function ArtistSignup() {
             <img src={LOGO_URL} alt="tatt-ooo" className="h-8 opacity-80" />
           </div>
           <h1 className="text-3xl sm:text-4xl font-black text-foreground mb-3">
-            Join the tatt-ooo Artist Directory
+            Partner with tatt-ooo — Fill Your Studio with Ready-to-Book Clients
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl">
-            Connect with clients who've already designed their perfect tattoo using AI — they just need <em>you</em> to bring it to life.
+            We handle the marketing, client acquisition, and design preparation. You focus on the tattoo.
+            No upfront costs. No subscriptions. A simple <strong className="text-foreground">13% commission</strong> only when a booking is confirmed.
           </p>
         </div>
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-10">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-          {/* Left: Benefits */}
+          {/* Left: Benefits + How It Works */}
           <div className="space-y-6">
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-cyan-400 mb-3">Why join?</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-cyan-400 mb-3">Why partner with us?</p>
               <div className="space-y-4">
                 {BENEFITS.map((b) => (
                   <div key={b.title} className="flex gap-3">
@@ -257,19 +348,27 @@ export default function ArtistSignup() {
               </div>
             </div>
 
-            {/* Pricing card */}
+            {/* Commission card */}
             <div className="bg-gradient-to-br from-cyan-500/10 to-purple-500/10 border border-cyan-500/30 rounded-2xl p-5">
-              <div className="flex items-center gap-2 mb-2">
-                <Star className="w-4 h-4 text-cyan-400 fill-cyan-400" />
-                <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider">Annual Listing</span>
+              <div className="flex items-center gap-2 mb-3">
+                <Percent className="w-4 h-4 text-cyan-400" />
+                <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider">Commission Model</span>
               </div>
-              <div className="flex items-end gap-1 mb-1">
-                <span className="text-4xl font-black text-foreground">$29</span>
-                <span className="text-muted-foreground mb-1">/year</span>
+              <div className="flex items-end gap-1 mb-2">
+                <span className="text-4xl font-black text-foreground">13%</span>
+                <span className="text-muted-foreground mb-1">/ confirmed booking</span>
               </div>
-              <p className="text-xs text-muted-foreground">Less than $2.50/month. Cancel anytime.</p>
-              <div className="mt-3 space-y-1.5">
-                {["Verified artist badge", "Unlimited client enquiries", "Booking deposit system", "Global directory listing", "Priority in search results"].map((f) => (
+              <p className="text-xs text-muted-foreground mb-3">
+                Charged on the quoted job value only when a booking is confirmed. Zero cost if no booking is made.
+              </p>
+              <div className="space-y-1.5">
+                {[
+                  "No upfront listing fee",
+                  "No monthly subscription",
+                  "No charge for unconfirmed enquiries",
+                  "Automatic deduction from client deposit",
+                  "Full booking management included",
+                ].map((f) => (
                   <div key={f} className="flex items-center gap-2 text-xs text-muted-foreground">
                     <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0" />
                     {f}
@@ -280,9 +379,12 @@ export default function ArtistSignup() {
           </div>
 
           {/* Right: Multi-step form */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-6">
+            {/* How It Works expandable — shown above the form */}
+            <HowItWorksSection />
+
             {/* Step indicator */}
-            <div className="flex items-center gap-1.5 mb-8 flex-wrap">
+            <div className="flex items-center gap-1.5 flex-wrap">
               {STEPS.map((s, i) => (
                 <div key={s.id} className="flex items-center gap-1.5">
                   <div className={cn(
@@ -456,59 +558,50 @@ export default function ArtistSignup() {
               </div>
             )}
 
-            {/* ── Step 3: Portfolio & Links ── */}
+            {/* ── Step 3: Portfolio ── */}
             {step === 3 && (
               <div className="space-y-5">
                 <div>
-                  <h2 className="text-xl font-bold text-foreground mb-1">Portfolio &amp; Links</h2>
-                  <p className="text-sm text-muted-foreground">Showcase your work and connect your social profiles.</p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-sm text-foreground flex items-center gap-1.5">
-                    <Camera className="w-3.5 h-3.5 text-cyan-400" /> Profile photo URL
-                  </Label>
-                  <Input placeholder="https://example.com/your-photo.jpg" value={form.profilePhotoUrl} onChange={set("profilePhotoUrl")} className="bg-card border-border" />
-                  <p className="text-xs text-muted-foreground/60">Link to a professional headshot or studio photo.</p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-sm text-foreground flex items-center gap-1.5">
-                    <Palette className="w-3.5 h-3.5 text-purple-400" /> Portfolio image URLs
-                  </Label>
-                  <Textarea
-                    placeholder="Paste image URLs separated by commas&#10;e.g. https://cdn.example.com/tattoo1.jpg, https://cdn.example.com/tattoo2.jpg"
-                    value={form.portfolioImages}
-                    onChange={set("portfolioImages")}
-                    className="bg-card border-border min-h-[80px] resize-none"
-                  />
-                  <p className="text-xs text-muted-foreground/60">Up to 20 images. Comma-separated direct image URLs.</p>
+                  <h2 className="text-xl font-bold text-foreground mb-1">Portfolio & Social Links</h2>
+                  <p className="text-sm text-muted-foreground">Showcase your work and connect your social presence.</p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label className="text-sm text-foreground flex items-center gap-1.5">
-                      <Instagram className="w-3.5 h-3.5 text-pink-400" /> Instagram handle
+                      <Instagram className="w-3.5 h-3.5 text-cyan-400" /> Instagram handle
                     </Label>
                     <Input placeholder="@yourstudio" value={form.instagram} onChange={set("instagram")} className="bg-card border-border" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-sm text-foreground flex items-center gap-1.5">
-                      <Star className="w-3.5 h-3.5 text-muted-foreground" /> TikTok handle
-                    </Label>
-                    <Input placeholder="@yourtiktok" value={form.tiktok} onChange={set("tiktok")} className="bg-card border-border" />
+                    <Label className="text-sm text-foreground">TikTok handle</Label>
+                    <Input placeholder="@yourstudio" value={form.tiktok} onChange={set("tiktok")} className="bg-card border-border" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-sm text-foreground flex items-center gap-1.5">
-                      <Globe className="w-3.5 h-3.5 text-blue-400" /> Facebook URL
-                    </Label>
-                    <Input placeholder="https://facebook.com/yourpage" value={form.facebook} onChange={set("facebook")} className="bg-card border-border" />
+                    <Label className="text-sm text-foreground">Facebook page</Label>
+                    <Input placeholder="facebook.com/yourstudio" value={form.facebook} onChange={set("facebook")} className="bg-card border-border" />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-sm text-foreground flex items-center gap-1.5">
                       <Globe className="w-3.5 h-3.5 text-cyan-400" /> Website
                     </Label>
                     <Input placeholder="https://yourstudio.com" value={form.website} onChange={set("website")} className="bg-card border-border" />
+                  </div>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label className="text-sm text-foreground flex items-center gap-1.5">
+                      <Camera className="w-3.5 h-3.5 text-cyan-400" /> Profile photo URL
+                    </Label>
+                    <Input placeholder="https://..." value={form.profilePhotoUrl} onChange={set("profilePhotoUrl")} className="bg-card border-border" />
+                  </div>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label className="text-sm text-foreground">Portfolio image URLs</Label>
+                    <Textarea
+                      placeholder="Paste image URLs separated by commas..."
+                      value={form.portfolioImages}
+                      onChange={set("portfolioImages")}
+                      className="bg-card border-border min-h-[80px] resize-none text-xs"
+                    />
+                    <p className="text-[10px] text-muted-foreground/60">Separate multiple URLs with commas. Must start with https://</p>
                   </div>
                 </div>
 
@@ -523,12 +616,12 @@ export default function ArtistSignup() {
               </div>
             )}
 
-            {/* ── Step 4: Business Hours & Pricing ── */}
+            {/* ── Step 4: Hours ── */}
             {step === 4 && (
               <div className="space-y-5">
                 <div>
-                  <h2 className="text-xl font-bold text-foreground mb-1">Hours &amp; Pricing</h2>
-                  <p className="text-sm text-muted-foreground">Set your availability and booking deposit.</p>
+                  <h2 className="text-xl font-bold text-foreground mb-1">Business Hours & Rates</h2>
+                  <p className="text-sm text-muted-foreground">Let clients know when you're available and what to expect.</p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -536,28 +629,25 @@ export default function ArtistSignup() {
                     <Label className="text-sm text-foreground flex items-center gap-1.5">
                       <DollarSign className="w-3.5 h-3.5 text-cyan-400" /> Hourly rate (USD)
                     </Label>
-                    <Input type="number" min="0" placeholder="e.g. 200" value={form.hourlyRate} onChange={set("hourlyRate")} className="bg-card border-border" />
+                    <Input type="number" min="0" placeholder="e.g. 150" value={form.hourlyRate} onChange={set("hourlyRate")} className="bg-card border-border" />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-sm text-foreground flex items-center gap-1.5">
                       <CreditCard className="w-3.5 h-3.5 text-cyan-400" /> Booking deposit (USD)
                     </Label>
-                    <Input type="number" min="10" placeholder="e.g. 50" value={form.depositAmount} onChange={set("depositAmount")} className="bg-card border-border" />
-                    <p className="text-xs text-muted-foreground/60">Clients pay this to secure their appointment.</p>
+                    <Input type="number" min="0" placeholder="e.g. 50" value={form.depositAmount} onChange={set("depositAmount")} className="bg-card border-border" />
                   </div>
                 </div>
 
-                {/* Business hours */}
-                <div className="bg-card border border-border rounded-xl overflow-hidden">
-                  <div className="px-4 py-3 border-b border-border/40 flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm font-semibold text-foreground">Business Hours</span>
-                  </div>
-                  <div className="divide-y divide-border/30">
+                <div>
+                  <Label className="text-sm text-foreground flex items-center gap-1.5 mb-3">
+                    <Clock className="w-3.5 h-3.5 text-cyan-400" /> Opening hours
+                  </Label>
+                  <div className="space-y-2">
                     {DAYS.map((day) => {
                       const h = form.businessHours[day];
                       return (
-                        <div key={day} className="flex items-center gap-3 px-4 py-2.5">
+                        <div key={day} className="flex items-center gap-3 py-2 border-b border-border/20 last:border-0">
                           <div className="w-24 text-xs font-medium text-foreground">{day}</div>
                           <input
                             type="checkbox"
@@ -606,29 +696,37 @@ export default function ArtistSignup() {
             {step === 5 && (
               <div className="space-y-5">
                 <div>
-                  <h2 className="text-xl font-bold text-foreground mb-1">Annual Listing Fee</h2>
+                  <h2 className="text-xl font-bold text-foreground mb-1">Review & Confirm Partnership</h2>
                   <p className="text-sm text-muted-foreground">
-                    One payment of <strong className="text-foreground">$29/year</strong> to be listed in the tatt-ooo artist directory.
+                    Review the partnership terms and commission structure before joining.
                   </p>
                 </div>
 
-                {/* Order summary */}
+                {/* Commission & process summary */}
                 <div className="bg-card border border-border rounded-2xl overflow-hidden">
-                  <div className="px-5 py-4 border-b border-border/40">
-                    <p className="text-sm font-semibold text-foreground">Order Summary</p>
+                  <div className="px-5 py-4 border-b border-border/40 bg-cyan-500/5">
+                    <p className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <Percent className="w-4 h-4 text-cyan-400" />
+                      Partnership & Commission Summary
+                    </p>
                   </div>
-                  <div className="px-5 py-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-foreground">tatt-ooo Artist Directory Listing</p>
-                        <p className="text-xs text-muted-foreground">Annual subscription</p>
-                      </div>
-                      <span className="text-sm font-bold text-foreground">$29.00</span>
-                    </div>
-                    <div className="border-t border-border/40 pt-3 flex items-center justify-between">
-                      <span className="text-sm font-semibold text-foreground">Total</span>
-                      <span className="text-lg font-black text-cyan-400">$29.00 / year</span>
-                    </div>
+                  <div className="px-5 py-4 space-y-3 text-sm text-muted-foreground">
+                    <p>By joining the tatt-ooo partner network, you agree to the following:</p>
+                    <ul className="space-y-2 list-none">
+                      {[
+                        { label: "What we provide:", value: "Client traffic generation, marketing, and AI-prepared design briefs delivered to your studio for every booking enquiry." },
+                        { label: "What you provide:", value: "Your tattooing expertise. Review the client's brief, send a quote, and complete the booking." },
+                        { label: "Commission rate:", value: "13% of the total quoted job value, deducted automatically when a booking is confirmed by the client." },
+                        { label: "When you pay:", value: "Only upon a confirmed booking. No charge for unconfirmed enquiries, cancellations before confirmation, or periods of inactivity." },
+                        { label: "No upfront fees:", value: "There is no listing fee, no monthly subscription, and no hidden charges of any kind." },
+                        { label: "Booking deposits:", value: "Clients pay a deposit at booking. The 13% commission is deducted from this deposit; the remainder is transferred to your nominated account." },
+                      ].map((item) => (
+                        <li key={item.label} className="flex gap-2">
+                          <CheckCircle className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
+                          <span><strong className="text-foreground">{item.label}</strong> {item.value}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
 
@@ -642,21 +740,43 @@ export default function ArtistSignup() {
                   {form.isTeamSignup && form.studioName && <p className="text-xs text-purple-400">🏢 Studio: {form.studioName}</p>}
                 </div>
 
+                {/* T&C agreement checkbox */}
+                <div className={cn(
+                  "border rounded-xl p-4 transition-colors",
+                  agreedToTerms ? "border-green-500/30 bg-green-500/5" : "border-border/40 bg-card/40"
+                )}>
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={agreedToTerms}
+                      onChange={(e) => setAgreedToTerms(e.target.checked)}
+                      className="mt-0.5 accent-cyan-500 w-4 h-4 flex-shrink-0"
+                    />
+                    <span className="text-sm text-muted-foreground leading-relaxed">
+                      I have read and understood the partnership terms above. I agree to the{" "}
+                      <a href="/terms" target="_blank" className="text-cyan-400 underline underline-offset-2 hover:text-cyan-300">
+                        tatt-ooo Terms of Service
+                      </a>{" "}
+                      and confirm that a <strong className="text-foreground">13% service fee</strong> will be applied to the quoted value of each confirmed booking made through the tatt-ooo platform. I understand there are no upfront costs and that the fee applies only upon booking confirmation.
+                    </span>
+                  </label>
+                </div>
+
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Shield className="w-3.5 h-3.5 text-green-400" />
-                  Secure payment via Stripe. Your card details are never stored by tatt-ooo.
+                  Secure checkout via Stripe. Your card details are never stored by tatt-ooo.
                 </div>
 
                 {applyMutation.isPending ? (
                   <div className="flex items-center justify-center gap-3 py-6">
                     <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
-                    <span className="text-sm text-muted-foreground">Preparing your checkout session...</span>
+                    <span className="text-sm text-muted-foreground">Preparing your account...</span>
                   </div>
                 ) : applyMutation.isSuccess ? (
                   <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 text-center">
                     <CheckCircle className="w-6 h-6 text-green-400 mx-auto mb-2" />
-                    <p className="text-sm text-foreground font-semibold">Checkout opened in a new tab</p>
-                    <p className="text-xs text-muted-foreground mt-1">Complete your payment there. This page will update once confirmed.</p>
+                    <p className="text-sm text-foreground font-semibold">Application submitted successfully</p>
+                    <p className="text-xs text-muted-foreground mt-1">Our team will review your profile within 24–48 hours and send you a confirmation email.</p>
                   </div>
                 ) : (
                   <div className="flex gap-3">
@@ -664,18 +784,24 @@ export default function ArtistSignup() {
                       <ArrowLeft className="w-4 h-4 mr-2" /> Back
                     </Button>
                     <Button
-                      className="flex-1 bg-cyan-500 hover:bg-cyan-600 text-black font-bold text-base py-3"
+                      className={cn(
+                        "flex-1 font-bold text-base py-3 transition-all",
+                        agreedToTerms
+                          ? "bg-cyan-500 hover:bg-cyan-600 text-black"
+                          : "bg-muted text-muted-foreground cursor-not-allowed"
+                      )}
                       onClick={handleSubmit}
-                      disabled={applyMutation.isPending}
+                      disabled={applyMutation.isPending || !agreedToTerms}
                     >
-                      <CreditCard className="w-4 h-4 mr-2" />
-                      Pay $29 &amp; Join
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Confirm & Join tatt-ooo
                     </Button>
                   </div>
                 )}
 
                 <p className="text-[10px] text-muted-foreground/50 text-center">
-                  By proceeding you agree to our Terms of Service. Annual fee renews automatically. Cancel anytime from your account settings.
+                  By confirming, you agree to our Terms of Service and the 13% commission structure described above.
+                  Your studio listing will be reviewed and activated within 24–48 hours of submission.
                 </p>
               </div>
             )}

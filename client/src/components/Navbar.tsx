@@ -340,7 +340,7 @@ export default function Navbar() {
           </nav>
           <div className="flex flex-col items-center pb-4 pt-3 border-t border-zinc-800/40">
             <p className="text-[9px] text-zinc-600 uppercase tracking-widest mb-2">Created by</p>
-            <div className="bg-black rounded-xl p-2 shadow-lg shadow-black/60 flex items-center justify-center" style={{ minWidth: 80, minHeight: 80 }}>
+            <div className="flex items-center justify-center" style={{ minWidth: 80, minHeight: 80 }}>
               <LeegoLogo size={72} />
             </div>
           </div>
@@ -470,7 +470,7 @@ export default function Navbar() {
         {/* LEEGO creator logo — click to enlarge 2× for 3 seconds */}
         <div className="flex flex-col items-center pb-4 pt-3 border-t border-zinc-800/40">
           <p className="text-[9px] text-zinc-600 uppercase tracking-widest mb-2">Created by</p>
-          <div className="bg-black rounded-xl p-2 shadow-lg shadow-black/60 flex items-center justify-center" style={{ minWidth: 80, minHeight: 80 }}>
+          <div className="flex items-center justify-center" style={{ minWidth: 80, minHeight: 80 }}>
             <LeegoLogo size={72} />
           </div>
         </div>
@@ -570,7 +570,7 @@ export default function Navbar() {
             {/* Leego logo on mobile — click to enlarge 2× for 3 seconds */}
             <div className="flex flex-col items-center pt-2 border-t border-zinc-800/40">
               <p className="text-[9px] text-zinc-600 uppercase tracking-widest mb-2">Created by</p>
-              <div className="bg-black rounded-xl p-1.5 shadow-lg shadow-black/60 flex items-center justify-center" style={{ minWidth: 56, minHeight: 56 }}>
+              <div className="flex items-center justify-center" style={{ minWidth: 56, minHeight: 56 }}>
                 <LeegoLogo size={52} />
               </div>
             </div>

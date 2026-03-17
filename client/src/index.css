@@ -240,3 +240,34 @@
     color: oklch(0.80 0.14 75);
   }
 }
+
+/* ── Mobile stability fixes ──────────────────────────────────────────────── */
+/* Prevent overscroll bounce on iOS */
+html, body {
+  overscroll-behavior: none;
+}
+
+/* Prevent text size adjustment on orientation change */
+body {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Prevent tap highlight on interactive elements */
+button, a, [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Fix 100vh on mobile browsers (address bar height) */
+.h-dvh {
+  height: 100dvh;
+}
+
+/* Prevent canvas from triggering scroll on touch */
+canvas {
+  touch-action: none;
+}
+
+/* Safe area insets for notched devices */
+.pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.pt-safe { padding-top: env(safe-area-inset-top, 0px); }

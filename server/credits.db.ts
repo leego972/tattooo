@@ -5,7 +5,7 @@ import { sendLowCreditAlert } from "./emailService";
 
 const LOW_CREDIT_THRESHOLD = 5;
 
-export const FREE_CREDITS = 500;
+export const FREE_CREDITS = 5;
 
 /**
  * Get or create a user's credits record.

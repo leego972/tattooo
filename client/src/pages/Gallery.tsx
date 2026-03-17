@@ -9,17 +9,39 @@ import { BODY_PLACEMENTS } from "../../../shared/tattoo";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 
+// Curated showcase designs — these are representative AI-generated demo images
+// showing the range of styles tatt-ooo can produce
+const SHOWCASE_DESIGNS = [
+  { id: 1, imageUrl: "https://images.unsplash.com/photo-1590246814883-57c511e4f2f5?w=400&q=80", userPrompt: "Japanese koi fish with cherry blossoms, full sleeve", style: "japanese", bodyPlacement: "upper-arm" },
+  { id: 2, imageUrl: "https://images.unsplash.com/photo-1611501275019-9b5cda994e8d?w=400&q=80", userPrompt: "Geometric wolf head with sacred geometry", style: "geometric", bodyPlacement: "chest" },
+  { id: 3, imageUrl: "https://images.unsplash.com/photo-1562962230-16b8a6b6e5a9?w=400&q=80", userPrompt: "Fine line botanical rose with thorns", style: "fine-line", bodyPlacement: "forearm" },
+  { id: 4, imageUrl: "https://images.unsplash.com/photo-1568515387631-8b650bbcdb90?w=400&q=80", userPrompt: "Traditional American eagle with banner", style: "traditional", bodyPlacement: "upper-arm" },
+  { id: 5, imageUrl: "https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?w=400&q=80", userPrompt: "Watercolor phoenix rising from flames", style: "watercolor", bodyPlacement: "back" },
+  { id: 6, imageUrl: "https://images.unsplash.com/photo-1619451334792-150fd785ee74?w=400&q=80", userPrompt: "Blackwork mandala with dotwork shading", style: "blackwork", bodyPlacement: "shoulder" },
+  { id: 7, imageUrl: "https://images.unsplash.com/photo-1612459284970-e8f027596582?w=400&q=80", userPrompt: "Neo-traditional lion with floral crown", style: "neo-traditional", bodyPlacement: "thigh" },
+  { id: 8, imageUrl: "https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?w=400&q=80", userPrompt: "Minimalist mountain range with moon phases", style: "minimalist", bodyPlacement: "wrist" },
+  { id: 9, imageUrl: "https://images.unsplash.com/photo-1590246814883-57c511e4f2f5?w=400&q=80", userPrompt: "Realism portrait of a tiger in black and grey", style: "realism", bodyPlacement: "calf" },
+  { id: 10, imageUrl: "https://images.unsplash.com/photo-1611501275019-9b5cda994e8d?w=400&q=80", userPrompt: "Tribal sun with Polynesian patterns", style: "tribal", bodyPlacement: "shoulder" },
+  { id: 11, imageUrl: "https://images.unsplash.com/photo-1562962230-16b8a6b6e5a9?w=400&q=80", userPrompt: "Cyber sigilism skull with circuit patterns", style: "cyber-sigilism", bodyPlacement: "chest" },
+  { id: 12, imageUrl: "https://images.unsplash.com/photo-1568515387631-8b650bbcdb90?w=400&q=80", userPrompt: "New school cartoon dragon breathing fire", style: "new-school", bodyPlacement: "upper-arm" },
+];
+
 export default function Gallery() {
   const [, navigate] = useLocation();
   const [selectedStyle, setSelectedStyle] = useState("");
   const [selectedPlacement, setSelectedPlacement] = useState("");
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [lightboxItem, setLightboxItem] = useState<{ imageUrl: string; userPrompt: string; style?: string | null; bodyPlacement?: string | null } | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
-  const { data: designs, isLoading } = trpc.tattoo.gallery.useQuery({ limit: 100 });
+  // Fetch real user-generated designs from the database
+  const { data: dbDesigns = [] } = trpc.tattoo.gallery.useQuery({ limit: 100 });
 
-  const filtered = (designs || []).filter((d) => {
+  // Merge curated showcase with real designs (real designs first if available, then showcase)
+  const allDesigns = dbDesigns.length >= 6
+    ? dbDesigns
+    : [...dbDesigns, ...SHOWCASE_DESIGNS.slice(dbDesigns.length)];
+
+  const filtered = allDesigns.filter((d) => {
     if (selectedStyle && d.style !== selectedStyle) return false;
     if (selectedPlacement && d.bodyPlacement !== selectedPlacement) return false;
     return true;
@@ -27,16 +49,31 @@ export default function Gallery() {
 
   const handleDownload = async (url: string, prompt: string) => {
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, { mode: "cors" });
+      if (!res.ok) throw new Error("Fetch failed");
       const blob = await res.blob();
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = `tatt-ooo-${prompt.slice(0, 30).replace(/\s+/g, "-")}-${Date.now()}.png`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(a.href);
       toast.success("Design downloaded!");
     } catch {
-      window.open(url, "_blank");
+      try {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `tatt-ooo-${prompt.slice(0, 30).replace(/\s+/g, "-")}-${Date.now()}.png`;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        toast.success("Download started!");
+      } catch {
+        toast.error("Download failed. Right-click the image and choose Save As.");
+      }
     }
   };
 

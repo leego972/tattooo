@@ -26,6 +26,7 @@ import {
   Bell,
   CheckCheck,
   Smartphone,
+  Lock,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -106,18 +107,20 @@ function DownloadAppButtons() {
 }
 
 // Links shown only when authenticated
+// premium: true = requires a paid plan (starter/pro/studio/unlimited/member)
+// artistOnly: true = only visible to users who are registered artists
 const authNavLinks = [
-  { href: "/studio", label: "Studio", icon: Sparkles },
-  { href: "/my-tatts", label: "My Tatts", icon: BookMarked },
-  { href: "/gallery", label: "Gallery", icon: Images },
-  { href: "/draw", label: "Drawing Board", icon: PenTool },
-  { href: "/history", label: "History", icon: Clock },
-  { href: "/pricing", label: "Pricing", icon: DollarSign },
-  { href: "/artists", label: "Find Artist", icon: Users },
-  { href: "/my-bookings", label: "My Bookings", icon: CalendarDays },
-  { href: "/referral", label: "Refer & Earn", icon: Gift },
-  { href: "/subscription", label: "Subscription", icon: CreditCard },
-  { href: "/artist-dashboard", label: "Artist Dashboard", icon: LayoutDashboard },
+  { href: "/studio", label: "Studio", icon: Sparkles, premium: false },
+  { href: "/my-tatts", label: "My Tatts", icon: BookMarked, premium: false },
+  { href: "/gallery", label: "Gallery", icon: Images, premium: false },
+  { href: "/draw", label: "Drawing Board", icon: PenTool, premium: true },
+  { href: "/history", label: "History", icon: Clock, premium: true },
+  { href: "/pricing", label: "Pricing", icon: DollarSign, premium: false },
+  { href: "/artists", label: "Find Artist", icon: Users, premium: true },
+  { href: "/my-bookings", label: "My Bookings", icon: CalendarDays, premium: true },
+  { href: "/referral", label: "Refer & Earn", icon: Gift, premium: false },
+  { href: "/subscription", label: "Subscription", icon: CreditCard, premium: false },
+  { href: "/artist-dashboard", label: "Artist Dashboard", icon: LayoutDashboard, premium: false, artistOnly: true },
 ];
 
 // Links shown to everyone (logged out)
@@ -288,7 +291,33 @@ export default function Navbar() {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const visibleLinks = isAuthenticated ? authNavLinks : publicNavLinks;
+  // Fetch credits/plan info to determine if user has a paid plan
+  const { data: creditsData } = trpc.credits.balance.useQuery(undefined, {
+    enabled: isAuthenticated,
+    staleTime: 60 * 1000,
+  });
+
+  // Fetch artist profile to determine if user is an artist
+  const { data: artistProfile } = trpc.artists.getMyProfile.useQuery(undefined, {
+    enabled: isAuthenticated,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const isPaidPlan = isAuthenticated && (
+    user?.role === "admin" ||
+    (creditsData?.plan && creditsData.plan !== "free")
+  );
+
+  const isArtist = !!artistProfile;
+
+  // Filter links based on plan and artist status
+  const visibleLinks = isAuthenticated
+    ? authNavLinks.filter(link => {
+        // Hide artist-only links from non-artists
+        if ((link as { artistOnly?: boolean }).artistOnly && !isArtist && user?.role !== "admin") return false;
+        return true;
+      })
+    : publicNavLinks;
 
   // When not authenticated, show a minimal public nav with only Login/Signup/Artist
   if (!isAuthenticated && !loading) {
@@ -355,21 +384,29 @@ export default function Navbar() {
 
         {/* Nav links */}
         <nav className="flex flex-col gap-0.5 px-2 pt-3 flex-1 overflow-y-auto">
-          {visibleLinks.map(({ href, label, icon: Icon }) => {
+          {visibleLinks.map((link) => {
+            const { href, label, icon: Icon } = link;
+            const isPremiumLink = (link as { premium?: boolean }).premium;
+            const isLocked = isPremiumLink && !isPaidPlan;
             const active = location === href || (href === "/signup" && location === "/login");
+            const targetHref = isLocked ? "/pricing" : href;
             return (
-              <Link key={href} href={href}>
+              <Link key={href} href={targetHref}>
                 <Button
                   variant="ghost"
                   className={cn(
                     "w-full justify-start gap-2.5 h-9 text-sm transition-all rounded-lg",
-                    active
+                    active && !isLocked
                       ? "text-cyan-400 bg-cyan-500/10 border border-cyan-500/20"
+                      : isLocked
+                      ? "text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800/40"
                       : "text-zinc-400 hover:text-white hover:bg-zinc-800/60"
                   )}
+                  title={isLocked ? "Upgrade to unlock" : undefined}
                 >
                   <Icon size={15} />
-                  {label}
+                  <span className="flex-1 text-left">{label}</span>
+                  {isLocked && <Lock size={10} className="text-zinc-600 ml-auto" />}
                 </Button>
               </Link>
             );
@@ -471,21 +508,29 @@ export default function Navbar() {
         {/* Mobile dropdown */}
         {mobileOpen && (
           <div className="bg-zinc-950/98 border-t border-zinc-800/60 px-3 pb-4 pt-2 flex flex-col gap-1">
-            {visibleLinks.map(({ href, label, icon: Icon }) => {
+            {visibleLinks.map((link) => {
+              const { href, label, icon: Icon } = link;
+              const isPremiumLink = (link as { premium?: boolean }).premium;
+              const isLocked = isPremiumLink && !isPaidPlan;
               const active = location === href;
+              const targetHref = isLocked ? "/pricing" : href;
               return (
-                <Link key={href} href={href} onClick={() => setMobileOpen(false)}>
+                <Link key={href} href={targetHref} onClick={() => setMobileOpen(false)}>
                   <Button
                     variant="ghost"
                     className={cn(
                       "w-full justify-start gap-2 h-9 text-sm",
-                      active
+                      active && !isLocked
                         ? "text-cyan-400 bg-cyan-500/10"
+                        : isLocked
+                        ? "text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800/40"
                         : "text-zinc-400 hover:text-white hover:bg-zinc-800/60"
                     )}
+                    title={isLocked ? "Upgrade to unlock" : undefined}
                   >
                     <Icon size={14} />
-                    {label}
+                    <span className="flex-1 text-left">{label}</span>
+                    {isLocked && <Lock size={10} className="text-zinc-600 ml-auto" />}
                   </Button>
                 </Link>
               );

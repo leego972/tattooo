@@ -473,6 +473,35 @@ export default function ArtistDashboard() {
     );
   }
 
+  // Block non-artist users — only registered artists can access this dashboard
+  if (!artistProfile && user.role !== "admin") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-6 max-w-md mx-auto px-6">
+          <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto">
+            <Layers className="w-8 h-8 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-black tracking-wider mb-2" style={{ fontFamily: "'Bebas Neue', Georgia, serif" }}>
+              ARTIST DASHBOARD
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              This area is exclusively for registered tattoo artists. Sign up as an artist to manage bookings, set your availability, and grow your studio.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3">
+            <Link href="/artist-signup">
+              <Button className="w-full" size="lg">Join as a Tattoo Artist</Button>
+            </Link>
+            <Link href="/studio">
+              <Button variant="outline" className="w-full" size="lg">Back to Studio</Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}

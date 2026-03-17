@@ -338,6 +338,75 @@ const tattooRouter = router({
       return { url };
     }),
 
+  // ── Conversational Chat — Ask clarifying questions before generating ──────
+  chat: publicProcedure
+    .input(
+      z.object({
+        messages: z.array(
+          z.object({
+            role: z.enum(["user", "assistant"]),
+            content: z.string(),
+          })
+        ).min(1),
+        sessionId: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const TATTOO_CHAT_SYSTEM_PROMPT = `You are Ink, a world-class tattoo design consultant and AI artist for tatt-ooo. Your job is to have a natural, friendly conversation with the customer to gather all the details needed to create their perfect tattoo.
+
+Your personality: warm, creative, professional, enthusiastic about tattoo art. You love helping people find their perfect design.
+
+Your goal: Before generating any tattoo, you MUST gather enough information through conversation. Ask follow-up questions one or two at a time — never bombard the customer with a wall of questions.
+
+Information you need to collect (ask about what's missing):
+1. **Design concept** — what they want (subject, theme, symbols)
+2. **Style** — traditional, neo-traditional, realism, Japanese, geometric, watercolor, tribal, blackwork, fine line, new school, etc.
+3. **Body placement** — where on their body (upper arm, forearm, chest, back, calf, etc.)
+4. **Size** — small (5cm), medium (10cm), large (15cm), or XL (20cm+)
+5. **Colors** — black & grey only, full color, specific colors
+6. **Specific details** — any specific elements, poses, expressions, backgrounds
+7. **Mood/feel** — dark, spiritual, playful, fierce, elegant, minimal, etc.
+
+IMPORTANT RULES:
+- NEVER generate or describe a tattoo design in your text response — that's the image generator's job
+- Ask 1-2 clarifying questions at a time, not all at once
+- Be conversational and enthusiastic
+- When you have enough information (at minimum: concept + placement + at least one of style/color/size), respond with a JSON object on its own line: {"ready": true, "summary": "brief summary of what to generate"}
+- If the customer's first message is very detailed and covers concept + placement + style, you can respond with ready:true immediately
+- If the customer says "just generate it" or "surprise me" or similar, respect that and respond with ready:true
+- Always acknowledge what the customer told you before asking follow-up questions
+- Use tattoo terminology naturally to show expertise
+
+When responding with ready:true, format it EXACTLY like this (on its own line at the end):
+{"ready": true, "summary": "[detailed summary of the tattoo design request]"}`;
+
+      const llmMessages = [
+        { role: "system" as const, content: TATTOO_CHAT_SYSTEM_PROMPT },
+        ...input.messages.map(m => ({ role: m.role as "user" | "assistant", content: m.content })),
+      ];
+
+      const response = await invokeLLM({ messages: llmMessages, maxTokens: 500 });
+      const rawContent = response.choices?.[0]?.message?.content;
+      const text = typeof rawContent === "string" ? rawContent : "";
+
+      // Check if the AI has decided it has enough info to generate
+      let ready = false;
+      let summary = "";
+      const jsonMatch = text.match(/\{\s*"ready"\s*:\s*true[^}]*\}/);
+      if (jsonMatch) {
+        try {
+          const parsed = JSON.parse(jsonMatch[0]);
+          ready = parsed.ready === true;
+          summary = parsed.summary || "";
+        } catch (_) {}
+      }
+
+      // Strip the JSON from the display text
+      const displayText = text.replace(/\{\s*"ready"\s*:\s*true[^}]*\}/, "").trim();
+
+      return { text: displayText, ready, summary };
+    }),
+
   generate: publicProcedure
     .input(
       z.object({

@@ -247,6 +247,64 @@ export default function Studio() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const chatMutation = trpc.tattoo.chat.useMutation({
+    onSuccess: (data) => {
+      setIsGenerating(false);
+      if (data.ready && data.summary) {
+        // AI has enough info — show its final message then auto-generate
+        const assistantMsg: ChatMessage = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: data.text || "Perfect! I have everything I need. Generating your tattoo now...",
+          timestamp: new Date(),
+        };
+        const generatingMsg: ChatMessage = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: "",
+          isGenerating: true,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [
+          ...prev.filter((m) => !m.isGenerating),
+          assistantMsg,
+          generatingMsg,
+        ]);
+        setIsGenerating(true);
+        generateMutation.mutate({
+          userPrompt: [data.summary, selectedMood ? `Mood: ${selectedMood}` : ""].filter(Boolean).join(". "),
+          referenceImageUrl: pendingImageRef.current,
+          style: selectedStyle?.id,
+          bodyPlacement: selectedPlacement || undefined,
+          sizeLabel: selectedSize || undefined,
+          sessionId,
+          gender: gender || undefined,
+          bodyShape: bodyShape || undefined,
+          variationCount,
+        });
+      } else {
+        // AI is asking follow-up questions
+        setMessages((prev) => [
+          ...prev.filter((m) => !m.isGenerating),
+          {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content: data.text,
+            timestamp: new Date(),
+          },
+        ]);
+      }
+    },
+    onError: (err) => {
+      setIsGenerating(false);
+      setMessages((prev) => prev.filter((m) => !m.isGenerating));
+      toast.error(`Chat error: ${err.message}`);
+    },
+  });
+
+  // Track the reference image URL for the current conversation
+  const pendingImageRef = useRef<string | undefined>(undefined);
+
   const handleSend = async (messageText?: string) => {
     const text = (messageText || input).trim();
     if (!text && uploadedImages.length === 0) return;
@@ -260,7 +318,12 @@ export default function Studio() {
       timestamp: new Date(),
     };
 
-    const generatingMsg: ChatMessage = {
+    // Track uploaded image for eventual generation
+    if (uploadedImages[0]?.url) {
+      pendingImageRef.current = uploadedImages[0].url;
+    }
+
+    const thinkingMsg: ChatMessage = {
       id: crypto.randomUUID(),
       role: "assistant",
       content: "",
@@ -268,22 +331,19 @@ export default function Studio() {
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMsg, generatingMsg]);
+    const updatedMessages = [...messages, userMsg];
+    setMessages([...updatedMessages, thinkingMsg]);
     setInput("");
     setUploadedImages([]);
     setIsGenerating(true);
     if (textareaRef.current) textareaRef.current.style.height = "auto";
 
-    generateMutation.mutate({
-      userPrompt: [text, selectedMood ? `Mood: ${selectedMood}` : ""].filter(Boolean).join(". "),
-      referenceImageUrl: (userMsg.imageUrls || [])[0],
-      style: selectedStyle?.id,
-      bodyPlacement: selectedPlacement || undefined,
-      sizeLabel: selectedSize || undefined,
+    // Use the chat endpoint to ask clarifying questions before generating
+    chatMutation.mutate({
+      messages: updatedMessages
+        .filter((m) => !m.isGenerating && (m.role === "user" || (m.role === "assistant" && m.content && !m.generatedImageUrl)))
+        .map((m) => ({ role: m.role, content: m.content })),
       sessionId,
-      gender: gender || undefined,
-      bodyShape: bodyShape || undefined,
-      variationCount,
     });
   };
 
@@ -296,16 +356,33 @@ export default function Studio() {
 
   const handleDownload = async (url: string, printSpec?: string) => {
     try {
-      const res = await fetch(url);
+      // Try direct download first
+      const res = await fetch(url, { mode: "cors" });
+      if (!res.ok) throw new Error("Fetch failed");
       const blob = await res.blob();
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = `tatt-ooo-design-${Date.now()}.png`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(a.href);
       toast.success(printSpec ? `Downloaded — ${printSpec}` : "Design downloaded!");
     } catch (_e) {
-      window.open(url, "_blank");
+      // Fallback: create a link and let the browser handle it natively
+      try {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `tatt-ooo-design-${Date.now()}.png`;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        toast.success("Download started!");
+      } catch (_e2) {
+        toast.error("Download failed. Right-click the image and choose Save As.");
+      }
     }
   };
 
@@ -1008,24 +1085,66 @@ export default function Studio() {
           )}
 
           {/* Size ruler overlay */}
-          {showRuler && lastGeneratedUrl && (
-            <div className="mt-2 p-2 bg-card/40 rounded-xl border border-border/30">
-              <p className="text-[10px] text-muted-foreground mb-2 flex items-center gap-1">
+          {showRuler && (
+            <div className="mt-2 p-3 bg-card/40 rounded-xl border border-border/30">
+              <p className="text-[10px] text-muted-foreground mb-3 flex items-center gap-1">
                 <Ruler size={10} className="text-primary" /> Size Reference Ruler
               </p>
-              <div className="relative w-full max-w-xs mx-auto">
-                <img src={lastGeneratedUrl} alt="Design" className="w-full rounded-lg" />
-                {/* Horizontal ruler */}
-                <div className="absolute bottom-2 left-2 right-2 h-4 flex items-center">
-                  <div className="flex-1 h-0.5 bg-cyan-400/80" />
-                  <div className="h-3 w-0.5 bg-cyan-400/80" />
-                </div>
-                <div className="absolute bottom-6 left-0 right-0 text-center">
-                  <span className="text-[9px] bg-black/60 text-cyan-400 px-1.5 py-0.5 rounded font-mono">
-                    {selectedSize ? SIZE_OPTIONS.find(s => s.label === selectedSize)?.cmRange || selectedSize : "Select size above"}
-                  </span>
-                </div>
-              </div>
+              {!selectedSize && (
+                <p className="text-[10px] text-amber-400/80 mb-2">Select a size above to see the ruler</p>
+              )}
+              {selectedSize && (() => {
+                const sizeOption = SIZE_OPTIONS.find(s => s.label === selectedSize);
+                // Parse cm range to get max cm for ruler
+                const cmMatch = sizeOption?.cmRange?.match(/(\d+)/);
+                const maxCm = cmMatch ? parseInt(cmMatch[1]) + 2 : 10;
+                const ticks = Array.from({ length: maxCm + 1 }, (_, i) => i);
+                return (
+                  <div className="space-y-3">
+                    {/* Ruler bar */}
+                    <div className="relative bg-zinc-900 border border-zinc-700 rounded-lg p-2 overflow-hidden">
+                      <div className="flex items-end h-8 gap-0">
+                        {ticks.map((cm) => (
+                          <div key={cm} className="flex flex-col items-center" style={{ flex: 1, minWidth: 0 }}>
+                            <span className="text-[7px] text-cyan-400/70 font-mono mb-0.5">{cm}</span>
+                            <div className={`w-px bg-cyan-400/60 ${cm % 5 === 0 ? 'h-4' : 'h-2'}`} />
+                          </div>
+                        ))}
+                      </div>
+                      <div className="text-[8px] text-zinc-500 text-right mt-1">cm</div>
+                    </div>
+                    {/* Size info */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-semibold text-foreground">{sizeOption?.name || selectedSize}</span>
+                        <span className="text-[10px] text-muted-foreground ml-2">{sizeOption?.cmRange}</span>
+                      </div>
+                      <span className="text-[9px] bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-primary/20">
+                        {sizeOption?.description || selectedSize}
+                      </span>
+                    </div>
+                    {lastGeneratedUrl && (
+                      <div className="relative w-full max-w-xs mx-auto">
+                        <img src={lastGeneratedUrl} alt="Design" className="w-full rounded-lg" />
+                        {/* Scale indicator overlay */}
+                        <div className="absolute bottom-2 left-2 right-2">
+                          <div className="flex items-center gap-1">
+                            <div className="h-px flex-1 bg-cyan-400/80" />
+                            <span className="text-[8px] bg-black/70 text-cyan-400 px-1 py-0.5 rounded font-mono whitespace-nowrap">
+                              {sizeOption?.cmRange || selectedSize}
+                            </span>
+                            <div className="h-px flex-1 bg-cyan-400/80" />
+                          </div>
+                          <div className="flex justify-between mt-0.5">
+                            <div className="w-px h-2 bg-cyan-400/80" />
+                            <div className="w-px h-2 bg-cyan-400/80" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>

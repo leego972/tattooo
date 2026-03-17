@@ -324,3 +324,88 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
 
   return (await response.json()) as InvokeResult;
 }
+
+/**
+ * Streaming LLM invocation — yields text tokens as they arrive via SSE.
+ * @param params - Same as invokeLLM
+ * @param onToken - Called for each text token chunk
+ * @param onDone - Called when streaming is complete with the full text
+ * @param onError - Called if an error occurs
+ */
+export async function invokeLLMStream(
+  params: InvokeParams,
+  onToken: (token: string) => void,
+  onDone: (fullText: string) => void,
+  onError?: (error: Error) => void
+): Promise<void> {
+  assertApiKey();
+  const { messages, tools, toolChoice, tool_choice } = params;
+  const payload: Record<string, unknown> = {
+    model: "gpt-4o-mini",
+    messages: messages.map(normalizeMessage),
+    stream: true,
+    max_tokens: params.maxTokens || params.max_tokens || 1000,
+  };
+  if (tools && tools.length > 0) payload.tools = tools;
+  const normalizedToolChoice = normalizeToolChoice(toolChoice || tool_choice, tools);
+  if (normalizedToolChoice) payload.tool_choice = normalizedToolChoice;
+
+  try {
+    const response = await fetch(resolveApiUrl(), {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${ENV.openaiApiKey}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      const err = new Error(`LLM stream failed: ${response.status} ${response.statusText} – ${errorText}`);
+      if (onError) onError(err);
+      return;
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      const err = new Error("No response body reader available");
+      if (onError) onError(err);
+      return;
+    }
+
+    const decoder = new TextDecoder();
+    let fullText = "";
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || ""; // keep incomplete line in buffer
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed === "data: [DONE]") continue;
+        if (!trimmed.startsWith("data: ")) continue;
+
+        try {
+          const json = JSON.parse(trimmed.slice(6));
+          const delta = json.choices?.[0]?.delta?.content;
+          if (delta) {
+            fullText += delta;
+            onToken(delta);
+          }
+        } catch {
+          // Skip malformed SSE lines
+        }
+      }
+    }
+
+    onDone(fullText);
+  } catch (err) {
+    if (onError) onError(err instanceof Error ? err : new Error(String(err)));
+  }
+}

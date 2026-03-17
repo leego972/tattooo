@@ -13,6 +13,7 @@ import healthRouter from "../health";
 import stripeWebhookRouter from "../stripeWebhook";
 import { handleUnsubscribe, runWeeklyAdJob } from "../mailing-list-router";
 import { getDb } from "../db";
+import { invokeLLMStream } from "./llm";
 import { studioMailingList, users, bookings, inAppNotifications } from "../../drizzle/schema";
 import { sendBookingNotificationEmail } from "../emailService";
 import { registerUser } from "../emailAuth";
@@ -136,6 +137,64 @@ async function startServer() {
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
+  });
+
+  // ── SSE Streaming Chat (Titan-style real-time token streaming) ────────
+  // Maps sessionId -> SSE Response so the POST handler can write to it
+  const activeChatStreams = new Map<string, import('express').Response>();
+
+  app.get("/api/chat/stream/:sessionId", (_req, res) => {
+    const { sessionId } = _req.params;
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders();
+    activeChatStreams.set(sessionId, res);
+    _req.on("close", () => activeChatStreams.delete(sessionId));
+    res.write(`data: ${JSON.stringify({ type: "connected" })}\n\n`);
+  });
+
+  app.post("/api/chat/stream/:sessionId/send", async (req, res) => {
+    const { sessionId } = req.params;
+    const { messages } = req.body as { messages: Array<{ role: string; content: string }> };
+    const sseRes = activeChatStreams.get(sessionId);
+    if (!sseRes) { res.status(404).json({ error: "No active stream" }); return; }
+
+    const SYSTEM = `You are Ink, a world-class tattoo design consultant and AI artist for tatt-ooo. Have a natural, friendly conversation to gather all details needed to create the perfect tattoo.\n\nYou know all styles: Traditional, Neo-Traditional, Realism, Watercolour, Geometric, Blackwork, Japanese, Tribal, Fine Line, Illustrative, Minimalist, Dotwork.\n\nWhen you have enough information (style, subject/theme, placement, size, colour preference), respond ONLY with JSON:\n{"readyToGenerate": true, "summary": "<detailed prompt>"}\n\nOtherwise ask 1-2 clarifying questions. Be conversational and enthusiastic.`;
+
+    const llmMessages = [
+      { role: "system" as const, content: SYSTEM },
+      ...messages.map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
+    ];
+
+    sseRes.write(`data: ${JSON.stringify({ type: "thinking", message: "Ink is thinking..." })}\n\n`);
+
+    let fullText = "";
+    await invokeLLMStream(
+      { messages: llmMessages, maxTokens: 600 },
+      (token) => {
+        fullText += token;
+        if (!fullText.trimStart().startsWith("{")) {
+          sseRes.write(`data: ${JSON.stringify({ type: "token", token })}\n\n`);
+        }
+      },
+      (full) => {
+        try {
+          const parsed = JSON.parse(full.trim());
+          if (parsed.readyToGenerate) {
+            sseRes.write(`data: ${JSON.stringify({ type: "ready_to_generate", summary: parsed.summary })}\n\n`);
+          } else {
+            sseRes.write(`data: ${JSON.stringify({ type: "done", text: full })}\n\n`);
+          }
+        } catch {
+          sseRes.write(`data: ${JSON.stringify({ type: "done", text: full })}\n\n`);
+        }
+      },
+      (err) => sseRes.write(`data: ${JSON.stringify({ type: "error", message: err.message })}\n\n`)
+    );
+
+    res.json({ ok: true });
   });
 
   // tRPC API

@@ -247,68 +247,45 @@ export default function Studio() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const chatMutation = trpc.tattoo.chat.useMutation({
-    onSuccess: (data) => {
-      setIsGenerating(false);
-      if (data.ready && data.summary) {
-        // AI has enough info — show its final message then auto-generate
-        const assistantMsg: ChatMessage = {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: data.text || "Perfect! I have everything I need. Generating your tattoo now...",
-          timestamp: new Date(),
-        };
-        const generatingMsg: ChatMessage = {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: "",
-          isGenerating: true,
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [
-          ...prev.filter((m) => !m.isGenerating),
-          assistantMsg,
-          generatingMsg,
-        ]);
-        setIsGenerating(true);
-        generateMutation.mutate({
-          userPrompt: [data.summary, selectedMood ? `Mood: ${selectedMood}` : ""].filter(Boolean).join(". "),
-          referenceImageUrl: pendingImageRef.current,
-          style: selectedStyle?.id,
-          bodyPlacement: selectedPlacement || undefined,
-          sizeLabel: selectedSize || undefined,
-          sessionId,
-          gender: gender || undefined,
-          bodyShape: bodyShape || undefined,
-          variationCount,
-        });
-      } else {
-        // AI is asking follow-up questions
-        setMessages((prev) => [
-          ...prev.filter((m) => !m.isGenerating),
-          {
-            id: crypto.randomUUID(),
-            role: "assistant",
-            content: data.text,
-            timestamp: new Date(),
-          },
-        ]);
-      }
-    },
-    onError: (err) => {
-      setIsGenerating(false);
-      setMessages((prev) => prev.filter((m) => !m.isGenerating));
-      toast.error(`Chat error: ${err.message}`);
-    },
-  });
-
   // Track the reference image URL for the current conversation
   const pendingImageRef = useRef<string | undefined>(undefined);
+  // SSE EventSource ref for streaming chat
+  const eventSourceRef = useRef<EventSource | null>(null);
 
-  const handleSend = async (messageText?: string) => {
+  const triggerGenerate = useCallback((summary: string) => {
+    const generatingMsg: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "assistant",
+      content: "",
+      isGenerating: true,
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev.filter((m) => !m.isGenerating), generatingMsg]);
+    setIsGenerating(true);
+    generateMutation.mutate({
+      userPrompt: [summary, selectedMood ? `Mood: ${selectedMood}` : ""].filter(Boolean).join(". "),
+      referenceImageUrl: pendingImageRef.current,
+      style: selectedStyle?.id,
+      bodyPlacement: selectedPlacement || undefined,
+      sizeLabel: selectedSize || undefined,
+      sessionId,
+      gender: gender || undefined,
+      bodyShape: bodyShape || undefined,
+      variationCount,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedMood, selectedStyle, selectedPlacement, selectedSize, sessionId, gender, bodyShape, variationCount]);
+
+  const handleSend = useCallback(async (messageText?: string) => {
     const text = (messageText || input).trim();
     if (!text && uploadedImages.length === 0) return;
     if (isGenerating) return;
+
+    // Close any existing SSE connection
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
 
     const userMsg: ChatMessage = {
       id: crypto.randomUUID(),
@@ -317,20 +294,16 @@ export default function Studio() {
       imageUrls: uploadedImages.map((i) => i.url),
       timestamp: new Date(),
     };
+    if (uploadedImages[0]?.url) pendingImageRef.current = uploadedImages[0].url;
 
-    // Track uploaded image for eventual generation
-    if (uploadedImages[0]?.url) {
-      pendingImageRef.current = uploadedImages[0].url;
-    }
-
+    const streamingId = crypto.randomUUID();
     const thinkingMsg: ChatMessage = {
-      id: crypto.randomUUID(),
+      id: streamingId,
       role: "assistant",
       content: "",
       isGenerating: true,
       timestamp: new Date(),
     };
-
     const updatedMessages = [...messages, userMsg];
     setMessages([...updatedMessages, thinkingMsg]);
     setInput("");
@@ -338,14 +311,92 @@ export default function Studio() {
     setIsGenerating(true);
     if (textareaRef.current) textareaRef.current.style.height = "auto";
 
-    // Use the chat endpoint to ask clarifying questions before generating
-    chatMutation.mutate({
-      messages: updatedMessages
-        .filter((m) => !m.isGenerating && (m.role === "user" || (m.role === "assistant" && m.content && !m.generatedImageUrl)))
-        .map((m) => ({ role: m.role, content: m.content })),
-      sessionId,
-    });
-  };
+    const chatMessages = updatedMessages
+      .filter((m) => !m.isGenerating && (m.role === "user" || (m.role === "assistant" && m.content && !m.generatedImageUrl)))
+      .map((m) => ({ role: m.role, content: m.content }));
+
+    // Connect to SSE stream for real-time token streaming (Titan-style)
+    const es = new EventSource(`/api/chat/stream/${sessionId}`);
+    eventSourceRef.current = es;
+    let connected = false;
+
+    es.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data) as { type: string; token?: string; text?: string; summary?: string; message?: string };
+        if (data.type === "connected" && !connected) {
+          connected = true;
+          // Send the message to the stream
+          void fetch(`/api/chat/stream/${sessionId}/send`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ messages: chatMessages }),
+          }).catch((err: Error) => {
+            toast.error(`Chat error: ${err.message}`);
+            setIsGenerating(false);
+            setMessages((prev) => prev.filter((m) => m.id !== streamingId));
+          });
+        } else if (data.type === "token" && data.token) {
+          setMessages((prev) => prev.map((m) =>
+            m.id === streamingId
+              ? { ...m, content: m.content + data.token, isGenerating: false }
+              : m
+          ));
+        } else if (data.type === "done" && data.text) {
+          setMessages((prev) => prev.map((m) =>
+            m.id === streamingId ? { ...m, content: data.text!, isGenerating: false } : m
+          ));
+          setIsGenerating(false);
+          es.close();
+          eventSourceRef.current = null;
+        } else if (data.type === "ready_to_generate" && data.summary) {
+          setMessages((prev) => prev.map((m) =>
+            m.id === streamingId
+              ? { ...m, content: "Perfect! I have everything I need. Generating your tattoo now ✨", isGenerating: false }
+              : m
+          ));
+          es.close();
+          eventSourceRef.current = null;
+          triggerGenerate(data.summary);
+        } else if (data.type === "error") {
+          toast.error(data.message || "Chat error");
+          setIsGenerating(false);
+          setMessages((prev) => prev.filter((m) => m.id !== streamingId));
+          es.close();
+          eventSourceRef.current = null;
+        }
+      } catch {
+        // ignore parse errors
+      }
+    };
+
+    es.onerror = () => {
+      // SSE failed — fall back to tRPC chat mutation
+      es.close();
+      eventSourceRef.current = null;
+      void fetch("/api/trpc/tattoo.chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ json: { messages: chatMessages, sessionId } }),
+        credentials: "include",
+      }).then(async (r) => {
+        const json = await r.json() as { result?: { data?: { json?: { ready?: boolean; summary?: string; text?: string } } } };
+        const d = json?.result?.data?.json;
+        if (!d) { setIsGenerating(false); return; }
+        if (d.ready && d.summary) {
+          setMessages((prev) => prev.map((m) =>
+            m.id === streamingId ? { ...m, content: d.text || "Generating your tattoo now ✨", isGenerating: false } : m
+          ));
+          triggerGenerate(d.summary);
+        } else {
+          setMessages((prev) => prev.map((m) =>
+            m.id === streamingId ? { ...m, content: d.text || "", isGenerating: false } : m
+          ));
+          setIsGenerating(false);
+        }
+      }).catch(() => setIsGenerating(false));
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [input, uploadedImages, isGenerating, messages, sessionId, triggerGenerate]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {

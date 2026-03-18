@@ -228,7 +228,7 @@ export default function ArtistRegister() {
           <BadgeCheck className="w-12 h-12 text-amber-400 mx-auto mb-4" />
           <h2 className="text-2xl font-bold mb-3">Ready to Reach Clients Worldwide?</h2>
           <p className="text-zinc-400 mb-6 max-w-md mx-auto">
-            Join many artists and studios from around the world already earning through tattooo.shop. No monthly fees, no upfront risk.
+            Join many artists and studios from around the world already earning through tattooo.shop. One annual listing fee, no upfront booking risk.
           </p>
           <Button
             onClick={handleArtistCheckout}

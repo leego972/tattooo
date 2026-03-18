@@ -26,7 +26,7 @@ import { Label } from "@/components/ui/label";
 import { TATTOO_STYLES, TATTOO_CATEGORIES, type TattooStyle, type TattooCategory } from "../../../shared/tattooStyles";
 import { BODY_PLACEMENTS, SIZE_OPTIONS } from "../../../shared/tattoo";
 import { cn } from "@/lib/utils";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 
 const LOGO_URL = "/assets/tattooo-logo.png";
 
@@ -639,7 +639,7 @@ export default function Studio() {
         {/* Chat header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/30 bg-card/20 shrink-0">
           <div className="flex items-center gap-3">
-            <img src={LOGO_URL} alt="tatt-ooo" className="w-7 h-7 rounded-full ring-1 ring-primary/30" />
+            <Link href="/"><img src={LOGO_URL} alt="tatt-ooo" className="w-7 h-7 rounded-full ring-1 ring-primary/30 hover:opacity-80 transition-opacity cursor-pointer" /></Link>
             <div>
               <h1 className="text-sm font-semibold text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>
                 tatt-ooo Studio

@@ -127,7 +127,7 @@ const authNavLinks = [
 const publicNavLinks = [
   { href: "/login", label: "Sign In", icon: LogIn },
   { href: "/signup", label: "Create Account", icon: Sparkles },
-  { href: "/artist-signup", label: "Join as Artist", icon: UserPlus },
+  { href: "/artist-register", label: "Register as Artist/Studio", icon: UserPlus },
 ];
 
 const adminNavLinks = [
@@ -325,7 +325,7 @@ export default function Navbar() {
       <>
         {/* Desktop minimal sidebar for logged-out users */}
         <aside className="hidden md:flex flex-col w-52 shrink-0 h-screen sticky top-0 bg-zinc-950/95 border-r border-zinc-800/60 z-40 backdrop-blur-sm">
-          <Link href="/login" className="flex items-center gap-3 px-4 py-4 group border-b border-zinc-800/60">
+          <Link href="/" className="flex items-center gap-3 px-4 py-4 group border-b border-zinc-800/60">
             <img src={LOGO_URL} alt="tatt-ooo" className="h-8 w-8 rounded-full object-cover ring-1 ring-cyan-500/30 group-hover:ring-cyan-500/60 transition-all" />
             <span className="text-base font-bold text-white" style={{ fontFamily: "'Playfair Display', serif" }}>tatt-ooo</span>
           </Link>
@@ -349,13 +349,14 @@ export default function Navbar() {
         {/* Mobile top bar for logged-out users */}
         <header className="md:hidden sticky top-0 z-50 w-full bg-zinc-950/95 border-b border-zinc-800/60 backdrop-blur-sm">
           <div className="flex items-center justify-between h-13 px-4 py-2">
-            <Link href="/login" className="flex items-center gap-2">
+            <Link href="/" className="flex items-center gap-2">
               <img src={LOGO_URL} alt="tatt-ooo" className="h-7 w-7 rounded-full object-cover ring-1 ring-cyan-500/30" />
               <span className="text-sm font-bold text-white" style={{ fontFamily: "'Playfair Display', serif" }}>tatt-ooo</span>
             </Link>
             <div className="flex items-center gap-2">
               <Link href="/login"><Button size="sm" variant="ghost" className="text-zinc-400 hover:text-white text-xs h-8">Sign In</Button></Link>
               <Link href="/signup"><Button size="sm" className="bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-xs h-8">Sign Up</Button></Link>
+              <Link href="/artist-register"><Button size="sm" className="bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs h-8">Artist</Button></Link>
             </div>
           </div>
         </header>

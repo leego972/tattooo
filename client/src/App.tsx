@@ -14,6 +14,7 @@ import ResetPassword from "./pages/ResetPassword";
 import SharedDesign from "./pages/SharedDesign";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import ArtistSignup from "./pages/ArtistSignup";
+import ArtistRegister from "./pages/ArtistRegister";
 
 // Protected pages (require login)
 import Studio from "./pages/Studio";
@@ -63,6 +64,7 @@ function Router() {
           <Route path="/payment-success" component={PaymentSuccess} />
           <Route path="/artist-signup/success" component={ArtistSignup} />
           <Route path="/artist-signup" component={ArtistSignup} />
+          <Route path="/artist-register" component={ArtistRegister} />
 
           {/* ── Home / landing — public so visitors can browse before signing up ── */}
           <Route path="/" component={Home} />

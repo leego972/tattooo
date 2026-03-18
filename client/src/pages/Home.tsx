@@ -394,10 +394,10 @@ export default function Home() {
                 the algorithm games. We handle the platform fee (13% of each booking) so you keep the rest.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
-                <Link href="/artist-signup">
-                  <Button size="lg" className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold gap-2">
+                <Link href="/artist-register">
+                  <Button size="lg" className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-black font-bold gap-2">
                     <UserPlus className="w-5 h-5" />
-                    List Your Studio
+                    Register as Artist/Studio
                     <ArrowRight className="w-4 h-4" />
                   </Button>
                 </Link>
@@ -584,10 +584,10 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
             <div className="col-span-2 md:col-span-1">
-              <div className="flex items-center gap-2 mb-3">
+              <Link href="/" className="flex items-center gap-2 mb-3 hover:opacity-80 transition-opacity">
                 <img src={LOGO_URL} alt="tattooo.shop" className="h-8 w-8 rounded-lg object-cover" />
                 <span className="font-black text-lg">tattooo.shop</span>
-              </div>
+              </Link>
               <p className="text-xs text-gray-500 leading-relaxed">
                 The global tattoo platform. AI design meets verified artists worldwide. Est. 2026.
               </p>
@@ -604,7 +604,7 @@ export default function Home() {
             <div>
               <h4 className="font-semibold text-sm text-white mb-3">Artists</h4>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li><Link href="/artist-signup" className="hover:text-amber-400 transition-colors">List Your Studio</Link></li>
+                <li><Link href="/artist-register" className="hover:text-amber-400 transition-colors">Register as Artist/Studio</Link></li>
                 <li><Link href="/artist-dashboard" className="hover:text-amber-400 transition-colors">Artist Dashboard</Link></li>
                 <li><Link href="/referral" className="hover:text-amber-400 transition-colors">Affiliate Programme</Link></li>
               </ul>

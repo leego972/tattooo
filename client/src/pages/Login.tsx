@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2, Sparkles, Eye, EyeOff } from "lucide-react";
+import { Link } from "wouter";
 
 const LOGO_URL = "/assets/tattooo-logo.png";
 
@@ -80,8 +81,12 @@ export default function Login() {
       <div className="relative w-full max-w-md">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <img src={LOGO_URL} alt="tatt-ooo" className="w-20 h-20 rounded-full object-cover mb-3" />
-          <h1 className="text-2xl font-bold text-white tracking-tight">tatt-ooo</h1>
+          <Link href="/">
+            <img src={LOGO_URL} alt="tatt-ooo" className="w-20 h-20 rounded-full object-cover mb-3 hover:opacity-80 transition-opacity cursor-pointer" />
+          </Link>
+          <Link href="/" className="hover:opacity-80 transition-opacity">
+            <h1 className="text-2xl font-bold text-white tracking-tight">tatt-ooo</h1>
+          </Link>
           <p className="text-sm text-zinc-400 mt-1">AI Tattoo Designer</p>
         </div>
 

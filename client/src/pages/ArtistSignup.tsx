@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import {
   CheckCircle,
   Palette,
@@ -309,7 +309,7 @@ export default function ArtistSignup() {
           <div className="w-20 h-20 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center mx-auto mb-6">
             <CheckCircle className="w-10 h-10 text-green-400" />
           </div>
-          <img src={LOGO_URL} alt="tatt-ooo" className="h-10 mx-auto mb-4 opacity-80" />
+          <Link href="/"><img src={LOGO_URL} alt="tatt-ooo" className="h-10 mx-auto mb-4 opacity-80 hover:opacity-100 transition-opacity cursor-pointer" /></Link>
           <h1 className="text-2xl font-bold text-foreground mb-3">Application Received!</h1>
           <p className="text-muted-foreground mb-6">
             Thank you for joining the tatt-ooo partner network. Your application is now{" "}
@@ -345,7 +345,7 @@ export default function ArtistSignup() {
       <div className="border-b border-border bg-gradient-to-r from-cyan-500/5 to-purple-500/5">
         <div className="max-w-5xl mx-auto px-4 py-10">
           <div className="flex items-center gap-3 mb-4">
-            <img src={LOGO_URL} alt="tatt-ooo" className="h-8 opacity-80" />
+            <Link href="/"><img src={LOGO_URL} alt="tatt-ooo" className="h-8 opacity-80 hover:opacity-100 transition-opacity cursor-pointer" /></Link>
           </div>
           <h1 className="text-3xl sm:text-4xl font-black text-foreground mb-3">
             Partner with tatt-ooo — Fill Your Studio with Ready-to-Book Clients

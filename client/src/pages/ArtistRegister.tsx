@@ -102,7 +102,7 @@ export default function ArtistRegister() {
           <h1 className="text-4xl md:text-5xl font-black mb-4 leading-tight">
             Fill Your Studio with<br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">
-              Ready-to-Book Clients
+              Confirmed Bookings
             </span>
           </h1>
           <p className="text-zinc-400 text-lg max-w-2xl mx-auto">

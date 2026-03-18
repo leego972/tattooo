@@ -16,7 +16,7 @@
  * Cyber+ and Titan are internal/enterprise tiers, not shown in the public pricing UI.
  *
  * CREDIT ALLOCATION (aligned with pricing page advertising):
- * - Free:       500 credits/mo  (50 signup bonus)
+ * - Free:       500 credits/mo  (5 signup bonus)
  * - Pro:        50,000 credits/mo  (1,000 signup bonus)   — ~1,000 builder tasks/mo
  * - Enterprise: 250,000 credits/mo (5,000 signup bonus)   — ~5,000 builder tasks/mo
  * - Cyber:      750,000 credits/mo (25,000 signup bonus)  — heavy security usage
@@ -81,7 +81,7 @@ export const PRICING_TIERS: PricingTier[] = [
     },
     credits: {
       monthlyAllocation: 500,
-      signupBonus: 50,
+      signupBonus: 5,
     },
   },
 

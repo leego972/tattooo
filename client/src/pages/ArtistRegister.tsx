@@ -34,7 +34,7 @@ const ARTIST_PERKS = [
 const STATS = [
   { value: "2,400+", label: "Active Members", icon: Users },
   { value: "38", label: "Countries", icon: Globe },
-  { value: "340+", label: "Artists Listed", icon: Brush },
+  { value: "Global", label: "Artists & Studios From Around the World", icon: Brush },
   { value: "13%", label: "Commission Only on Confirmed Bookings", icon: DollarSign },
 ];
 
@@ -228,7 +228,7 @@ export default function ArtistRegister() {
           <BadgeCheck className="w-12 h-12 text-amber-400 mx-auto mb-4" />
           <h2 className="text-2xl font-bold mb-3">Ready to Reach Clients Worldwide?</h2>
           <p className="text-zinc-400 mb-6 max-w-md mx-auto">
-            Join 340+ verified artists already earning through tattooo.shop. No monthly fees, no upfront risk.
+            Join many artists and studios from around the world already earning through tattooo.shop. No monthly fees, no upfront risk.
           </p>
           <Button
             onClick={handleArtistCheckout}

@@ -80,7 +80,7 @@ const STATS = [
   { value: "2,400+", label: "Members Worldwide", icon: Users },
   { value: "38", label: "Countries Active", icon: Globe },
   { value: "14,000+", label: "Designs Generated", icon: Sparkles },
-  { value: "340+", label: "Artists & Studios", icon: Brush },
+  { value: "Global", label: "Artists & Studios From Around the World", icon: Brush },
 ];
 
 const COUNTRIES = [
@@ -115,7 +115,7 @@ const CLIENT_STEPS = [
     num: "03",
     icon: Users,
     title: "Find Your Artist",
-    desc: "Browse 340+ verified artists globally. Filter by style, location, and availability. Message them directly.",
+    desc: "Browse verified artists and studios from around the world. Filter by style, location, and availability. Message them directly.",
   },
   {
     num: "04",
@@ -519,7 +519,7 @@ export default function Home() {
       <section className="border-t border-white/5 overflow-hidden">
         <img
           src={GLOBAL_BANNER_URL}
-          alt="The World's Tattoo Platform — 38 Countries, 340+ Artists, One Platform"
+          alt="The World's Tattoo Platform — 38 Countries, Artists & Studios From Around the World, One Platform"
           className="w-full object-cover max-h-[300px]"
         />
       </section>

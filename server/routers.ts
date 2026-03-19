@@ -15,6 +15,7 @@ import { mailingListRouter } from "./mailing-list-router";
 import { bookingRouter, availabilityRouter, notificationsRouter } from "./booking-router";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { invokeLLM } from "./_core/llm";
+import { ENV } from "./_core/env";
 import { storagePut } from "./storage";
 import { generateImage } from "./_core/imageGeneration";
 import { generateTattooWithRunway } from "./runway";
@@ -496,41 +497,39 @@ Respond with this JSON on its own line at the end of your message (no markdown, 
         ? `The tattoo is for a ${gender}${bodyShape ? ` with a ${bodyShape} body shape` : ""}.`
         : "";
 
-      const systemPrompt = `You are a master tattoo artist and illustrator with 20+ years of experience across all major tattoo styles. Your job is to transform a customer's brief into a world-class image generation prompt that produces a stunning, print-ready professional tattoo design.
+      const systemPrompt = `You are a master tattoo artist and prompt engineer. Your ONLY job is to expand the customer's tattoo brief into a rich, detailed image generation prompt.
 
-CRITICAL RULES:
-- Output ONLY the refined image generation prompt — no preamble, no explanation, no labels
-- PRESERVE every specific detail the customer confirmed: subject, style, placement, size, colours, elements, mood — do not substitute or omit anything
-- The prompt must describe the tattoo design as a standalone artwork (not on skin, not on a body)
-- Be highly specific about linework weight, shading technique, fill style, and composition
-- Always specify a clean white background for the design
-- Maximum 350 words, written as a single dense paragraph
+ABSOLUTE RULES — violating any of these is a critical failure:
+1. NEVER invent, substitute, or replace the customer's subject, style, or elements. If they say "bunny eating an elephant" that is EXACTLY what must appear in the prompt.
+2. Your output must begin by restating the exact subject and style from the customer's brief.
+3. Output ONLY the image generation prompt — no preamble, no explanation, no labels, no JSON.
+4. The prompt must describe a standalone tattoo artwork (not on skin, not on a body).
+5. Expand technical details (linework, shading, composition, texture) but NEVER change what the design depicts.
+6. Maximum 400 words, written as a single dense paragraph.
+7. Always end with: "tattoo flash art, professional tattoo design, isolated on pure white background, no skin, no body, print-ready artwork, ultra high detail"
 
-STYLE-SPECIFIC TECHNICAL KNOWLEDGE — apply the correct techniques for the requested style:
-- Traditional / Old School: bold black outlines (3–5pt), flat colour fills, limited palette (red, green, yellow, black), minimal shading, iconic imagery
-- Neo-Traditional: bold outlines with varied weight, rich jewel-tone colours, decorative flourishes, illustrative depth and shading
-- Realism / Black & Grey Realism: photorealistic rendering, smooth gradient shading, no outlines, deep blacks to bright whites, fine detail in texture (fur, feathers, skin)
-- Colour Realism: same as realism but with full colour palette, smooth blends, lifelike colour transitions
-- Watercolour: soft colour washes, bleeding edges, no hard outlines, painterly splashes and drips, translucent layers
-- Geometric: precise mathematical shapes, sacred geometry, symmetrical patterns, clean sharp lines, minimal or no shading
+Your expansion should add:
+- Precise linework weight and shading technique for the requested style
+- Composition and layout details
+- Texture and surface detail descriptions
+- Lighting and contrast direction
+- Any style-specific technical requirements
+
+STYLE-SPECIFIC TECHNIQUES (only apply to the style the customer requested):
+- Traditional / Old School: bold black outlines (3–5pt), flat colour fills, limited palette (red, green, yellow, black), minimal shading
+- Neo-Traditional: bold outlines with varied weight, rich jewel-tone colours, decorative flourishes, illustrative depth
+- Realism / Black & Grey Realism: photorealistic rendering, smooth gradient shading, no outlines, deep blacks to bright whites, fine fur/skin texture
+- Colour Realism: full colour palette, smooth lifelike colour transitions, photorealistic
+- Watercolour: soft colour washes, bleeding edges, no hard outlines, painterly splashes and drips
+- Geometric: precise mathematical shapes, sacred geometry, clean sharp lines, minimal shading
 - Blackwork: solid black fills, negative space, bold graphic shapes, no colour, high contrast
-- Japanese / Irezumi: bold outlines, flat colour fills, traditional motifs (koi, dragons, cherry blossom, waves, oni), wind bars, peonies as filler
-- Tribal: solid black, interlocking curved shapes, cultural pattern work, no shading or colour
-- Fine Line: ultra-thin single-needle linework, delicate detail, minimal shading, elegant and precise
-- Illustrative: comic or editorial illustration style, expressive linework, varied line weight, stylised shading
-- Minimalist: single thin line or small simple shape, maximum negative space, no fill, no shading
-- Dotwork: stippling technique, dots of varying density create shading, no solid lines, intricate patterns
-
-COMPOSITION RULES by placement:
-- Forearm / Calf: vertical or wrap-around composition, elongated designs
-- Upper Arm / Thigh: can be larger, portrait or landscape orientation
-- Chest / Back: wide horizontal or full-canvas compositions
-- Shoulder: circular or flowing designs that follow the curve
-- Wrist / Ankle: band-style or compact designs
-- Behind Ear / Finger: tiny, ultra-minimal designs
-- Ribs / Sternum: tall vertical flowing designs
-
-Always end the prompt with: "tattoo flash art, professional tattoo design, isolated on pure white background, no skin, no body, print-ready artwork, ultra high detail"`;
+- Japanese / Irezumi: bold outlines, flat fills, traditional motifs, wind bars
+- Tribal: solid black, interlocking curved shapes, no shading or colour
+- Fine Line: ultra-thin single-needle linework, delicate detail, minimal shading
+- Illustrative: expressive linework, varied line weight, stylised shading
+- Minimalist: single thin line, maximum negative space, no fill
+- Dotwork: stippling, dots of varying density for shading, no solid lines
+- Horror Realism: photorealistic rendering, deep dramatic shadows, high contrast blacks and whites, unsettling detail, cinematic horror atmosphere`;
 
       const userMessage = `Customer request: "${userPrompt}"
 ${placementContext ? `\nPlacement context:\n${placementContext}` : ""}
@@ -557,12 +556,46 @@ Please create the optimal image generation prompt for this tattoo design. Make s
         llmMessages.push({ role: "user", content: userMessage });
       }
 
-      const refinementResponse = await invokeLLM({
-        messages: llmMessages as Parameters<typeof invokeLLM>[0]["messages"],
-        maxTokens: 600,
+      // Use gpt-4o for prompt refinement — it has far better instruction following
+      // than gpt-4o-mini and won't hallucinate a different design than what was requested.
+      const refinementResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${ENV.openaiApiKey}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4o",
+          messages: (llmMessages as Array<{ role: string; content: unknown }>).map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+          max_tokens: 700,
+          temperature: 0.3,
+        }),
       });
-      const rawContent = refinementResponse.choices?.[0]?.message?.content;
-      const refinedPrompt = typeof rawContent === "string" ? rawContent : userPrompt;
+      const refinementJson = await refinementResponse.json() as { choices?: Array<{ message?: { content?: string } }> };
+      const rawContent = refinementJson.choices?.[0]?.message?.content;
+
+      // Keyword validation: if the refined prompt doesn't mention at least one key word
+      // from the original request, the model has hallucinated — fall back to the raw input.
+      let refinedPrompt: string;
+      if (typeof rawContent === "string" && rawContent.trim().length > 20) {
+        const inputKeywords = userPrompt.toLowerCase().split(/\s+/).filter((w) => w.length > 4);
+        const refinedLower = rawContent.toLowerCase();
+        const matchCount = inputKeywords.filter((kw) => refinedLower.includes(kw)).length;
+        const matchRatio = inputKeywords.length > 0 ? matchCount / inputKeywords.length : 1;
+        if (matchRatio >= 0.25) {
+          // At least 25% of the key words from the input appear in the refined prompt — looks faithful
+          refinedPrompt = rawContent.trim();
+        } else {
+          // The model hallucinated — use the original request directly with quality tags appended
+          console.warn(`[PromptRefinement] Low keyword match (${Math.round(matchRatio * 100)}%) — using original prompt`);
+          refinedPrompt = `${userPrompt.trim()}, tattoo flash art, professional tattoo design, isolated on pure white background, no skin, no body, print-ready artwork, ultra high detail`;
+        }
+      } else {
+        refinedPrompt = `${userPrompt.trim()}, tattoo flash art, professional tattoo design, isolated on pure white background, no skin, no body, print-ready artwork, ultra high detail`;
+      }
 
       // Generate image(s) — support multiple variations
       const generateOne = async (variationSuffix: string = "") => {

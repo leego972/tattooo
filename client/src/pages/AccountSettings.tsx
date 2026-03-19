@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { isAdminRole } from "@/const";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -663,7 +664,7 @@ export default function AccountSettingsPage() {
             </div>
             <div>
               <p className="text-muted-foreground">Role</p>
-              <p className="mt-1 capitalize">{user?.role === 'admin' ? 'Admin' : (user?.role || 'user')}</p>
+              <p className="mt-1 capitalize">{isAdminRole(user?.role) ? 'Admin' : (user?.role || 'user')}</p>
             </div>
             <div>
               <p className="text-muted-foreground">Sign-In Methods</p>

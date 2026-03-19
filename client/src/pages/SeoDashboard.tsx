@@ -2,6 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { isAdminRole } from "@/const";
 import {
   Search,
   Globe,
@@ -27,12 +28,13 @@ export default function SeoDashboard() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"overview" | "keywords" | "meta" | "structured" | "pages">("overview");
 
-  const statusQuery = trpc.seo.getStatus.useQuery(undefined, { enabled: user?.role === "admin" });
-  const healthQuery = trpc.seo.getHealthScore.useQuery(undefined, { enabled: user?.role === "admin" && activeTab === "overview" });
-  const keywordsQuery = trpc.seo.getKeywords.useQuery(undefined, { enabled: user?.role === "admin" && activeTab === "keywords" });
-  const metaQuery = trpc.seo.getMetaOptimizations.useQuery(undefined, { enabled: user?.role === "admin" && activeTab === "meta" });
-  const structuredQuery = trpc.seo.getStructuredData.useQuery(undefined, { enabled: user?.role === "admin" && activeTab === "structured" });
-  const pagesQuery = trpc.seo.getPublicPages.useQuery(undefined, { enabled: user?.role === "admin" && activeTab === "pages" });
+  const isAdmin = isAdminRole(user?.role);
+  const statusQuery = trpc.seo.getStatus.useQuery(undefined, { enabled: isAdmin });
+  const healthQuery = trpc.seo.getHealthScore.useQuery(undefined, { enabled: isAdmin && activeTab === "overview" });
+  const keywordsQuery = trpc.seo.getKeywords.useQuery(undefined, { enabled: isAdmin && activeTab === "keywords" });
+  const metaQuery = trpc.seo.getMetaOptimizations.useQuery(undefined, { enabled: isAdmin && activeTab === "meta" });
+  const structuredQuery = trpc.seo.getStructuredData.useQuery(undefined, { enabled: isAdmin && activeTab === "structured" });
+  const pagesQuery = trpc.seo.getPublicPages.useQuery(undefined, { enabled: isAdmin && activeTab === "pages" });
 
   const runOptimization = trpc.seo.runOptimization.useMutation({
     onSuccess: () => {

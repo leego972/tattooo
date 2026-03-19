@@ -1,4 +1,5 @@
 import { useAuth } from "@/hooks/useAuth";
+import { isAdminRole } from "@/const";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
 import {
@@ -148,8 +149,10 @@ function CreditsBadge() {
 
   if (!isAuthenticated || !balance) return null;
 
-  const isLow = balance.balance < 3 && balance.balance !== 99999;
-  const displayBalance = balance.balance === 99999 ? "∞" : balance.balance;
+  // Admins and unlimited-plan users always see ∞, never a low-credit warning
+  const isUnlimited = balance.isUnlimited ?? balance.isAdmin ?? false;
+  const isLow = !isUnlimited && typeof balance.balance === "number" && balance.balance < 3;
+  const displayBalance = isUnlimited ? "∞" : (balance.balance ?? 0);
 
   return (
     <Link href="/credits">
@@ -163,7 +166,7 @@ function CreditsBadge() {
       >
         <Zap className="w-3 h-3" />
         <span>{displayBalance} credits</span>
-        {balance.plan && balance.plan !== "free" && (
+        {!balance.isAdmin && balance.plan && balance.plan !== "free" && (
           <span className="ml-0.5 text-[9px] uppercase tracking-wide opacity-60">{balance.plan}</span>
         )}
       </div>
@@ -304,7 +307,7 @@ export default function Navbar() {
   });
 
   const isPaidPlan = isAuthenticated && (
-    user?.role === "admin" ||
+    isAdminRole(user?.role) ||
     (creditsData?.plan && creditsData.plan !== "free")
   );
 
@@ -314,7 +317,7 @@ export default function Navbar() {
   const visibleLinks = isAuthenticated
     ? authNavLinks.filter(link => {
         // Hide artist-only links from non-artists
-        if ((link as { artistOnly?: boolean }).artistOnly && !isArtist && user?.role !== "admin") return false;
+        if ((link as { artistOnly?: boolean }).artistOnly && !isArtist && !isAdminRole(user?.role)) return false;
         return true;
       })
     : publicNavLinks;
@@ -414,8 +417,8 @@ export default function Navbar() {
           })}
         </nav>
 
-        {/* Admin links — only when authenticated admin */}
-        {isAuthenticated && user?.role === "admin" && (
+        {/* Admin links — only when authenticated admin (admin or head_admin) */}
+        {isAuthenticated && isAdminRole(user?.role) && (
           <div className="px-2 pb-2">
             <p className="text-[9px] text-zinc-600 uppercase tracking-widest px-2 mb-1">Admin</p>
             {adminNavLinks.map(({ href, label, icon: Icon }) => {
@@ -536,8 +539,8 @@ export default function Navbar() {
                 </Link>
               );
             })}
-            {/* Admin links on mobile */}
-            {isAuthenticated && user?.role === "admin" && (
+            {/* Admin links on mobile (admin or head_admin) */}
+            {isAuthenticated && isAdminRole(user?.role) && (
               <div className="pt-2 border-t border-zinc-800/60">
                 <p className="text-[9px] text-zinc-600 uppercase tracking-widest px-2 mb-1">Admin</p>
                 {adminNavLinks.map(({ href, label, icon: Icon }) => (

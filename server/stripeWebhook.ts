@@ -5,17 +5,22 @@
  */
 import { Router } from "express";
 import { constructWebhookEvent } from "./stripe";
-import { setStripeCustomerId, getOrCreateCredits } from "./credits.db";
+import {
+  setStripeCustomerId,
+  activateSubscriptionPlan,
+  refillSubscriptionCredits,
+} from "./credits.db";
 import { getDb } from "./db";
-import { users, artists, bookings, credits, promoCodes } from "../drizzle/schema";
+import { users, artists, bookings, credits } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
+import { SUBSCRIPTION_PLANS } from "./subscription-router";
 
 const stripeWebhookRouter = Router();
 
 stripeWebhookRouter.post(
   "/api/stripe/webhook",
-  // Raw body is required for Stripe signature verification
-  // This route is registered before express.json()
+  // Raw body is required for Stripe signature verification.
+  // This route must be registered before express.json().
   (req, res, next) => {
     let data = "";
     req.setEncoding("utf8");
@@ -52,17 +57,20 @@ stripeWebhookRouter.post(
     console.log(`[Webhook] Event: ${event.type} | ${event.id}`);
 
     try {
+
+      // ── checkout.session.completed ──────────────────────────────────────────
       if (event.type === "checkout.session.completed") {
         const session = event.data.object as {
           metadata?: Record<string, string>;
           customer?: string;
           customer_email?: string;
           amount_total?: number;
+          subscription?: string;
         };
         const meta = session.metadata || {};
         const eventType = meta.type;
 
-        // ── User Membership ──────────────────────────────────────────────────
+        // ── Legacy membership ($6.99/mo basic flow) ───────────────────────────
         if (eventType === "membership") {
           const userId = meta.userId ? parseInt(meta.userId) : null;
           const interval = meta.interval || "monthly";
@@ -75,15 +83,45 @@ stripeWebhookRouter.post(
             if (session.customer && typeof session.customer === "string") {
               await setStripeCustomerId(userId, session.customer);
             }
-            await db.update(credits)
-              .set({
-                plan: "member" as any,
-                subscriptionStatus: "active",
-                stripeSubscriptionId: (session as any).subscription ?? null,
-                stripeCustomerId: session.customer ?? null,
-              })
-              .where(eq(credits.userId, userId));
-            console.log(`[Webhook] User ${userId} activated as member (${interval})`);
+            // Grant 30 credits (customer-tier allocation) for the basic membership
+            await activateSubscriptionPlan(
+              userId,
+              "member",
+              30,
+              session.customer ?? null,
+              session.subscription ?? null
+            );
+            console.log(`[Webhook] User ${userId} activated as member (${interval}) — 30 credits added`);
+          }
+        }
+
+        // ── Subscription plan checkout (customer / artist / studio / industry) ─
+        // The subscription-router passes metadata: { type: "subscription", user_id, plan, billing }
+        if (eventType === "subscription") {
+          const userId = meta.user_id ? parseInt(meta.user_id) : null;
+          const planId = meta.plan as keyof typeof SUBSCRIPTION_PLANS | undefined;
+          if (!userId || !planId) {
+            console.warn("[Webhook] Missing user_id or plan in subscription metadata", meta);
+            return res.json({ received: true });
+          }
+          const plan = SUBSCRIPTION_PLANS[planId];
+          if (!plan) {
+            console.warn("[Webhook] Unknown plan:", planId);
+            return res.json({ received: true });
+          }
+          const db = await getDb();
+          if (db) {
+            if (session.customer && typeof session.customer === "string") {
+              await setStripeCustomerId(userId, session.customer);
+            }
+            await activateSubscriptionPlan(
+              userId,
+              planId as any,
+              plan.credits,
+              session.customer ?? null,
+              session.subscription ?? null
+            );
+            console.log(`[Webhook] User ${userId} activated on ${planId} plan — ${plan.credits} credits added`);
           }
         }
 
@@ -96,10 +134,11 @@ stripeWebhookRouter.post(
           }
           const db = await getDb();
           if (db) {
-            // Mark artist as verified (payment received, pending admin review)
+            // Mark artist as pending admin review
             await db.update(artists)
               .set({ verified: false })
               .where(eq(artists.id, pendingArtistId));
+
             const artistRows = await db.select().from(artists).where(eq(artists.id, pendingArtistId)).limit(1);
             if (artistRows.length > 0) {
               const artist = artistRows[0];
@@ -115,9 +154,7 @@ stripeWebhookRouter.post(
           }
         }
 
-
-
-        // ── Booking deposit ───────────────────────────────────────────────
+        // ── Booking deposit ───────────────────────────────────────────────────
         if (eventType === "booking_deposit") {
           const bookingId = meta.bookingId ? parseInt(meta.bookingId) : null;
           const userId = meta.userId ? parseInt(meta.userId) : null;
@@ -130,6 +167,7 @@ stripeWebhookRouter.post(
             await db.update(bookings)
               .set({ status: "confirmed" })
               .where(eq(bookings.id, bookingId));
+
             if (userId) {
               const userRows = await db.select().from(users).where(eq(users.id, userId)).limit(1);
               const bookingRows = await db.select().from(bookings).where(eq(bookings.id, bookingId)).limit(1);
@@ -138,7 +176,6 @@ stripeWebhookRouter.post(
                 const booking = bookingRows[0];
                 if (user.email) {
                   try {
-                    // Get artist name for the confirmation email
                     const artistRows2 = await db.select().from(artists).where(eq(artists.id, booking.artistId)).limit(1);
                     const artistName = artistRows2.length > 0 ? artistRows2[0].name : "your artist";
                     const { sendArtistContactEmail } = await import("./emailService");
@@ -158,37 +195,65 @@ stripeWebhookRouter.post(
         }
       }
 
-      // ── Membership renewal ────────────────────────────────────────────────────
+      // ── invoice.paid — monthly subscription renewal ─────────────────────────
+      // On renewal, refill the user's credits to their plan's monthly allocation.
       if (event.type === "invoice.paid") {
         const invoice = event.data.object as {
           subscription?: string;
           customer?: string;
           billing_reason?: string;
         };
+
         if (invoice.billing_reason === "subscription_cycle" && invoice.customer) {
           const db = await getDb();
           if (db) {
-            await db.update(credits)
-              .set({ subscriptionStatus: "active" })
-              .where(eq(credits.stripeCustomerId, invoice.customer));
-            console.log(`[Webhook] Membership renewed for customer ${invoice.customer}`);
+            // Look up the user's current plan to determine how many credits to refill
+            const creditRows = await db
+              .select({ plan: credits.plan, userId: credits.userId })
+              .from(credits)
+              .where(eq(credits.stripeCustomerId, invoice.customer))
+              .limit(1);
+
+            if (creditRows.length > 0) {
+              const { plan, userId } = creditRows[0];
+              const planKey = plan as keyof typeof SUBSCRIPTION_PLANS;
+              const planDef = SUBSCRIPTION_PLANS[planKey];
+              const monthlyCredits = planDef?.credits ?? 30; // fallback: 30 (customer tier)
+              await refillSubscriptionCredits(invoice.customer, monthlyCredits);
+              console.log(`[Webhook] Monthly refill: user ${userId} (${plan}) → ${monthlyCredits} credits`);
+            } else {
+              // No plan record found — just mark as active
+              await db.update(credits)
+                .set({ subscriptionStatus: "active" })
+                .where(eq(credits.stripeCustomerId, invoice.customer));
+              console.log(`[Webhook] Subscription renewed for customer ${invoice.customer} (no plan record found)`);
+            }
           }
         }
       }
 
+      // ── customer.subscription.deleted — downgrade to free ──────────────────
       if (event.type === "customer.subscription.deleted") {
-        const subscription = event.data.object as { customer: string; metadata?: { userId?: string } };
+        const subscription = event.data.object as {
+          customer: string;
+          metadata?: { userId?: string };
+        };
         const userId = subscription.metadata?.userId ? parseInt(subscription.metadata.userId) : null;
         if (userId) {
           const db = await getDb();
           if (db) {
             await db.update(credits)
-              .set({ plan: "free" as any, stripeSubscriptionId: null, subscriptionStatus: "cancelled" })
+              .set({
+                plan: "free" as any,
+                stripeSubscriptionId: null,
+                subscriptionStatus: "cancelled",
+              })
               .where(eq(credits.userId, userId));
             console.log(`[Webhook] User ${userId} downgraded to free (subscription cancelled)`);
           }
         }
       }
+
     } catch (err) {
       console.error("[Webhook] Error processing event:", err);
       return res.status(500).json({ error: "Webhook processing failed" });

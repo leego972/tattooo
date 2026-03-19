@@ -16,6 +16,8 @@ import {
   ArrowUpRight,
   Loader2,
   Settings,
+  Infinity,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,12 +25,12 @@ const TYPE_META: Record<
   string,
   { label: string; icon: React.ElementType; color: string; sign: "+" | "-" }
 > = {
-  free_grant: { label: "Welcome Gift", icon: Gift, color: "text-emerald-400", sign: "+" },
-  purchase:   { label: "Purchase",     icon: ShoppingCart, color: "text-cyan-400",    sign: "+" },
-  subscription: { label: "Subscription", icon: Crown, color: "text-violet-400",  sign: "+" },
-  referral:   { label: "Referral",     icon: Gift, color: "text-amber-400",   sign: "+" },
-  refund:     { label: "Refund",       icon: RefreshCw, color: "text-emerald-400", sign: "+" },
-  deduction:  { label: "Used",         icon: Minus, color: "text-zinc-500",    sign: "-" },
+  free_grant:   { label: "Welcome Gift",  icon: Gift,         color: "text-emerald-400", sign: "+" },
+  purchase:     { label: "Purchase",      icon: ShoppingCart, color: "text-cyan-400",    sign: "+" },
+  subscription: { label: "Subscription",  icon: Crown,        color: "text-violet-400",  sign: "+" },
+  referral:     { label: "Referral",      icon: Gift,         color: "text-amber-400",   sign: "+" },
+  refund:       { label: "Refund",        icon: RefreshCw,    color: "text-emerald-400", sign: "+" },
+  deduction:    { label: "Used",          icon: Minus,        color: "text-zinc-500",    sign: "-" },
 };
 
 const PLAN_COLORS: Record<string, string> = {
@@ -37,6 +39,10 @@ const PLAN_COLORS: Record<string, string> = {
   pro:       "bg-violet-500/20 text-violet-300",
   studio:    "bg-amber-500/20 text-amber-300",
   unlimited: "bg-cyan-500/20 text-cyan-300",
+  member:    "bg-violet-500/20 text-violet-300",
+  customer:  "bg-blue-500/20 text-blue-300",
+  artist:    "bg-amber-500/20 text-amber-300",
+  industry:  "bg-rose-500/20 text-rose-300",
 };
 
 export default function Credits() {
@@ -45,7 +51,7 @@ export default function Credits() {
     enabled: isAuthenticated,
   });
   const { data: transactions, isLoading: txLoading } = trpc.credits.transactions.useQuery(undefined, {
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !balance?.isAdmin,
   });
   const createPortal = trpc.subscription.createPortal.useMutation({
     onSuccess: (data) => { window.open(data.url, "_blank"); },
@@ -64,9 +70,43 @@ export default function Credits() {
     );
   }
 
-  const displayBalance = balance?.balance === 99999 ? "∞" : (balance?.balance ?? 0);
+  // ── Admin view — unlimited access, no balance shown ─────────────────────────
+  if (balance?.isAdmin) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-white" style={{ fontFamily: "'Playfair Display', serif" }}>
+            Credits
+          </h1>
+          <p className="text-zinc-400 text-sm mt-1">Account access level and permissions.</p>
+        </div>
+
+        <Card className="bg-zinc-900/80 border-cyan-500/30">
+          <CardContent className="px-6 py-8 flex flex-col items-center gap-4 text-center">
+            <div className="w-16 h-16 rounded-full bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center">
+              <ShieldCheck className="w-8 h-8 text-cyan-400" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-white mb-1">Unlimited Admin Access</h2>
+              <p className="text-zinc-400 text-sm max-w-sm">
+                As an administrator, you have unrestricted access to all features. Credits are not deducted for any action.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-500/20">
+              <Infinity className="w-4 h-4 text-cyan-400" />
+              <span className="text-cyan-400 font-semibold text-sm">Unlimited Credits</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // ── Regular user view ────────────────────────────────────────────────────────
+  const isUnlimited = balance?.isUnlimited ?? false;
+  const displayBalance = isUnlimited ? "∞" : (balance?.balance ?? 0);
   const plan = balance?.plan ?? "free";
-  const isLow = typeof balance?.balance === "number" && balance.balance < 5 && balance.balance !== 99999;
+  const isLow = !isUnlimited && typeof balance?.balance === "number" && balance.balance < 5;
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
@@ -93,11 +133,17 @@ export default function Credits() {
               <Loader2 className="w-5 h-5 animate-spin text-zinc-600" />
             ) : (
               <>
-                <p className={cn("text-3xl font-bold", isLow ? "text-orange-400" : "text-cyan-400")}>
+                <p className={cn(
+                  "text-3xl font-bold",
+                  isUnlimited ? "text-cyan-400" : isLow ? "text-orange-400" : "text-cyan-400"
+                )}>
                   {displayBalance}
                 </p>
-                {isLow && (
+                {isLow && !isUnlimited && (
                   <p className="text-xs text-orange-400/80 mt-1">Running low</p>
+                )}
+                {isUnlimited && (
+                  <p className="text-xs text-cyan-400/60 mt-1">Unlimited</p>
                 )}
               </>
             )}
@@ -144,8 +190,8 @@ export default function Credits() {
         </Card>
       </div>
 
-      {/* Lifetime total */}
-      {balance && (
+      {/* Lifetime total — only for non-unlimited users */}
+      {balance && !isUnlimited && (
         <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-zinc-900/50 border border-zinc-800/40">
           <TrendingUp className="w-4 h-4 text-zinc-500" />
           <span className="text-sm text-zinc-400">
@@ -162,64 +208,66 @@ export default function Credits() {
         </div>
       )}
 
-      {/* Transaction history */}
-      <div>
-        <h2 className="text-sm font-semibold text-zinc-300 mb-3 uppercase tracking-wider">Transaction History</h2>
+      {/* Transaction history — only for non-unlimited users */}
+      {!isUnlimited && (
+        <div>
+          <h2 className="text-sm font-semibold text-zinc-300 mb-3 uppercase tracking-wider">Transaction History</h2>
 
-        {txLoading ? (
-          <div className="flex justify-center py-10">
-            <Loader2 className="w-6 h-6 animate-spin text-zinc-600" />
-          </div>
-        ) : !transactions || transactions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10 gap-3 text-center">
-            <Zap className="w-8 h-8 text-zinc-700" />
-            <p className="text-zinc-500 text-sm">No transactions yet.</p>
-            <Link href="/studio">
-              <Button size="sm" className="bg-cyan-500 hover:bg-cyan-400 text-black font-semibold">
-                Start Designing
-              </Button>
-            </Link>
-          </div>
-        ) : (
-          <div className="space-y-1.5">
-            {transactions.map((tx) => {
-              const meta = TYPE_META[tx.type] ?? TYPE_META.deduction;
-              const Icon = meta.icon;
-              const isPositive = tx.amount > 0;
-              return (
-                <div
-                  key={tx.id}
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg bg-zinc-900/60 border border-zinc-800/40 hover:border-zinc-700/60 transition-colors"
-                >
-                  <div className={cn("p-1.5 rounded-md bg-zinc-800/60", meta.color)}>
-                    <Icon className="w-3.5 h-3.5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white font-medium truncate">{tx.description || meta.label}</p>
-                    <p className="text-xs text-zinc-500 mt-0.5">
-                      {new Date(tx.createdAt).toLocaleString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                  </div>
-                  <span
-                    className={cn(
-                      "text-sm font-bold tabular-nums",
-                      isPositive ? "text-emerald-400" : "text-zinc-500"
-                    )}
+          {txLoading ? (
+            <div className="flex justify-center py-10">
+              <Loader2 className="w-6 h-6 animate-spin text-zinc-600" />
+            </div>
+          ) : !transactions || transactions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 gap-3 text-center">
+              <Zap className="w-8 h-8 text-zinc-700" />
+              <p className="text-zinc-500 text-sm">No transactions yet.</p>
+              <Link href="/studio">
+                <Button size="sm" className="bg-cyan-500 hover:bg-cyan-400 text-black font-semibold">
+                  Start Designing
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              {transactions.map((tx) => {
+                const meta = TYPE_META[tx.type] ?? TYPE_META.deduction;
+                const Icon = meta.icon;
+                const isPositive = tx.amount > 0;
+                return (
+                  <div
+                    key={tx.id}
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg bg-zinc-900/60 border border-zinc-800/40 hover:border-zinc-700/60 transition-colors"
                   >
-                    {isPositive ? "+" : ""}{tx.amount}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+                    <div className={cn("p-1.5 rounded-md bg-zinc-800/60", meta.color)}>
+                      <Icon className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-white font-medium truncate">{tx.description || meta.label}</p>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        {new Date(tx.createdAt).toLocaleString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                    <span
+                      className={cn(
+                        "text-sm font-bold tabular-nums",
+                        isPositive ? "text-emerald-400" : "text-zinc-500"
+                      )}
+                    >
+                      {isPositive ? "+" : ""}{tx.amount}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

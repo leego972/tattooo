@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/useAuth";
+import { isAdminRole } from "@/const";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -210,7 +211,7 @@ function AdminDashboardContent() {
                           <td className="py-2.5 px-3">
                             <Badge
                               variant="outline"
-                              className={u.role === "admin" ? "border-cyan-500/50 text-cyan-400" : "border-white/20 text-white/50"}
+                              className={isAdminRole(u.role) ? "border-cyan-500/50 text-cyan-400" : "border-white/20 text-white/50"}
                             >
                               {u.role}
                             </Badge>
@@ -226,10 +227,10 @@ function AdminDashboardContent() {
                                 className="h-7 text-xs text-white/50 hover:text-white"
                                 onClick={() => setRoleMut.mutate({
                                   userId: u.id,
-                                  role: u.role === "admin" ? "user" : "admin",
+                                  role: isAdminRole(u.role) ? "user" : "admin",
                                 })}
                               >
-                                {u.role === "admin" ? "Demote" : "Make Admin"}
+                                {isAdminRole(u.role) ? "Demote" : "Make Admin"}
                               </Button>
                               <Button
                                 size="sm"

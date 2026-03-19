@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { eq, and, isNull, gt, desc, sql, count } from "drizzle-orm";
-import { COOKIE_NAME } from "@shared/const";
+import { COOKIE_NAME, isAdminRole } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { advertisingRouter } from "./advertising-router";
@@ -91,8 +91,9 @@ const REFERRAL_REWARDS = {
 } as const;
 
 // ─── Admin guard ──────────────────────────────────────────────────────────────
+// Uses isAdminRole() so both "admin" and "head_admin" roles are granted access.
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "admin") {
+  if (!isAdminRole(ctx.user.role)) {
     throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required." });
   }
   return next({ ctx });
@@ -292,11 +293,15 @@ const authRouter = router({
 
 const creditsRouter = router({
   balance: protectedProcedure.query(async ({ ctx }) => {
+    const isAdmin = isAdminRole(ctx.user.role);
     const userCredits = await getOrCreateCredits(ctx.user.id);
+    const isUnlimited = isAdmin || userCredits.plan === "unlimited";
     return {
-      balance: userCredits.balance,
-      plan: userCredits.plan,
-      lifetimeTotal: userCredits.lifetimeTotal,
+      balance: isAdmin ? null : userCredits.balance,
+      plan: isAdmin ? "unlimited" : userCredits.plan,
+      lifetimeTotal: isAdmin ? null : userCredits.lifetimeTotal,
+      isUnlimited,
+      isAdmin,
     };
   }),
 
@@ -452,7 +457,8 @@ Respond with this JSON on its own line at the end of your message (no markdown, 
         sizeInCm, style, sessionId, gender, bodyShape, variationCount,
       } = input;
 
-      // Credit check — deduct one credit per generation (not per variation)
+      // Credit check — deduct one credit per generation (not per variation).
+      // Admin role bypass is enforced inside deductCredit at the DB level.
       if (ctx.user?.id) {
         const hasCredits = await deductCredit(ctx.user.id);
         if (!hasCredits) {
@@ -684,19 +690,17 @@ Please create the optimal image generation prompt for this tattoo design. Make s
       const generation = rows[0];
       if (!generation.imageUrl) throw new TRPCError({ code: "BAD_REQUEST", message: "No image to animate." });
 
-      // Deduct credits (video costs 5 credits) — skip for admin/unlimited users
-      const userCreditsForVideo = await getOrCreateCredits(ctx.user.id);
-      const isUnlimitedUser = ctx.user.role === 'admin' || userCreditsForVideo.plan === 'unlimited';
-      if (!isUnlimitedUser) {
-        let deducted = 0;
-        for (let i = 0; i < 5; i++) {
-          const ok = await deductCredit(ctx.user.id);
-          if (ok) deducted++;
-          else break;
-        }
-        if (deducted < 5) {
-          throw new TRPCError({ code: "PAYMENT_REQUIRED", message: "Insufficient credits. Video generation costs 5 credits." });
-        }
+      // Deduct 5 credits for video generation.
+      // Admin role bypass and unlimited plan bypass are both enforced inside deductCredit.
+      // We call deductCredit 5 times; for admins/unlimited it always returns true instantly.
+      let deducted = 0;
+      for (let i = 0; i < 5; i++) {
+        const ok = await deductCredit(ctx.user.id);
+        if (ok) deducted++;
+        else break;
+      }
+      if (deducted < 5) {
+        throw new TRPCError({ code: "PAYMENT_REQUIRED", message: "Insufficient credits. Video generation costs 5 credits." });
       }
 
       const { generateTattooVideo } = await import("./runway");

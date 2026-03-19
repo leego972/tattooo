@@ -18,6 +18,7 @@ import { invokeLLM } from "./_core/llm";
 import { storagePut } from "./storage";
 import { generateImage } from "./_core/imageGeneration";
 import { generateTattooWithRunway } from "./runway";
+import { generateWithHuggingFace } from "./huggingface";
 import {
   saveTattooGeneration,
   getTattooGenerationsBySession,
@@ -579,14 +580,24 @@ Please create the optimal image generation prompt for this tattoo design. Make s
           });
           rawImageUrl = runwayResult.imageUrl;
         } catch (runwayError) {
-          console.warn("[RunwayML] Failed, falling back to built-in generator:", runwayError);
-          const fallbackResult = await generateImage({
-            prompt: promptWithVariation,
-            ...(referenceImageUrl
-              ? { originalImages: [{ url: referenceImageUrl, mimeType: "image/jpeg" }] }
-              : {}),
-          });
-          rawImageUrl = fallbackResult.url || "";
+          console.warn("[RunwayML] Failed, falling back to Hugging Face FLUX:", runwayError);
+          try {
+            const hfResult = await generateWithHuggingFace({
+              prompt: promptWithVariation,
+              width: genWidth,
+              height: genHeight,
+            });
+            rawImageUrl = hfResult.imageUrl;
+          } catch (hfError) {
+            console.warn("[HuggingFace] Failed, falling back to DALL-E 3:", hfError);
+            const fallbackResult = await generateImage({
+              prompt: promptWithVariation,
+              ...(referenceImageUrl
+                ? { originalImages: [{ url: referenceImageUrl, mimeType: "image/jpeg" }] }
+                : {}),
+            });
+            rawImageUrl = fallbackResult.url || "";
+          }
         }
 
         if (!rawImageUrl) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Image generation failed." });

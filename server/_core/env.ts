@@ -10,6 +10,7 @@ export const ENV = {
   resendApiKey: process.env.RESEND_API_KEY ?? "",
   openaiApiKey: process.env.OPENAI_API_KEY ?? "",
   runwayApiKey: process.env.RUNWAYML_API_KEY ?? "",
+  hfToken: process.env.HF_TOKEN ?? "",
   // Optional social channel tokens
   googleAdsCustomerId: process.env.GOOGLE_ADS_CUSTOMER_ID ?? "",
   nordvpnAffId: process.env.NORDVPN_AFF_ID ?? "",

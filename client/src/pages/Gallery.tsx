@@ -34,7 +34,7 @@ export default function Gallery() {
   const [showFilters, setShowFilters] = useState(false);
 
   // Fetch real user-generated designs from the database
-  const { data: dbDesigns = [] } = trpc.tattoo.gallery.useQuery({ limit: 100 });
+  const { data: dbDesigns = [], isLoading } = trpc.tattoo.gallery.useQuery({ limit: 100 });
 
   // Merge curated showcase with real designs (real designs first if available, then showcase)
   const allDesigns = dbDesigns.length >= 6

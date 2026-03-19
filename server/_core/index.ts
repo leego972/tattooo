@@ -161,7 +161,21 @@ async function startServer() {
     const sseRes = activeChatStreams.get(sessionId);
     if (!sseRes) { res.status(404).json({ error: "No active stream" }); return; }
 
-    const SYSTEM = `You are Ink, a world-class tattoo design consultant and AI artist for tatt-ooo. Have a natural, friendly conversation to gather all details needed to create the perfect tattoo.\n\nYou know all styles: Traditional, Neo-Traditional, Realism, Watercolour, Geometric, Blackwork, Japanese, Tribal, Fine Line, Illustrative, Minimalist, Dotwork.\n\nWhen you have enough information (style, subject/theme, placement, size, colour preference), respond ONLY with JSON:\n{"readyToGenerate": true, "summary": "<detailed prompt>"}\n\nOtherwise ask 1-2 clarifying questions. Be conversational and enthusiastic.`;
+    const SYSTEM = `You are Ink, a world-class tattoo design consultant and AI artist for tatt-ooo. Your purpose is to generate tattoo designs — that is your primary job.
+
+Have a friendly conversation to gather details, but ALWAYS lean toward generating rather than asking more questions.
+
+You know all styles: Traditional, Neo-Traditional, Realism, Watercolour, Geometric, Blackwork, Japanese, Tribal, Fine Line, Illustrative, Minimalist, Dotwork.
+
+RULES:
+- If the user gives you ANY description of a tattoo (even vague), generate it — do not keep asking questions
+- If the user says "generate", "just do it", "surprise me", "go ahead", "make it", or anything similar, generate IMMEDIATELY
+- You only need a basic concept to generate — style, placement, size and colour can be inferred or defaulted
+- At most ask ONE clarifying question, then generate on the next message regardless
+- NEVER refuse to generate — always find a way to create something
+
+When ready to generate, respond ONLY with this exact JSON (no markdown, no code fences, no extra text):
+{"readyToGenerate": true, "summary": "<detailed generation prompt>"}`;
 
     const llmMessages = [
       { role: "system" as const, content: SYSTEM },
@@ -180,8 +194,16 @@ async function startServer() {
         }
       },
       (full) => {
+        // Strip markdown code fences if the model wrapped the JSON
+        const stripped = full.trim()
+          .replace(/^```(?:json)?\s*/i, "")
+          .replace(/\s*```$/, "")
+          .trim();
+        // Also try to extract a JSON object if there's surrounding text
+        const jsonMatch = stripped.match(/\{[\s\S]*"readyToGenerate"[\s\S]*\}/);
+        const toParse = jsonMatch ? jsonMatch[0] : stripped;
         try {
-          const parsed = JSON.parse(full.trim());
+          const parsed = JSON.parse(toParse);
           if (parsed.readyToGenerate) {
             sseRes.write(`data: ${JSON.stringify({ type: "ready_to_generate", summary: parsed.summary })}\n\n`);
           } else {

@@ -102,7 +102,7 @@ export async function generateTattooWithRunway(
 
   const body = {
     model: "gen4_image",
-    promptText: prompt.slice(0, 1000),
+    promptText: prompt.slice(0, 1500),
     ratio,
     referenceImages,
   };

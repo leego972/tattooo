@@ -41,7 +41,8 @@ export async function generateImage(
       prompt: options.prompt.slice(0, 4000),
       n: 1,
       size: "1024x1024",
-      quality: "standard",
+      quality: "hd",
+      style: "vivid",
       response_format: "b64_json",
     }),
   });

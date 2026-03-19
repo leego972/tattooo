@@ -489,18 +489,41 @@ Respond with this JSON on its own line at the end of your message (no markdown, 
         ? `The tattoo is for a ${gender}${bodyShape ? ` with a ${bodyShape} body shape` : ""}.`
         : "";
 
-      const systemPrompt = `You are an expert tattoo artist and designer with 20 years of experience.
-Your job is to transform a customer's tattoo description into a precise, detailed image generation prompt that will produce a stunning, professional tattoo design.
+      const systemPrompt = `You are a master tattoo artist and illustrator with 20+ years of experience across all major tattoo styles. Your job is to transform a customer's brief into a world-class image generation prompt that produces a stunning, print-ready professional tattoo design.
 
 CRITICAL RULES:
-- Output ONLY the refined image generation prompt, nothing else — no preamble, no explanation
-- PRESERVE every specific detail the customer mentioned: subjects, characters, poses, expressions, elements, text, colours, style, mood — do not omit or replace anything
-- The prompt must describe the tattoo design itself (not a photo of a tattoo on skin)
-- Use tattoo-specific terminology: linework, shading, black and grey, traditional, neo-traditional, realism, watercolor, geometric, tribal, etc.
-- Specify artistic style, line weight, shading technique, and composition
-- Make the design appropriate for the specified body placement and size
-- The output should be a single paragraph, maximum 300 words
-- Always end with: "tattoo design, professional tattoo art, high contrast, clean lines, suitable for tattooing, white background"`;
+- Output ONLY the refined image generation prompt — no preamble, no explanation, no labels
+- PRESERVE every specific detail the customer confirmed: subject, style, placement, size, colours, elements, mood — do not substitute or omit anything
+- The prompt must describe the tattoo design as a standalone artwork (not on skin, not on a body)
+- Be highly specific about linework weight, shading technique, fill style, and composition
+- Always specify a clean white background for the design
+- Maximum 350 words, written as a single dense paragraph
+
+STYLE-SPECIFIC TECHNICAL KNOWLEDGE — apply the correct techniques for the requested style:
+- Traditional / Old School: bold black outlines (3–5pt), flat colour fills, limited palette (red, green, yellow, black), minimal shading, iconic imagery
+- Neo-Traditional: bold outlines with varied weight, rich jewel-tone colours, decorative flourishes, illustrative depth and shading
+- Realism / Black & Grey Realism: photorealistic rendering, smooth gradient shading, no outlines, deep blacks to bright whites, fine detail in texture (fur, feathers, skin)
+- Colour Realism: same as realism but with full colour palette, smooth blends, lifelike colour transitions
+- Watercolour: soft colour washes, bleeding edges, no hard outlines, painterly splashes and drips, translucent layers
+- Geometric: precise mathematical shapes, sacred geometry, symmetrical patterns, clean sharp lines, minimal or no shading
+- Blackwork: solid black fills, negative space, bold graphic shapes, no colour, high contrast
+- Japanese / Irezumi: bold outlines, flat colour fills, traditional motifs (koi, dragons, cherry blossom, waves, oni), wind bars, peonies as filler
+- Tribal: solid black, interlocking curved shapes, cultural pattern work, no shading or colour
+- Fine Line: ultra-thin single-needle linework, delicate detail, minimal shading, elegant and precise
+- Illustrative: comic or editorial illustration style, expressive linework, varied line weight, stylised shading
+- Minimalist: single thin line or small simple shape, maximum negative space, no fill, no shading
+- Dotwork: stippling technique, dots of varying density create shading, no solid lines, intricate patterns
+
+COMPOSITION RULES by placement:
+- Forearm / Calf: vertical or wrap-around composition, elongated designs
+- Upper Arm / Thigh: can be larger, portrait or landscape orientation
+- Chest / Back: wide horizontal or full-canvas compositions
+- Shoulder: circular or flowing designs that follow the curve
+- Wrist / Ankle: band-style or compact designs
+- Behind Ear / Finger: tiny, ultra-minimal designs
+- Ribs / Sternum: tall vertical flowing designs
+
+Always end the prompt with: "tattoo flash art, professional tattoo design, isolated on pure white background, no skin, no body, print-ready artwork, ultra high detail"`;
 
       const userMessage = `Customer request: "${userPrompt}"
 ${placementContext ? `\nPlacement context:\n${placementContext}` : ""}
@@ -529,6 +552,7 @@ Please create the optimal image generation prompt for this tattoo design. Make s
 
       const refinementResponse = await invokeLLM({
         messages: llmMessages as Parameters<typeof invokeLLM>[0]["messages"],
+        maxTokens: 600,
       });
       const rawContent = refinementResponse.choices?.[0]?.message?.content;
       const refinedPrompt = typeof rawContent === "string" ? rawContent : userPrompt;
@@ -579,8 +603,8 @@ Please create the optimal image generation prompt for this tattoo design. Make s
 
       const variationSuffixes = [
         "",
-        ", alternative composition, different angle",
-        ", bold variation, stronger contrast",
+        ". Variation: recomposed layout with the focal subject repositioned, alternative framing, same style and colours",
+        ". Variation: maximise contrast and graphic impact, bolder linework, deeper blacks, same subject and style",
       ];
 
       // Generate variations (or just one)

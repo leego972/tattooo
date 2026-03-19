@@ -5,6 +5,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ArtistRoute from "./components/ArtistRoute";
 
 // Public pages (no auth required)
 import Home from "./pages/Home";
@@ -62,9 +63,15 @@ function Router() {
           <Route path="/reset-password" component={ResetPassword} />
           <Route path="/share" component={SharedDesign} />
           <Route path="/payment-success" component={PaymentSuccess} />
-          <Route path="/artist-signup/success" component={ArtistSignup} />
-          <Route path="/artist-signup" component={ArtistSignup} />
-          <Route path="/artist-register" component={ArtistRegister} />
+          <Route path="/artist-signup/success">
+            {() => <ProtectedRoute component={ArtistSignup} />}
+          </Route>
+          <Route path="/artist-signup">
+            {() => <ProtectedRoute component={ArtistSignup} />}
+          </Route>
+          <Route path="/artist-register">
+            {() => <ProtectedRoute component={ArtistRegister} />}
+          </Route>
 
           {/* ── Home / landing — public so visitors can browse before signing up ── */}
           <Route path="/" component={Home} />
@@ -119,7 +126,7 @@ function Router() {
             {() => <ProtectedRoute component={AffiliateDashboard} />}
           </Route>
           <Route path="/artist-dashboard">
-            {() => <ProtectedRoute component={ArtistDashboard} />}
+            {() => <ArtistRoute component={ArtistDashboard} />}
           </Route>
           <Route path="/my-bookings">
             {() => <ProtectedRoute component={MyBookings} />}

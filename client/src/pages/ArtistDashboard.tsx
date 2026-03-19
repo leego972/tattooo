@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/useAuth";
+import { isAdminRole } from "@/const";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -474,7 +475,7 @@ export default function ArtistDashboard() {
   }
 
   // Block non-artist users — only registered artists can access this dashboard
-  if (!artistProfile && user.role !== "admin") {
+  if (!artistProfile && !isAdminRole(user.role)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-6 max-w-md mx-auto px-6">

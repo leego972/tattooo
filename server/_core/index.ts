@@ -12,6 +12,7 @@ import { serveStatic, setupVite } from "./vite";
 import healthRouter from "../health";
 import stripeWebhookRouter from "../stripeWebhook";
 import { handleUnsubscribe, runWeeklyAdJob } from "../mailing-list-router";
+import { registerVoiceUploadRoute, registerVoiceTTSRoute, registerVoiceTempRoute } from "../voice-router";
 import { getDb } from "../db";
 import { invokeLLMStream } from "./llm";
 import { studioMailingList, users, bookings, inAppNotifications } from "../../drizzle/schema";
@@ -68,6 +69,12 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+  // ── Voice routes (must be before tRPC) ───────────────────────────────
+  registerVoiceTempRoute(app);
+  registerVoiceUploadRoute(app);
+  registerVoiceTTSRoute(app);
+
   // Health check endpoint (used by Railway)
   app.use("/api", healthRouter);
 

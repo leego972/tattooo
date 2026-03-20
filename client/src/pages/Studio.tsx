@@ -14,6 +14,7 @@ import {
   Palette, MapPin, Ruler, RefreshCw, ZoomIn, Settings2,
   Layers, Droplets, SlidersHorizontal, Check, Calendar, Globe,
   Building2, Shield, CreditCard, PenLine, Eye,
+  Mic, Square, Volume2, VolumeX, AudioLines,
 } from "lucide-react";
 import {
   Dialog,
@@ -103,6 +104,236 @@ export default function Studio() {
   const [skinPhotoUrl, setSkinPhotoUrl] = useState<string | undefined>();
   const [showSkinOverlay, setShowSkinOverlay] = useState(false);
   const skinInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Voice Mode State ─────────────────────────────────────────────────
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [voiceModeActive, setVoiceModeActive] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [voiceStatus, setVoiceStatus] = useState<'idle' | 'listening' | 'thinking' | 'speaking'>('idle');
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const vadAnalyserRef = useRef<AnalyserNode | null>(null);
+  const vadStreamRef = useRef<MediaStream | null>(null);
+  const vadSilenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const vadRafRef = useRef<number | null>(null);
+  const vadHasSpokenRef = useRef(false);
+  const voiceModeRef = useRef(false);
+  const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const transcribeMutation = trpc.voice.transcribe.useMutation();
+
+  // Keep voiceModeRef in sync with state
+  useEffect(() => { voiceModeRef.current = voiceModeActive; }, [voiceModeActive]);
+
+  // Cleanup TTS on unmount
+  useEffect(() => { return () => { stopTtsPlayback(); }; }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const stripMarkdown = (text: string): string => {
+    return text
+      .replace(/```[\s\S]*?```/g, '')
+      .replace(/`[^`]+`/g, '')
+      .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+      .replace(/#{1,6}\s/g, '')
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      .replace(/~~([^~]+)~~/g, '$1')
+      .replace(/^[\s]*[-*+]\s/gm, '')
+      .replace(/^[\s]*\d+\.\s/gm, '')
+      .replace(/^>\s?/gm, '')
+      .replace(/\|[^\n]+\|/g, '')
+      .replace(/---+/g, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  };
+
+  function stopTtsPlayback() {
+    try { audioSourceRef.current?.stop(); } catch (_) { /* already stopped */ }
+    audioSourceRef.current = null;
+    if (ttsAudioRef.current) { ttsAudioRef.current.pause(); ttsAudioRef.current = null; }
+  }
+
+  const speakText = async (text: string) => {
+    if (!text.trim()) return;
+    const cleanText = stripMarkdown(text).slice(0, 4096);
+    if (!cleanText) return;
+    stopTtsPlayback();
+    setIsSpeaking(true);
+    setVoiceStatus('speaking');
+    try {
+      const csrfTk = document.cookie.split('; ').find(c => c.startsWith('csrf_token='))?.split('=')[1] || '';
+      const res = await fetch('/api/voice/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(csrfTk ? { 'x-csrf-token': csrfTk } : {}) },
+        credentials: 'include',
+        body: JSON.stringify({ text: cleanText, voice: 'onyx', speed: 0.95 }),
+      });
+      if (!res.ok) throw new Error('TTS request failed');
+      const arrayBuffer = await res.arrayBuffer();
+      if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
+        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') await ctx.resume();
+      const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+      const source = ctx.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(ctx.destination);
+      audioSourceRef.current = source;
+      source.onended = () => {
+        audioSourceRef.current = null;
+        setIsSpeaking(false);
+        if (voiceModeRef.current) {
+          setVoiceStatus('idle');
+          setTimeout(() => {
+            if (voiceModeRef.current) { startRecording(); setVoiceStatus('listening'); }
+          }, 600);
+        }
+      };
+      source.start(0);
+    } catch (err) {
+      console.error('[TTS] Error:', err);
+      setIsSpeaking(false);
+      if (voiceModeRef.current) setVoiceStatus('idle');
+    }
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+      mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null; }
+        setRecordingDuration(0);
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        if (audioBlob.size < 100) { toast.error('Recording too short. Please try again.'); setIsRecording(false); return; }
+        setIsRecording(false);
+        setIsTranscribing(true);
+        if (voiceModeRef.current) setVoiceStatus('thinking');
+        try {
+          const formData = new FormData();
+          formData.append('audio', audioBlob, `recording.${mimeType.includes('webm') ? 'webm' : 'm4a'}`);
+          const csrfTk = document.cookie.split('; ').find(c => c.startsWith('csrf_token='))?.split('=')[1] || '';
+          const uploadRes = await fetch('/api/voice/upload', { method: 'POST', body: formData, credentials: 'include', headers: csrfTk ? { 'x-csrf-token': csrfTk } : {} });
+          if (!uploadRes.ok) { const err = await uploadRes.json().catch(() => ({ error: 'Upload failed' })); throw new Error(err.error || 'Failed to upload audio'); }
+          const { url: audioUrl } = await uploadRes.json() as { url: string };
+          const result = await transcribeMutation.mutateAsync({ audioUrl });
+          if (result.text && result.text.trim()) {
+            if (voiceModeRef.current) setVoiceStatus('thinking');
+            void handleSend(result.text.trim());
+          } else {
+            toast.error('Could not understand the audio. Please try again.');
+            if (voiceModeRef.current) setVoiceStatus('idle');
+          }
+        } catch (err: any) {
+          console.error('[Voice] Transcription error:', err);
+          toast.error(err.message || 'Voice transcription failed. Please try again.');
+          if (voiceModeRef.current) setVoiceStatus('idle');
+        } finally {
+          setIsTranscribing(false);
+        }
+      };
+      mediaRecorder.start(250);
+      setIsRecording(true);
+      setRecordingDuration(0);
+      recordingTimerRef.current = setInterval(() => { setRecordingDuration(prev => prev + 1); }, 1000);
+      if (!voiceModeRef.current) toast.success('Recording started. Tap stop when done.');
+      if (voiceModeRef.current) setVoiceStatus('listening');
+      // Voice Activity Detection (VAD)
+      if (voiceModeRef.current) {
+        vadHasSpokenRef.current = false;
+        vadStreamRef.current = stream;
+        try {
+          const vadCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+          if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') audioCtxRef.current = vadCtx;
+          if (vadCtx.state === 'suspended') await vadCtx.resume();
+          const source = vadCtx.createMediaStreamSource(stream);
+          const analyser = vadCtx.createAnalyser();
+          analyser.fftSize = 512;
+          analyser.smoothingTimeConstant = 0.3;
+          source.connect(analyser);
+          vadAnalyserRef.current = analyser;
+          const dataArray = new Uint8Array(analyser.frequencyBinCount);
+          const SILENCE_THRESHOLD = 12;
+          const SILENCE_DURATION = 1500;
+          const MIN_SPEECH_MS = 400;
+          let speechStartTime = 0;
+          const checkVad = () => {
+            if (!vadAnalyserRef.current) return;
+            analyser.getByteTimeDomainData(dataArray);
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) { const v = (dataArray[i] - 128) / 128; sum += v * v; }
+            const rms = Math.sqrt(sum / dataArray.length) * 100;
+            if (rms > SILENCE_THRESHOLD) {
+              if (!vadHasSpokenRef.current) { vadHasSpokenRef.current = true; speechStartTime = Date.now(); }
+              if (vadSilenceTimerRef.current) { clearTimeout(vadSilenceTimerRef.current); vadSilenceTimerRef.current = null; }
+            } else if (vadHasSpokenRef.current && !vadSilenceTimerRef.current) {
+              const spokenMs = Date.now() - speechStartTime;
+              if (spokenMs >= MIN_SPEECH_MS) {
+                vadSilenceTimerRef.current = setTimeout(() => {
+                  vadSilenceTimerRef.current = null;
+                  if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') mediaRecorderRef.current.stop();
+                  vadAnalyserRef.current = null;
+                  if (vadRafRef.current) cancelAnimationFrame(vadRafRef.current);
+                  vadRafRef.current = null;
+                }, SILENCE_DURATION);
+              }
+            }
+            vadRafRef.current = requestAnimationFrame(checkVad);
+          };
+          vadRafRef.current = requestAnimationFrame(checkVad);
+        } catch (vadErr) { console.warn('[VAD] Could not start voice activity detection:', vadErr); }
+      }
+    } catch (err: any) {
+      console.error('[Voice] Microphone access error:', err);
+      if (err.name === 'NotAllowedError') toast.error('Microphone access denied. Please allow microphone access in your browser settings.');
+      else toast.error('Could not access microphone. Please check your device settings.');
+    }
+  };
+
+  const stopRecording = () => {
+    vadAnalyserRef.current = null;
+    if (vadRafRef.current) { cancelAnimationFrame(vadRafRef.current); vadRafRef.current = null; }
+    if (vadSilenceTimerRef.current) { clearTimeout(vadSilenceTimerRef.current); vadSilenceTimerRef.current = null; }
+    if (voiceModeRef.current) setVoiceStatus('thinking');
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') mediaRecorderRef.current.stop();
+  };
+
+  const formatDuration = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const enterVoiceMode = () => {
+    setVoiceModeActive(true);
+    setVoiceStatus('idle');
+    setTimeout(() => { startRecording(); setVoiceStatus('listening'); }, 300);
+  };
+
+  const exitVoiceMode = () => {
+    vadAnalyserRef.current = null;
+    if (vadRafRef.current) { cancelAnimationFrame(vadRafRef.current); vadRafRef.current = null; }
+    if (vadSilenceTimerRef.current) { clearTimeout(vadSilenceTimerRef.current); vadSilenceTimerRef.current = null; }
+    if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null; }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') mediaRecorderRef.current.stop();
+    stopTtsPlayback();
+    setIsSpeaking(false);
+    setIsRecording(false);
+    setRecordingDuration(0);
+    setVoiceStatus('idle');
+    setVoiceModeActive(false);
+  };
 
   // Book an Artist modal state
   const [showBookModal, setShowBookModal] = useState(false);
@@ -350,6 +581,8 @@ export default function Studio() {
           setIsGenerating(false);
           es.close();
           eventSourceRef.current = null;
+          // Voice Mode: speak the response aloud
+          if (voiceModeRef.current && data.text) void speakText(data.text);
         } else if (data.type === "ready_to_generate" && data.summary) {
           setMessages((prev) => prev.map((m) =>
             m.id === streamingId
@@ -1020,6 +1253,19 @@ export default function Studio() {
               />
             </div>
 
+            {/* Mic / Voice Mode button */}
+            <Button
+              onClick={enterVoiceMode}
+              disabled={isGenerating || isRecording || isTranscribing}
+              title="Voice Mode — speak your tattoo idea to Ink"
+              className={cn(
+                "shrink-0 w-10 h-10 rounded-xl p-0 transition-all",
+                "bg-zinc-800 hover:bg-zinc-700 text-cyan-400 border border-zinc-700"
+              )}
+            >
+              <Mic size={16} />
+            </Button>
+
             {/* Send button */}
             <Button
               onClick={() => void handleSend()}
@@ -1477,6 +1723,132 @@ export default function Studio() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* ── Voice Mode Overlay ─────────────────────────────────────────── */}
+      {voiceModeActive && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/95 backdrop-blur-xl">
+          {/* Header */}
+          <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 py-4">
+            <div className="flex items-center gap-2">
+              <img src={LOGO_URL} alt="Ink" className="w-8 h-8 rounded-full" />
+              <span className="text-white font-semibold text-sm">Ink — Voice Mode</span>
+            </div>
+            <button
+              onClick={exitVoiceMode}
+              className="text-white/60 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10"
+              aria-label="Exit voice mode"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* Animated Orb */}
+          <div className="relative flex items-center justify-center mb-10">
+            {/* Outer pulse rings */}
+            {(voiceStatus === 'listening' || voiceStatus === 'speaking') && (
+              <>
+                <div className={cn(
+                  "absolute rounded-full border opacity-20 animate-ping",
+                  voiceStatus === 'listening' ? "w-48 h-48 border-cyan-400" : "w-48 h-48 border-primary"
+                )} />
+                <div className={cn(
+                  "absolute rounded-full border opacity-10",
+                  voiceStatus === 'listening' ? "w-64 h-64 border-cyan-400" : "w-64 h-64 border-primary",
+                  "animate-pulse"
+                )} />
+              </>
+            )}
+            {/* Main orb */}
+            <div className={cn(
+              "relative w-36 h-36 rounded-full flex items-center justify-center transition-all duration-500 shadow-2xl",
+              voiceStatus === 'idle' && "bg-gradient-to-br from-zinc-700 to-zinc-900 border border-zinc-600",
+              voiceStatus === 'listening' && "bg-gradient-to-br from-cyan-500/30 to-cyan-900/60 border-2 border-cyan-400 shadow-cyan-500/30",
+              voiceStatus === 'thinking' && "bg-gradient-to-br from-amber-500/20 to-amber-900/40 border-2 border-amber-400/60 shadow-amber-500/20 animate-pulse",
+              voiceStatus === 'speaking' && "bg-gradient-to-br from-primary/30 to-primary/10 border-2 border-primary shadow-primary/30",
+            )}>
+              {voiceStatus === 'idle' && <Mic size={48} className="text-zinc-400" />}
+              {voiceStatus === 'listening' && <AudioLines size={48} className="text-cyan-400 animate-pulse" />}
+              {voiceStatus === 'thinking' && <Loader2 size={48} className="text-amber-400 animate-spin" />}
+              {voiceStatus === 'speaking' && <Volume2 size={48} className="text-primary animate-pulse" />}
+            </div>
+          </div>
+
+          {/* Status label */}
+          <div className="text-center mb-8">
+            <p className={cn(
+              "text-lg font-semibold mb-1 transition-all",
+              voiceStatus === 'idle' && "text-zinc-400",
+              voiceStatus === 'listening' && "text-cyan-400",
+              voiceStatus === 'thinking' && "text-amber-400",
+              voiceStatus === 'speaking' && "text-primary",
+            )}>
+              {voiceStatus === 'idle' && 'Tap to speak'}
+              {voiceStatus === 'listening' && `Listening… ${recordingDuration > 0 ? formatDuration(recordingDuration) : ''}`}
+              {voiceStatus === 'thinking' && 'Thinking…'}
+              {voiceStatus === 'speaking' && 'Ink is speaking…'}
+            </p>
+            <p className="text-xs text-zinc-500">
+              {voiceStatus === 'listening' && 'Speak naturally — Ink will respond when you stop'}
+              {voiceStatus === 'speaking' && 'Tap the orb to interrupt'}
+              {voiceStatus === 'idle' && 'Describe your tattoo idea out loud'}
+            </p>
+          </div>
+
+          {/* Controls */}
+          <div className="flex items-center gap-6">
+            {/* Stop speaking / interrupt */}
+            {voiceStatus === 'speaking' && (
+              <button
+                onClick={() => { stopTtsPlayback(); setIsSpeaking(false); setVoiceStatus('idle'); }}
+                className="flex flex-col items-center gap-2 text-white/60 hover:text-white transition-colors"
+              >
+                <div className="w-14 h-14 rounded-full border border-white/20 flex items-center justify-center hover:bg-white/10">
+                  <VolumeX size={24} />
+                </div>
+                <span className="text-xs">Stop</span>
+              </button>
+            )}
+            {/* Main mic button */}
+            {voiceStatus !== 'speaking' && (
+              <button
+                onClick={() => {
+                  if (voiceStatus === 'listening') stopRecording();
+                  else if (voiceStatus === 'idle') { startRecording(); setVoiceStatus('listening'); }
+                }}
+                disabled={voiceStatus === 'thinking'}
+                className={cn(
+                  "flex flex-col items-center gap-2 transition-all",
+                  voiceStatus === 'thinking' && "opacity-40 cursor-not-allowed"
+                )}
+              >
+                <div className={cn(
+                  "w-20 h-20 rounded-full flex items-center justify-center transition-all shadow-lg",
+                  voiceStatus === 'idle' && "bg-cyan-500 hover:bg-cyan-400 text-black",
+                  voiceStatus === 'listening' && "bg-red-500 hover:bg-red-400 text-white animate-pulse",
+                  voiceStatus === 'thinking' && "bg-zinc-700 text-zinc-400",
+                )}>
+                  {voiceStatus === 'listening' ? <Square size={28} /> : <Mic size={28} />}
+                </div>
+                <span className="text-xs text-white/60">
+                  {voiceStatus === 'idle' && 'Tap to speak'}
+                  {voiceStatus === 'listening' && 'Tap to stop'}
+                  {voiceStatus === 'thinking' && 'Processing…'}
+                </span>
+              </button>
+            )}
+          </div>
+
+          {/* Recent transcript preview */}
+          {messages.length > 0 && (() => {
+            const lastMsg = [...messages].reverse().find(m => m.role === 'assistant' && m.content && !m.isGenerating);
+            return lastMsg ? (
+              <div className="absolute bottom-8 left-4 right-4 max-w-md mx-auto">
+                <p className="text-xs text-zinc-500 text-center line-clamp-2">{lastMsg.content.slice(0, 120)}{lastMsg.content.length > 120 ? '…' : ''}</p>
+              </div>
+            ) : null;
+          })()}
+        </div>
+      )}
     </div>
   );
 }

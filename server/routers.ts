@@ -13,6 +13,7 @@ import { contentCreatorRouter } from "./content-creator-router";
 import { marketingRouter } from "./marketing-router";
 import { mailingListRouter } from "./mailing-list-router";
 import { bookingRouter, availabilityRouter, notificationsRouter } from "./booking-router";
+import { voiceRouter } from "./voice-router";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { invokeLLM } from "./_core/llm";
 import { ENV } from "./_core/env";
@@ -2164,6 +2165,7 @@ export const appRouter = router({
   notifications: notificationsRouter,
   blog: blogRouter,
   contentCreator: contentCreatorRouter,
+  voice: voiceRouter,
 });
 
 export type AppRouter = typeof appRouter;

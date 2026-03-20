@@ -451,12 +451,13 @@ Respond with this JSON on its own line at the end of your message (no markdown, 
         gender: z.enum(["male", "female"]).optional(),
         bodyShape: z.enum(["slim", "athletic", "average", "plus-size"]).optional(),
         variationCount: z.number().min(1).max(3).default(1),
+        outputMode: z.enum(["stencil", "preview"]).default("stencil"),
       })
     )
     .mutation(async ({ input, ctx }) => {
       const {
         userPrompt, referenceImageUrl, bodyPlacement, sizeLabel,
-        sizeInCm, style, sessionId, gender, bodyShape, variationCount,
+        sizeInCm, style, sessionId, gender, bodyShape, variationCount, outputMode,
       } = input;
 
       // Credit check — deduct one credit per generation (not per variation).
@@ -497,23 +498,73 @@ Respond with this JSON on its own line at the end of your message (no markdown, 
         ? `The tattoo is for a ${gender}${bodyShape ? ` with a ${bodyShape} body shape` : ""}.`
         : "";
 
-      const systemPrompt = `You are a master tattoo artist and prompt engineer. Your ONLY job is to expand the customer's tattoo brief into a rich, detailed image generation prompt.
+      // ── STENCIL MODE: produce a print-ready working design for the tattoo artist ──
+      // ── PREVIEW MODE: produce a photorealistic visualisation of the finished tattoo ──
+      const isStencil = outputMode === "stencil";
+
+      const systemPrompt = isStencil
+        ? `You are a master tattoo artist and technical illustrator. Your ONLY job is to expand the customer's tattoo brief into a detailed image generation prompt that produces a PROFESSIONAL TATTOO STENCIL — a print-ready working design that a tattoo artist can transfer directly to skin.
+
+ABSOLUTE RULES — violating any of these is a critical failure:
+1. NEVER invent, substitute, or replace the customer's subject, style, or elements. If they say "bunny eating an elephant" that is EXACTLY what must appear.
+2. Your output must begin by restating the exact subject and style from the customer's brief.
+3. Output ONLY the image generation prompt — no preamble, no explanation, no labels, no JSON.
+4. The design MUST be isolated on a PURE WHITE background — no skin, no body, no scene, no texture.
+5. Expand technical linework and shading details but NEVER change what the design depicts.
+6. Maximum 400 words, written as a single dense paragraph.
+7. Always end with: "professional tattoo stencil, clean black linework on pure white background, print-ready, transfer-ready, 300 DPI, no skin, no body, no background, isolated artwork"
+
+STENCIL REQUIREMENTS — the image must look like a professional tattoo flash sheet:
+- LINEWORK: Clean, precise black outlines. Use 3 distinct line weights: thick outer contour (boldest), medium detail lines, thin fine detail lines. NO grey, NO colour fill unless the style requires it.
+- SHADING: Indicated using the style-appropriate technique below — NOT photorealistic gradients.
+- BACKGROUND: Pure white only — absolutely no skin, body, scene, texture or colour wash.
+- COMPOSITION: Sized and oriented correctly for the body placement.
+
+PLACEMENT-SPECIFIC CANVAS PROPORTIONS (apply the correct one):
+- Forearm (inner/outer): tall vertical portrait — 2:5 ratio, elongated upright composition
+- Upper arm / bicep: vertical portrait — 3:5 ratio
+- Calf / shin: tall vertical portrait — 2:5 ratio
+- Thigh: vertical portrait — 3:4 ratio
+- Chest (full): wide horizontal landscape — 5:3 ratio, centred symmetrical composition
+- Chest (one side): vertical portrait — 3:4 ratio
+- Back (full): tall portrait — 3:4 ratio, large canvas
+- Shoulder / shoulder blade: roughly square — 1:1 ratio
+- Ribs / side: tall vertical — 1:3 ratio, narrow and elongated
+- Wrist: horizontal band — 5:1 ratio, wrap-style composition
+- Ankle: horizontal band — 4:1 ratio
+- Neck: vertical portrait — 2:3 ratio
+- Behind ear: small vertical — 1:2 ratio
+- Hand / knuckles: horizontal — 3:1 ratio
+- Foot: horizontal — 3:1 ratio
+- Butt cheek: roughly square — 1:1 ratio, circular or oval composition
+- Sternum: tall narrow vertical — 1:4 ratio
+- Finger: very narrow vertical — 1:5 ratio
+
+STYLE-SPECIFIC LINEWORK AND SHADING TECHNIQUES (apply ONLY the requested style):
+- Traditional / Old School: bold thick black outlines (heaviest weight), flat solid colour fills (red, green, yellow, black only), minimal shading using solid black shadow areas, no gradients
+- Neo-Traditional: bold outlines with 3 varied weights, rich jewel-tone flat colour fills, decorative flourishes, subtle shadow areas in solid black
+- Realism / Black & Grey Realism: fine detailed outlines, shading using fine parallel hatching lines and cross-hatching, graduated from dense black to sparse white, no flat fills
+- Colour Realism: fine outlines, shading zones indicated with hatching, colour zones clearly delineated with labels or flat fills
+- Watercolour: light sketch outlines, shading zones indicated as soft wash areas, colour bleed zones marked
+- Geometric: ultra-precise thin uniform lines, sacred geometry shapes, no shading, pure linework only
+- Blackwork: solid black filled areas, bold graphic negative space, no colour, high contrast solid fills
+- Japanese / Irezumi: bold uniform black outlines, flat colour fill zones, wind bars, wave patterns, traditional motif arrangement
+- Tribal: solid black interlocking curved shapes, no shading, no colour, pure solid black fills
+- Fine Line: ultra-thin single-needle weight lines throughout, delicate detail, minimal or no shading, maximum negative space
+- Illustrative: expressive varied linework, stylised hatching for shading, ink-drawing aesthetic
+- Minimalist: single continuous thin line, maximum white space, no fill, no shading
+- Dotwork: stippling only — dots of varying density create all shading, no solid lines, no fills
+- Horror Realism: fine detailed outlines, heavy cross-hatching for deep shadows, stark black areas for darkest zones, high contrast`
+        : `You are a master tattoo artist and prompt engineer. Your ONLY job is to expand the customer's tattoo brief into a rich, detailed image generation prompt that produces a PHOTOREALISTIC VISUALISATION of the finished tattoo on skin.
 
 ABSOLUTE RULES — violating any of these is a critical failure:
 1. NEVER invent, substitute, or replace the customer's subject, style, or elements. If they say "bunny eating an elephant" that is EXACTLY what must appear in the prompt.
 2. Your output must begin by restating the exact subject and style from the customer's brief.
 3. Output ONLY the image generation prompt — no preamble, no explanation, no labels, no JSON.
-4. The prompt must describe a standalone tattoo artwork (not on skin, not on a body).
+4. The prompt must describe a tattoo as it would appear on skin, fully healed and photographed.
 5. Expand technical details (linework, shading, composition, texture) but NEVER change what the design depicts.
 6. Maximum 400 words, written as a single dense paragraph.
-7. Always end with: "tattoo flash art, professional tattoo design, isolated on pure white background, no skin, no body, print-ready artwork, ultra high detail"
-
-Your expansion should add:
-- Precise linework weight and shading technique for the requested style
-- Composition and layout details
-- Texture and surface detail descriptions
-- Lighting and contrast direction
-- Any style-specific technical requirements
+7. Always end with: "tattoo on skin, photorealistic tattoo photography, professional tattoo, healed tattoo, ultra high detail"
 
 STYLE-SPECIFIC TECHNIQUES (only apply to the style the customer requested):
 - Traditional / Old School: bold black outlines (3–5pt), flat colour fills, limited palette (red, green, yellow, black), minimal shading
@@ -536,6 +587,7 @@ ${placementContext ? `\nPlacement context:\n${placementContext}` : ""}
 ${genderContext ? `\nCustomer: ${genderContext}` : ""}
 ${style ? `\nPreferred style: ${style}` : ""}
 ${referenceImageUrl ? "\nNote: Customer has provided a reference image. Use it as inspiration for the style and composition." : ""}
+Output mode: ${isStencil ? "STENCIL (print-ready working design for the tattoo artist — clean linework on pure white)" : "PREVIEW (photorealistic visualisation of the finished tattoo on skin)"}
 
 Please create the optimal image generation prompt for this tattoo design. Make sure every specific detail from the customer request is faithfully included.`;
 
@@ -591,10 +643,14 @@ Please create the optimal image generation prompt for this tattoo design. Make s
         } else {
           // The model hallucinated — use the original request directly with quality tags appended
           console.warn(`[PromptRefinement] Low keyword match (${Math.round(matchRatio * 100)}%) — using original prompt`);
-          refinedPrompt = `${userPrompt.trim()}, tattoo flash art, professional tattoo design, isolated on pure white background, no skin, no body, print-ready artwork, ultra high detail`;
+          refinedPrompt = isStencil
+            ? `${userPrompt.trim()}, professional tattoo stencil, clean black linework on pure white background, print-ready, transfer-ready, 300 DPI, no skin, no body, no background, isolated artwork`
+            : `${userPrompt.trim()}, tattoo on skin, photorealistic tattoo photography, professional tattoo, healed tattoo, ultra high detail`;
         }
       } else {
-        refinedPrompt = `${userPrompt.trim()}, tattoo flash art, professional tattoo design, isolated on pure white background, no skin, no body, print-ready artwork, ultra high detail`;
+        refinedPrompt = isStencil
+          ? `${userPrompt.trim()}, professional tattoo stencil, clean black linework on pure white background, print-ready, transfer-ready, 300 DPI, no skin, no body, no background, isolated artwork`
+          : `${userPrompt.trim()}, tattoo on skin, photorealistic tattoo photography, professional tattoo, healed tattoo, ultra high detail`;
       }
 
       // Generate image(s) — support multiple variations

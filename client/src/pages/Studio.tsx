@@ -13,7 +13,7 @@ import {
   ChevronDown, ChevronUp, User, Loader2, ImageIcon, Wand2,
   Palette, MapPin, Ruler, RefreshCw, ZoomIn, Settings2,
   Layers, Droplets, SlidersHorizontal, Check, Calendar, Globe,
-  Building2, Shield, CreditCard,
+  Building2, Shield, CreditCard, PenLine, Eye,
 } from "lucide-react";
 import {
   Dialog,
@@ -99,6 +99,7 @@ export default function Studio() {
   const [selectedVariationIdx, setSelectedVariationIdx] = useState(0);
   const [showRuler, setShowRuler] = useState(false);
   const [showColourPicker, setShowColourPicker] = useState(false);
+  const [outputMode, setOutputMode] = useState<"stencil" | "preview">("stencil");
   const [skinPhotoUrl, setSkinPhotoUrl] = useState<string | undefined>();
   const [showSkinOverlay, setShowSkinOverlay] = useState(false);
   const skinInputRef = useRef<HTMLInputElement>(null);
@@ -272,9 +273,10 @@ export default function Studio() {
       gender: gender || undefined,
       bodyShape: bodyShape || undefined,
       variationCount,
+      outputMode,
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedMood, selectedStyle, selectedPlacement, selectedSize, sessionId, gender, bodyShape, variationCount]);
+  }, [selectedMood, selectedStyle, selectedPlacement, selectedSize, sessionId, gender, bodyShape, variationCount, outputMode]);
 
   const handleSend = useCallback(async (messageText?: string) => {
     const text = (messageText || input).trim();
@@ -1058,6 +1060,24 @@ export default function Studio() {
                 </button>
               ))}
             </div>
+
+            {/* Stencil / Preview mode toggle */}
+            <button
+              onClick={() => setOutputMode(outputMode === "stencil" ? "preview" : "stencil")}
+              className={cn(
+                "flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-medium transition-all",
+                outputMode === "stencil"
+                  ? "border-primary/60 bg-primary/10 text-primary"
+                  : "border-border/30 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+              )}
+              title={outputMode === "stencil" ? "Stencil mode: print-ready working design for the artist. Click to switch to Preview mode." : "Preview mode: photorealistic visualisation on skin. Click to switch to Stencil mode."}
+            >
+              {outputMode === "stencil" ? (
+                <><PenLine size={11} /> Stencil</>
+              ) : (
+                <><Eye size={11} /> Preview</>
+              )}
+            </button>
 
             {/* Skin overlay toggle */}
             <button

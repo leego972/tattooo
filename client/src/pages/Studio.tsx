@@ -121,6 +121,13 @@ export default function Studio() {
   const vadRafRef = useRef<number | null>(null);
   const vadHasSpokenRef = useRef(false);
   const voiceModeRef = useRef(false);
+  const [voiceGeneratedData, setVoiceGeneratedData] = useState<{
+    imageUrl: string;
+    printImageUrl?: string;
+    printSpec?: string;
+    variations?: string[];
+    refinedPrompt?: string;
+  } | null>(null);
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
@@ -333,6 +340,7 @@ export default function Studio() {
     setRecordingDuration(0);
     setVoiceStatus('idle');
     setVoiceModeActive(false);
+    setVoiceGeneratedData(null);
   };
 
   // Book an Artist modal state
@@ -401,6 +409,17 @@ export default function Studio() {
               : m
           )
         );
+        // Voice mode: show image in overlay and speak confirmation
+        if (voiceModeRef.current) {
+          setVoiceGeneratedData({
+            imageUrl: data.imageUrl,
+            printImageUrl: data.printImageUrl,
+            printSpec: data.printSpec,
+            variations: data.variations || [data.imageUrl],
+            refinedPrompt: data.refinedPrompt,
+          });
+          void speakText("Your tattoo design is ready! You can download it now, or ask me to make any changes.");
+        }
       }
     },
     onError: (err) => {
@@ -591,6 +610,8 @@ export default function Studio() {
           ));
           es.close();
           eventSourceRef.current = null;
+          // Voice Mode: speak confirmation before generating
+          if (voiceModeRef.current) void speakText("Perfect! I have everything I need. Generating your tattoo design now — this will take just a moment.");
           triggerGenerate(data.summary);
         } else if (data.type === "error") {
           toast.error(data.message || "Chat error");
@@ -1742,36 +1763,91 @@ export default function Studio() {
             </button>
           </div>
 
-          {/* Animated Orb */}
-          <div className="relative flex items-center justify-center mb-10">
+          {/* Animated Orb — tattooo logo */}
+          <div className="relative flex items-center justify-center mb-8">
             {/* Outer pulse rings */}
             {(voiceStatus === 'listening' || voiceStatus === 'speaking') && (
               <>
                 <div className={cn(
                   "absolute rounded-full border opacity-20 animate-ping",
-                  voiceStatus === 'listening' ? "w-48 h-48 border-cyan-400" : "w-48 h-48 border-primary"
+                  voiceStatus === 'listening' ? "w-52 h-52 border-cyan-400" : "w-52 h-52 border-primary"
                 )} />
                 <div className={cn(
                   "absolute rounded-full border opacity-10",
-                  voiceStatus === 'listening' ? "w-64 h-64 border-cyan-400" : "w-64 h-64 border-primary",
+                  voiceStatus === 'listening' ? "w-72 h-72 border-cyan-400" : "w-72 h-72 border-primary",
                   "animate-pulse"
                 )} />
               </>
             )}
-            {/* Main orb */}
+            {/* Main orb — tattooo logo */}
             <div className={cn(
-              "relative w-36 h-36 rounded-full flex items-center justify-center transition-all duration-500 shadow-2xl",
-              voiceStatus === 'idle' && "bg-gradient-to-br from-zinc-700 to-zinc-900 border border-zinc-600",
-              voiceStatus === 'listening' && "bg-gradient-to-br from-cyan-500/30 to-cyan-900/60 border-2 border-cyan-400 shadow-cyan-500/30",
-              voiceStatus === 'thinking' && "bg-gradient-to-br from-amber-500/20 to-amber-900/40 border-2 border-amber-400/60 shadow-amber-500/20 animate-pulse",
-              voiceStatus === 'speaking' && "bg-gradient-to-br from-primary/30 to-primary/10 border-2 border-primary shadow-primary/30",
+              "relative w-40 h-40 rounded-full flex items-center justify-center transition-all duration-500 shadow-2xl overflow-hidden",
+              voiceStatus === 'idle' && "ring-2 ring-zinc-600",
+              voiceStatus === 'listening' && "ring-4 ring-cyan-400 shadow-cyan-500/40",
+              voiceStatus === 'thinking' && "ring-4 ring-amber-400/70 shadow-amber-500/30 animate-pulse",
+              voiceStatus === 'speaking' && "ring-4 ring-primary shadow-primary/40",
             )}>
-              {voiceStatus === 'idle' && <Mic size={48} className="text-zinc-400" />}
-              {voiceStatus === 'listening' && <AudioLines size={48} className="text-cyan-400 animate-pulse" />}
-              {voiceStatus === 'thinking' && <Loader2 size={48} className="text-amber-400 animate-spin" />}
-              {voiceStatus === 'speaking' && <Volume2 size={48} className="text-primary animate-pulse" />}
+              <img
+                src={LOGO_URL}
+                alt="Ink"
+                className="w-full h-full object-cover"
+              />
+              {/* Status overlay icon */}
+              {voiceStatus === 'listening' && (
+                <div className="absolute inset-0 flex items-end justify-center pb-3 bg-gradient-to-t from-black/60 to-transparent">
+                  <AudioLines size={28} className="text-cyan-400 animate-pulse" />
+                </div>
+              )}
+              {voiceStatus === 'thinking' && (
+                <div className="absolute inset-0 flex items-end justify-center pb-3 bg-gradient-to-t from-black/70 to-transparent">
+                  <Loader2 size={28} className="text-amber-400 animate-spin" />
+                </div>
+              )}
+              {voiceStatus === 'speaking' && (
+                <div className="absolute inset-0 flex items-end justify-center pb-3 bg-gradient-to-t from-black/60 to-transparent">
+                  <Volume2 size={28} className="text-primary animate-pulse" />
+                </div>
+              )}
             </div>
           </div>
+
+          {/* Generated image display */}
+          {voiceGeneratedData && (
+            <div className="flex flex-col items-center gap-3 mb-6 w-full max-w-xs px-4">
+              <p className="text-sm font-semibold text-primary">Your tattoo design is ready!</p>
+              <div className="relative rounded-xl overflow-hidden border-2 border-primary/40 shadow-lg shadow-primary/20">
+                <img
+                  src={voiceGeneratedData.imageUrl}
+                  alt="Generated tattoo design"
+                  className="w-64 h-64 object-contain bg-black"
+                />
+              </div>
+              <div className="flex gap-3">
+                <a
+                  href={voiceGeneratedData.imageUrl}
+                  download="tattoo-design.png"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-black text-xs font-semibold hover:bg-primary/90 transition-colors"
+                >
+                  <Download size={14} /> Download
+                </a>
+                {voiceGeneratedData.printImageUrl && (
+                  <a
+                    href={voiceGeneratedData.printImageUrl}
+                    download="tattoo-stencil.png"
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-zinc-700 text-white text-xs font-semibold hover:bg-zinc-600 transition-colors"
+                  >
+                    <Printer size={14} /> Print Stencil
+                  </a>
+                )}
+                <button
+                  onClick={() => setVoiceGeneratedData(null)}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-zinc-800 text-white/60 text-xs font-semibold hover:bg-zinc-700 hover:text-white transition-colors"
+                >
+                  <X size={14} /> Dismiss
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Status label */}
           <div className="text-center mb-8">

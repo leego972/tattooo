@@ -7,7 +7,9 @@ export const ENV = {
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
   stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? "",
-  resendApiKey: process.env.RESEND_API_KEY ?? "",
+  // Gmail SMTP (free) — generate an App Password at https://myaccount.google.com/apppasswords
+  gmailUser: process.env.GMAIL_USER ?? "",
+  gmailAppPassword: process.env.GMAIL_APP_PASSWORD ?? "",
   openaiApiKey: process.env.OPENAI_API_KEY ?? "",
   runwayApiKey: process.env.RUNWAYML_API_KEY ?? "",
   hfToken: process.env.HF_TOKEN ?? "",
@@ -74,10 +76,6 @@ export const SOCIAL_ENV = {
   googleAdsCustomerId: process.env.GOOGLE_ADS_CUSTOMER_ID ?? "",
   linkedinAdAccountId: process.env.LINKEDIN_AD_ACCOUNT_ID ?? "",
   linkedinOrgId: process.env.LINKEDIN_ORG_ID ?? "",
-  pinterestAdAccountId: process.env.PINTEREST_AD_ACCOUNT_ID ?? "",
-  sendgridApiKey: process.env.SENDGRID_API_KEY ?? "",
-  sendgridFromEmail: process.env.SENDGRID_FROM_EMAIL ?? "noreply@tatooo.shop",
-  sendgridFromName: process.env.SENDGRID_FROM_NAME ?? "tatooo.shop",
   snapchatAccessToken: process.env.SNAPCHAT_ACCESS_TOKEN ?? "",
   snapchatAdAccountId: process.env.SNAPCHAT_AD_ACCOUNT_ID ?? "",
   tiktokAdvertiserId: process.env.TIKTOK_ADVERTISER_ID ?? "",
@@ -91,5 +89,4 @@ export const SOCIAL_ENV = {
   whatsappBusinessAccountId: process.env.WHATSAPP_BUSINESS_ACCOUNT_ID ?? "",
   mediumAuthorId: process.env.MEDIUM_AUTHOR_ID ?? "",
   mediumIntegrationToken: process.env.MEDIUM_INTEGRATION_TOKEN ?? "",
-
 };

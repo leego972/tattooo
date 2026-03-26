@@ -4,18 +4,28 @@
  * Run with: node --loader tsx scripts/send-aunz-infopacks-direct.mjs
  */
 import "dotenv/config";
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 import mysql from "mysql2/promise";
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const GMAIL_USER = process.env.GMAIL_USER;
+const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
 const DATABASE_URL = process.env.DATABASE_URL;
 const ORIGIN = "https://tattooo.shop";
-const FROM_EMAIL = "tatt-ooo <noreply@tatt-ooo.com>";
+const FROM_EMAIL = `tatt-ooo <${GMAIL_USER ?? "noreply@tatt-ooo.com"}>`;
 
-if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY not set");
+if (!GMAIL_USER) throw new Error("GMAIL_USER not set");
+if (!GMAIL_APP_PASSWORD) throw new Error("GMAIL_APP_PASSWORD not set");
 if (!DATABASE_URL) throw new Error("DATABASE_URL not set");
 
-const resend = new Resend(RESEND_API_KEY);
+// Gmail SMTP transport — free, no API key required
+// Generate an App Password at: https://myaccount.google.com/apppasswords
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: GMAIL_USER,
+    pass: GMAIL_APP_PASSWORD,
+  },
+});
 
 // Connect to DB
 const db = await mysql.createConnection(DATABASE_URL);
@@ -77,7 +87,7 @@ Founder, tatt-ooo<br/>
 </p>
 `;
 
-    await resend.emails.send({
+    await transporter.sendMail({
       from: FROM_EMAIL,
       to: email,
       subject,
@@ -93,7 +103,7 @@ Founder, tatt-ooo<br/>
     sent++;
     console.log(`✅ [${sent}/${studios.length}] Sent to ${studioName} <${email}>`);
 
-    // 1.5s delay between sends to stay within Resend rate limits
+    // 1.5s delay between sends to stay within Gmail rate limits
     await new Promise(r => setTimeout(r, 1500));
   } catch (err) {
     failed++;

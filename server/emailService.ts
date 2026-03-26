@@ -1,16 +1,19 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
-let _resend: Resend | null = null;
-function getResend(): Resend {
-  if (!_resend) {
-    const key = process.env.RESEND_API_KEY;
-    if (!key) throw new Error("RESEND_API_KEY is not configured");
-    _resend = new Resend(key);
-  }
-  return _resend;
+// ─── Gmail SMTP Transport ─────────────────────────────────────────────────────
+// Uses Gmail free SMTP service. Set GMAIL_USER and GMAIL_APP_PASSWORD in env.
+// Generate an App Password at: https://myaccount.google.com/apppasswords
+function getTransporter() {
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_APP_PASSWORD,
+    },
+  });
 }
 
-const FROM_EMAIL = "tatt-ooo <noreply@tatt-ooo.com>";
+const FROM_EMAIL = `tatt-ooo <${process.env.GMAIL_USER ?? "noreply@tatt-ooo.com"}>`;
 const LOGO_URL = "https://www.tattooo.shop/assets/tattooo-logo.png";
 const LEEGO_LOGO_URL = "https://www.tattooo.shop/assets/leego-logo.png";
 
@@ -23,7 +26,7 @@ export async function sendPasswordResetEmail(
 ): Promise<void> {
   const firstName = toName?.split(" ")[0] ?? "there";
 
-  await getResend().emails.send({
+  await getTransporter().sendMail({
     from: FROM_EMAIL,
     to: toEmail,
     subject: "Reset your tatt-ooo password",
@@ -109,7 +112,7 @@ export async function sendArtistContactEmail(opts: {
   message: string;
   designUrl?: string;
 }): Promise<void> {
-  await getResend().emails.send({
+  await getTransporter().sendMail({
     from: FROM_EMAIL,
     to: opts.artistEmail,
     replyTo: opts.customerEmail,
@@ -185,7 +188,7 @@ export async function sendArtistContactEmail(opts: {
 export async function sendWelcomeEmail(toEmail: string, toName: string | null): Promise<void> {
   const firstName = toName?.split(" ")[0] ?? "there";
 
-  await getResend().emails.send({
+  await getTransporter().sendMail({
     from: FROM_EMAIL,
     to: toEmail,
     subject: "Welcome to tatt-ooo — Your AI Tattoo Designer 🎨",
@@ -274,8 +277,7 @@ export async function sendOutreachEmail(opts: {
   adImageUrl?: string;       // Optional inline ad image shown above body
 }): Promise<void> {
   // Build attachments array if a PDF URL is provided
-  type ResendAttachment = { filename: string; path: string };
-  const attachments: ResendAttachment[] = [];
+  const attachments: { filename: string; path: string }[] = [];
   if (opts.attachmentUrl) {
     attachments.push({
       filename: opts.attachmentName ?? "tattooo_info_pack.pdf",
@@ -288,7 +290,7 @@ export async function sendOutreachEmail(opts: {
   const adImageHtml = opts.adImageUrl
     ? `<tr><td style="padding:0 40px 32px;"><img src="${opts.adImageUrl}" alt="tatt-ooo weekly" style="width:100%;border-radius:8px;display:block;" /></td></tr>`
     : "";
-  await getResend().emails.send({
+  await getTransporter().sendMail({
     from: FROM_EMAIL,
     to: opts.to,
     subject: opts.subject,
@@ -350,7 +352,7 @@ export async function sendArtistRegistrationConfirmation(
   toEmail: string,
   artistName: string
 ): Promise<void> {
-  await getResend().emails.send({
+  await getTransporter().sendMail({
     from: FROM_EMAIL,
     to: toEmail,
     subject: "Application Received — tatooo.shop",
@@ -412,7 +414,7 @@ export async function sendPromoConfirmationEmail(
   const discountLine = discountPercent > 0 ? `<strong style="color:#06b6d4;">${discountPercent}% off</strong> your next credit purchase` : "";
   const bonusLine = bonusCredits > 0 ? `<strong style="color:#a78bfa;">+${bonusCredits} bonus credits</strong> added to your account` : "";
   const benefitLines = [discountLine, bonusLine].filter(Boolean).join(" and ");
-  await getResend().emails.send({
+  await getTransporter().sendMail({
     from: FROM_EMAIL,
     to: toEmail,
     subject: `Promo code ${promoCode} applied to your tatt-ooo account`,
@@ -483,7 +485,7 @@ export async function sendLowCreditAlert(
     "</table></td></tr></table></body></html>",
   ].join("\n");
 
-  await getResend().emails.send({
+  await getTransporter().sendMail({
     from: FROM_EMAIL,
     to: toEmail,
     subject,
@@ -496,7 +498,7 @@ export async function sendArtistTeamInviteEmail(
   studioName: string,
   inviteUrl: string
 ): Promise<void> {
-  await getResend().emails.send({
+  await getTransporter().sendMail({
     from: FROM_EMAIL,
     to: toEmail,
     subject: `You've been invited to join ${studioName} on tatt-ooo`,
@@ -553,7 +555,7 @@ export async function sendDesignToArtistEmail(opts: {
 
   const imageToShow = opts.printImageUrl || opts.designImageUrl;
 
-  await getResend().emails.send({
+  await getTransporter().sendMail({
     from: FROM_EMAIL,
     to: opts.artistEmail,
     replyTo: opts.customerEmail,
@@ -687,7 +689,7 @@ export async function sendBookingNotificationEmail(opts: {
     ].join("");
   }
 
-  await getResend().emails.send({
+  await getTransporter().sendMail({
     from: "Tattooo <noreply@tattooo.shop>",
     to: opts.to,
     subject,

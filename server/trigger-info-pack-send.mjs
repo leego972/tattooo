@@ -16,9 +16,9 @@ async function main() {
   // Instead, let's call the server directly using the internal tRPC endpoint
   // with the owner's session
   
-  // Check if RESEND_API_KEY is set
-  if (!process.env.RESEND_API_KEY) {
-    console.log('[InfoPackSend] Checking env...');
+  // Check if Gmail credentials are set
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+    console.log('[InfoPackSend] Warning: GMAIL_USER or GMAIL_APP_PASSWORD not set in env.');
   }
   
   const origin = 'https://tattooo.shop';

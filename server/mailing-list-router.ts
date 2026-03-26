@@ -366,7 +366,7 @@ export const mailingListRouter = router({
           });
           await db.update(studioMailingList).set({ infoPackSentAt: new Date(), infoPackStatus: "sent" }).where(eq(studioMailingList.id, studio.id));
           sent++;
-          // Rate limit: 1.5s per email to stay within Resend limits
+          // Rate limit: 1.5s per email to stay within Gmail rate limits
           await new Promise((r) => setTimeout(r, 1500));
         } catch (err: unknown) {
           failed++;

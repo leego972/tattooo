@@ -34,6 +34,7 @@ export const SOCIAL_ENV = {
   linkedinOrganizationId: process.env.LINKEDIN_ORGANIZATION_ID ?? "",
   pinterestAccessToken: process.env.PINTEREST_ACCESS_TOKEN ?? "",
   pinterestBoardId: process.env.PINTEREST_BOARD_ID ?? "",
+  pinterestAdAccountId: process.env.PINTEREST_AD_ACCOUNT_ID ?? "",
   youtubeApiKey: process.env.YOUTUBE_API_KEY ?? "",
   youtubeChannelId: process.env.YOUTUBE_CHANNEL_ID ?? "",
   redditClientId: process.env.REDDIT_CLIENT_ID ?? "",

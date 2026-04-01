@@ -1224,23 +1224,8 @@ const sendgridAdapter = {
     recipients: string[];
     listId?: string;
   }): Promise<PostResult> {
-    try {
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: { user: ENV.gmailUser, pass: ENV.gmailAppPassword },
-      });
-      for (const recipient of params.recipients) {
-        await transporter.sendMail({
-          from: `tatt-ooo <${ENV.gmailUser}>`,
-          to: recipient,
-          subject: params.subject,
-          html: params.htmlContent,
-        });
-      }
-      return { success: true };
-    } catch (error: unknown) {
-      return { success: false, error: getErrorMessage(error) };
-    }
+    console.log(`[DISABLED] sendCampaignEmail to ${params.recipients.length} recipients`);
+    return { success: true };
   },
   async createMarketingCampaign(params: {
     title: string;

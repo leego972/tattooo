@@ -536,54 +536,6 @@ export async function handleUnsubscribe(token: string): Promise<boolean> {
 const PROD_ORIGIN = process.env.VITE_APP_ORIGIN || "https://tattooo.shop";
 
 export async function runWeeklyAdJob(): Promise<{ sent: number; failed: number; errors: string[] }> {
-  const db = await getDb();
-  if (!db) return { sent: 0, failed: 0, errors: ["Database unavailable"] };
-
-  const weekNum = getISOWeek(new Date());
-  const year = new Date().getFullYear();
-
-  const studios = await db.select().from(studioMailingList)
-    .where(and(
-      isNotNull(studioMailingList.email),
-      eq(studioMailingList.emailStatus, "found"),
-      eq(studioMailingList.weeklyAdOptOut, false),
-    ));
-
-  const alreadySent = await db.select({ studioId: weeklyAdSends.studioId })
-    .from(weeklyAdSends)
-    .where(and(eq(weeklyAdSends.weekNumber, weekNum), eq(weeklyAdSends.year, year)));
-  const alreadySentIds = new Set(alreadySent.map((r) => r.studioId));
-  const pending = studios.filter((s) => !alreadySentIds.has(s.id));
-
-  let sent = 0;
-  let failed = 0;
-  const errors: string[] = [];
-
-  for (const studio of pending) {
-    if (!studio.email) continue;
-    try {
-      const unsubscribeUrl = `${PROD_ORIGIN}/api/unsubscribe/${studio.unsubscribeToken}`;
-      const { subject, htmlBody, imageUrl } = await generateWeeklyAdEmail(studio.language, studio.studioName, PROD_ORIGIN);
-      const bodyWithUnsub = htmlBody + `<p style="margin-top:32px;font-size:12px;color:#64748b;">To unsubscribe, <a href="${unsubscribeUrl}" style="color:#06b6d4;">click here</a>.</p>`;
-      await sendOutreachEmail({
-        to: studio.email,
-        toName: studio.studioName,
-        subject,
-        htmlBody: bodyWithUnsub,
-        unsubscribeToken: studio.unsubscribeToken ?? undefined,
-        adImageUrl: imageUrl,
-      });
-      await db.insert(weeklyAdSends).values({ studioId: studio.id, weekNumber: weekNum, year, subject, imageUrl, emailBodyHtml: htmlBody, status: "sent" });
-      await db.update(studioMailingList).set({ lastWeeklyAdSentAt: new Date(), weeklyAdSentCount: (studio.weeklyAdSentCount || 0) + 1 }).where(eq(studioMailingList.id, studio.id));
-      sent++;
-      // Rate limit: 1.5s per email
-      await new Promise((r) => setTimeout(r, 1500));
-    } catch (err: unknown) {
-      failed++;
-      errors.push(`${studio.studioName}: ${err instanceof Error ? err.message : String(err)}`);
-    }
-  }
-
-  console.log(`[runWeeklyAdJob] Week ${weekNum}/${year} — sent: ${sent}, failed: ${failed}`);
-  return { sent, failed, errors };
+  console.log("[DISABLED] runWeeklyAdJob");
+  return { sent: 0, failed: 0, errors: [] };
 }
